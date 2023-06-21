@@ -4,14 +4,12 @@ use std::sync::{Arc, Mutex};
 use rhai::{Dynamic, NativeCallContextStore};
 use rhai::{EvalAltResult, FnPtr};
 
-// TODO: This should not be public
 /// A struct that represents a function that will get called when the Promise is resolved.
 pub(crate) struct PromiseCallback {
     callback: Dynamic,
     following_promise: Arc<Mutex<PromiseInner>>,
 }
 
-// TODO: This should not be public
 /// Internal representation of a Promise.
 pub(crate) struct PromiseInner {
     pub(crate) callbacks: Vec<PromiseCallback>,
