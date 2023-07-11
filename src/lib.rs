@@ -19,7 +19,7 @@
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(ScriptingPlugin::default())
+//!     .add_plugins(ScriptingPlugin::default())
 //!     .add_script_function(String::from("hello_bevy"), || {
 //!       println!("hello bevy, called from script");
 //!     });
@@ -40,7 +40,7 @@
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(ScriptingPlugin::default())
+//!     .add_plugins(ScriptingPlugin::default())
 //!     .add_script_function(
 //!         String::from("print_player_names"),
 //!         |players: Query<&Name, With<Player>>| {
@@ -59,7 +59,7 @@
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(ScriptingPlugin::default())
+//!     .add_plugins(ScriptingPlugin::default())
 //!     .add_script_function(
 //!         String::from("fun_with_string_param"),
 //!         |In((x,)): In<(ImmutableString,)>| {
@@ -91,7 +91,7 @@
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(ScriptingPlugin::default())
+//!     .add_plugins(ScriptingPlugin::default())
 //!     .run();
 //! ```
 //!
@@ -104,7 +104,7 @@
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(ScriptingPlugin::default())
+//!     .add_plugins(ScriptingPlugin::default())
 //!     .add_script_function(
 //!         String::from("my_print"),
 //!         |In((x,)): In<(ImmutableString,)>| {
@@ -126,7 +126,7 @@
 //! use bevy_scriptum::Script;
 //!
 //! App::new()
-//!     .add_startup_system(|mut commands: Commands, asset_server: Res<AssetServer>| {
+//!     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
 //!         commands.spawn(Script::new(asset_server.load("script.rhai")));
 //!     });
 //! ```
@@ -221,13 +221,16 @@ impl Plugin for ScriptingPlugin {
             .init_asset_loader::<RhaiScriptLoader>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
-            .add_startup_system(init_engine.pipe(log_errors))
-            .add_systems((
-                reload_scripts,
-                process_calls.pipe(log_errors).after(process_new_scripts),
-                init_callbacks.pipe(log_errors),
-                process_new_scripts.pipe(log_errors).after(init_callbacks),
-            ));
+            .add_systems(Startup, init_engine.pipe(log_errors))
+            .add_systems(
+                Update,
+                (
+                    reload_scripts,
+                    process_calls.pipe(log_errors).after(process_new_scripts),
+                    init_callbacks.pipe(log_errors),
+                    process_new_scripts.pipe(log_errors).after(init_callbacks),
+                ),
+            );
     }
 }
 

@@ -21,7 +21,7 @@ use bevy_scriptum::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(ScriptingPlugin::default())
+    .add_plugins(ScriptingPlugin::default())
     .add_script_function(String::from("hello_bevy"), || {
       println!("hello bevy, called from script");
     });
@@ -42,7 +42,7 @@ struct Player;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(ScriptingPlugin::default())
+    .add_plugins(ScriptingPlugin::default())
     .add_script_function(
         String::from("print_player_names"),
         |players: Query<&Name, With<Player>>| {
@@ -61,7 +61,7 @@ use rhai::ImmutableString;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(ScriptingPlugin::default())
+    .add_plugins(ScriptingPlugin::default())
     .add_script_function(
         String::from("fun_with_string_param"),
         |In((x,)): In<(ImmutableString,)>| {
@@ -93,7 +93,7 @@ use bevy_scriptum::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(ScriptingPlugin::default())
+    .add_plugins(ScriptingPlugin::default())
     .run();
 ```
 
@@ -106,7 +106,7 @@ use bevy_scriptum::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(ScriptingPlugin::default())
+    .add_plugins(ScriptingPlugin::default())
     .add_script_function(
         String::from("my_print"),
         |In((x,)): In<(ImmutableString,)>| {
@@ -128,7 +128,7 @@ use bevy::prelude::*;
 use bevy_scriptum::Script;
 
 App::new()
-    .add_startup_system(|mut commands: Commands, asset_server: Res<AssetServer>| {
+    .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
         commands.spawn(Script::new(asset_server.load("script.rhai")));
     });
 ```

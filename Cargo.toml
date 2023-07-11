@@ -13,7 +13,7 @@ keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { default-features = false, version = "0.10.1", features = [
+bevy = { default-features = false, version = "0.11.0", features = [
     "bevy_asset",
 ] }
 serde = "1.0.162"

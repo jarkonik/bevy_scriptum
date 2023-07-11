@@ -1,4 +1,4 @@
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy_scriptum::{prelude::*, Script};
 
 #[derive(Component)]
@@ -7,12 +7,12 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ScriptingPlugin::default())
+        .add_plugins(ScriptingPlugin::default())
         .add_script_function(
             String::from("get_player_name"),
             |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
         )
-        .add_startup_system(startup)
+        .add_systems(Startup, startup)
         .run();
 }
 
