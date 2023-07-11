@@ -78,7 +78,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = "0.1"
+//! bevy_scriptum = "0.2"
 //! ```
 //!
 //! or execute `cargo add bevy_scriptum` from your project directory.
@@ -144,6 +144,7 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|----------------------|
+//! | 0.11         | 0.2                  |
 //! | 0.10         | 0.1                  |
 //!
 //! ## Promises - getting return values from scripts
