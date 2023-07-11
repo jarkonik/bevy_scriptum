@@ -9,7 +9,11 @@ fn main() {
             let mut app_exit_event_reader = ManualEventReader::<AppExit>::default();
             loop {
                 if let Some(app_exit_events) = app.world.get_resource_mut::<Events<AppExit>>() {
-                    if let Some(_) = app_exit_event_reader.iter(&app_exit_events).last() {
+                    if app_exit_event_reader
+                        .iter(&app_exit_events)
+                        .last()
+                        .is_some()
+                    {
                         break;
                     }
                 }
@@ -17,9 +21,9 @@ fn main() {
             }
         })
         .add_plugins(DefaultPlugins)
-        .add_plugin(ScriptingPlugin::default())
-        .add_startup_system(startup)
-        .add_system(call_rhai_on_update_from_rust)
+        .add_plugins(ScriptingPlugin::default())
+        .add_systems(Startup, startup)
+        .add_systems(Update, call_rhai_on_update_from_rust)
         .add_script_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
             exit.send(AppExit);
         })

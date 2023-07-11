@@ -1,11 +1,11 @@
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy_scriptum::{prelude::*, Script};
 use rhai::ImmutableString;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ScriptingPlugin::default())
+        .add_plugins(ScriptingPlugin::default())
         .add_script_function(String::from("fun_without_params"), || {
             println!("called without params");
         })
@@ -36,7 +36,7 @@ fn main() {
                 );
             },
         )
-        .add_startup_system(startup)
+        .add_systems(Startup, startup)
         .run();
 }
 

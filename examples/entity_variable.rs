@@ -1,11 +1,11 @@
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy_scriptum::{prelude::*, Script};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ScriptingPlugin::default())
-        .add_startup_system(startup)
+        .add_plugins(ScriptingPlugin::default())
+        .add_systems(Startup, startup)
         .run();
 }
 
