@@ -182,10 +182,15 @@ mod components;
 mod promise;
 mod systems;
 
-use std::sync::{Arc, Mutex};
+pub mod runtimes;
+
+use std::{
+    any::TypeId,
+    sync::{Arc, Mutex},
+};
 
 pub use crate::components::{Script, ScriptData};
-pub use assets::RhaiScript;
+pub use assets::ScriptAsset;
 
 use bevy::prelude::*;
 use callback::{Callback, RegisterCallbackFunction};
@@ -194,7 +199,7 @@ use systems::{init_callbacks, init_engine, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
-    assets::RhaiScriptLoader,
+    assets::ScriptLoader,
     systems::{process_new_scripts, reload_scripts},
 };
 
@@ -218,10 +223,10 @@ pub struct ScriptingPlugin;
 
 impl Plugin for ScriptingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_asset::<RhaiScript>()
-            .init_asset_loader::<RhaiScriptLoader>()
+        app.add_asset::<ScriptAsset>()
+            .init_asset_loader::<ScriptLoader>()
             .init_resource::<Callbacks>()
-            .insert_resource(ScriptingRuntime::default())
+            .insert_resource(Runtimes::default())
             .add_systems(Startup, init_engine.pipe(log_errors))
             .add_systems(
                 Update,
@@ -236,14 +241,14 @@ impl Plugin for ScriptingPlugin {
 }
 
 #[derive(Resource, Default)]
-pub struct ScriptingRuntime {
-    engine: Engine,
+pub struct Runtimes {
+    runtimes: Vec<Box<dyn ScriptingRuntime>>,
 }
 
-impl ScriptingRuntime {
+impl Runtimes {
     /// Get a  mutable reference to the internal [rhai::Engine].
-    pub fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
+    pub fn runtimes_mut(&mut self) -> &mut Vec<Box<dyn ScriptingRuntime>> {
+        &mut self.runtimes
     }
 
     /// Call a function that is available in the scope of the script.
@@ -254,19 +259,26 @@ impl ScriptingRuntime {
         entity: Entity,
         args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
-        let ast = script_data.ast.clone();
-        let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
-        let options = CallFnOptions::new().eval_ast(false);
-        let result =
-            self.engine
-                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-                e => Err(Box::new(e))?,
-            }
+        for runtime in &self.runtimes {
+            todo!();
+            // let ast = script_data.ast.clone();
+            // let scope = &mut script_data.scope;
+            // scope.push(ENTITY_VAR_NAME, entity);
+            // let options = CallFnOptions::new().eval_ast(false);
+            // let result = self.runtimes.call_fn_with_options::<Dynamic>(
+            //     options,
+            //     scope,
+            //     &ast,
+            //     function_name,
+            //     args,
+            // );
+            // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+            // if let Err(err) = result {
+            //     match *err {
+            //         rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
+            //         e => Err(Box::new(e))?,
+            //     }
+            // }
         }
         Ok(())
     }
@@ -288,6 +300,8 @@ pub trait AddScriptFunctionAppExt {
         name: String,
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
     ) -> &mut Self;
+
+    fn add_script_runtime(&mut self, runtime: impl ScriptingRuntime + 'static) -> &mut Self;
 }
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
@@ -297,7 +311,23 @@ struct Callbacks {
     callbacks: Mutex<Vec<Callback>>,
 }
 
+pub trait ScriptingRuntime: Sync + Send {
+    fn register_fn(
+        &mut self,
+        name: String,
+        arg_types: Vec<TypeId>,
+        callback: Box<dyn Fn() -> () + Send + Sync>,
+    );
+    fn eval(&mut self, code: &str) -> Result<(), ScriptingError>;
+}
+
 impl AddScriptFunctionAppExt for App {
+    fn add_script_runtime(&mut self, runtime: impl ScriptingRuntime + 'static) -> &mut Self {
+        let mut runtimes_resource = self.world.resource_mut::<Runtimes>();
+        runtimes_resource.runtimes.push(Box::new(runtime));
+        self
+    }
+
     fn add_script_function<
         Out,
         Marker,

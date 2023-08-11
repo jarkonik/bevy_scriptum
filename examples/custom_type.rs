@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script, ScriptingRuntime};
+use bevy_scriptum::{prelude::*, Runtimes, Script};
 
 fn main() {
     App::new()
@@ -19,19 +19,22 @@ struct MyType {
 
 fn startup(
     mut commands: Commands,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
+    mut runtimes_resource: ResMut<Runtimes>,
     assets_server: Res<AssetServer>,
 ) {
-    let engine = scripting_runtime.engine_mut();
+    let runtimes = runtimes_resource.runtimes_mut();
 
-    engine
-        .register_type_with_name::<MyType>("MyType")
-        // Register a method on MyType
-        .register_fn("my_method", |my_type_instance: &mut MyType| {
-            my_type_instance.my_field
-        })
-        // Register a "constructor" for MyType
-        .register_fn("new_my_type", || MyType { my_field: 42 });
+    for runtime in runtimes {
+        todo!();
+        // runtime
+        //     .register_type_with_name::<MyType>("MyType")
+        //     // Register a method on MyType
+        //     .register_fn("my_method", |my_type_instance: &mut MyType| {
+        //         my_type_instance.my_field
+        //     })
+        //     // Register a "constructor" for MyType
+        //     .register_fn("new_my_type", || MyType { my_field: 42 });
+    }
 
     commands.spawn(Script::new(assets_server.load("examples/custom_type.rhai")));
 }

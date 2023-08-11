@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use super::assets::RhaiScript;
+use super::assets::ScriptAsset;
 
 /// A component that represents a script.
 #[derive(Component)]
 pub struct Script {
-    pub script: Handle<RhaiScript>,
+    pub script: Handle<ScriptAsset>,
 }
 
 /// A component that represents the data of a script. It stores the [rhai::Scope](basically the state of the script, any declared variable etc.)
@@ -18,7 +18,7 @@ pub struct ScriptData {
 
 impl Script {
     /// Create a new script component from a handle to a [RhaiScript] obtained using [AssetServer].
-    pub fn new(script: Handle<RhaiScript>) -> Self {
+    pub fn new(script: Handle<ScriptAsset>) -> Self {
         Self { script }
     }
 }

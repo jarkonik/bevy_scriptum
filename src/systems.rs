@@ -12,32 +12,34 @@ use crate::{
     Callback, Callbacks, ScriptingError, ENTITY_VAR_NAME,
 };
 
-use super::{assets::RhaiScript, components::Script, ScriptingRuntime};
+use super::{assets::ScriptAsset, components::Script, Runtimes};
 
 /// Initialize the scripting engine. Adds built-in types and functions.
 pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
-    let mut scripting_runtime = world
-        .get_resource_mut::<ScriptingRuntime>()
+    let mut runtimes_resource = world
+        .get_resource_mut::<Runtimes>()
         .ok_or(ScriptingError::NoRuntimeResource)?;
 
-    let engine = &mut scripting_runtime.engine;
+    let engine = &mut runtimes_resource.runtimes;
 
-    engine
-        .register_type_with_name::<Entity>("Entity")
-        .register_fn("index", |entity: &mut Entity| entity.index());
-    engine
-        .register_type_with_name::<Promise>("Promise")
-        .register_fn("then", Promise::then);
-    engine
-        .register_type_with_name::<Vec3>("Vec3")
-        .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-            Vec3::new(x as f32, y as f32, z as f32)
-        })
-        .register_get("x", |vec: &mut Vec3| vec.x as f64)
-        .register_get("y", |vec: &mut Vec3| vec.y as f64)
-        .register_get("z", |vec: &mut Vec3| vec.z as f64);
-    #[allow(deprecated)]
-    engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+    for runtime in &mut runtimes_resource.runtimes {
+        // engine
+        //     .register_type_with_name::<Entity>("Entity")
+        //     .register_fn("index", |entity: &mut Entity| entity.index());
+        // engine
+        //     .register_type_with_name::<Promise>("Promise")
+        //     .register_fn("then", Promise::then);
+        // engine
+        //     .register_type_with_name::<Vec3>("Vec3")
+        //     .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
+        //         Vec3::new(x as f32, y as f32, z as f32)
+        //     })
+        //     .register_get("x", |vec: &mut Vec3| vec.x as f64)
+        //     .register_get("y", |vec: &mut Vec3| vec.y as f64)
+        //     .register_get("z", |vec: &mut Vec3| vec.z as f64);
+        // #[allow(deprecated)]
+        // engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+    }
 
     Ok(())
 }
@@ -45,7 +47,7 @@ pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
 /// Reloads scripts when they are modified.
 pub(crate) fn reload_scripts(
     mut commands: Commands,
-    mut ev_asset: EventReader<AssetEvent<RhaiScript>>,
+    mut ev_asset: EventReader<AssetEvent<ScriptAsset>>,
     mut scripts: Query<(Entity, &mut Script)>,
 ) {
     for ev in ev_asset.iter() {
@@ -63,29 +65,31 @@ pub(crate) fn reload_scripts(
 pub(crate) fn process_new_scripts(
     mut commands: Commands,
     mut added_scripted_entities: Query<(Entity, &mut Script), Without<ScriptData>>,
-    scripting_runtime: ResMut<ScriptingRuntime>,
-    scripts: Res<Assets<RhaiScript>>,
+    mut runtimes_resource: ResMut<Runtimes>,
+    scripts: Res<Assets<ScriptAsset>>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
         trace!("process_new_scripts: evaulating a new script");
         if let Some(script) = scripts.get(&script_component.script) {
-            let mut scope = Scope::new();
+            for runtime in &mut runtimes_resource.runtimes {
+                runtime.eval(&script.0);
 
-            scope.push(ENTITY_VAR_NAME, entity);
+                // let mut scope = Scope::new();
+                // scope.push(ENTITY_VAR_NAME, entity);
 
-            let engine = &scripting_runtime.engine;
+                // let engine = &runtimes_resource.runtimes;
+                // let ast = engine
+                //     .compile_with_scope(&scope, script.0.as_str())
+                //     .map_err(ScriptingError::CompileError)?;
 
-            let ast = engine
-                .compile_with_scope(&scope, script.0.as_str())
-                .map_err(ScriptingError::CompileError)?;
+                // engine
+                //     .run_ast_with_scope(&mut scope, &ast)
+                //     .map_err(ScriptingError::RuntimeError)?;
 
-            engine
-                .run_ast_with_scope(&mut scope, &ast)
-                .map_err(ScriptingError::RuntimeError)?;
+                // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
 
-            scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-
-            commands.entity(entity).insert(ScriptData { ast, scope });
+                // commands.entity(entity).insert(ScriptData { ast, scope });
+            }
         }
     }
     Ok(())
@@ -106,34 +110,39 @@ pub(crate) fn init_callbacks(world: &mut World) -> Result<(), ScriptingError> {
         if let Ok(mut system) = callback.system.lock() {
             system.system.initialize(world);
 
-            let mut scripting_runtime = world
-                .get_resource_mut::<ScriptingRuntime>()
+            let mut runtimes_resource = world
+                .get_resource_mut::<Runtimes>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
             trace!("init_callbacks: registering callback: '{}'", callback.name);
-            let engine = &mut scripting_runtime.engine;
-            let callback = callback.clone();
-            engine.register_raw_fn(
-                callback.name,
-                system.arg_types.clone(),
-                move |context, args| {
-                    #[allow(deprecated)]
-                    let context_data = context.store_data();
-                    let promise = Promise {
-                        inner: Arc::new(Mutex::new(PromiseInner {
-                            callbacks: vec![],
-                            context_data,
-                        })),
-                    };
 
-                    let mut calls = callback.calls.lock().unwrap();
-                    calls.push(FunctionCallEvent {
-                        promise: promise.clone(),
-                        params: args.iter_mut().map(|arg| arg.clone()).collect(),
-                    });
-                    Ok(promise)
-                },
-            );
+            for runtime in &mut runtimes_resource.runtimes {
+                let calls = callback.calls.clone();
+
+                runtime.register_fn(
+                    callback.name.clone(),
+                    system.arg_types.clone(),
+                    // move |context, args| {
+                    Box::new(move || {
+                        // #[allow(deprecated)]
+                        // let context_data = context.store_data();
+                        let promise = Promise {
+                            inner: Arc::new(Mutex::new(PromiseInner {
+                                callbacks: vec![],
+                                // context_data,
+                            })),
+                        };
+
+                        let mut calls = calls.lock().unwrap();
+                        calls.push(FunctionCallEvent {
+                            promise: promise.clone(),
+                            // params: args.iter_mut().map(|arg| arg.clone()).collect(),
+                            params: Vec::new(),
+                        });
+                        // Ok(promise)
+                    }),
+                );
+            }
         }
     }
 
@@ -168,10 +177,12 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
             let val = system.call(&call, world);
-            let mut runtime = world
-                .get_resource_mut::<ScriptingRuntime>()
+            let mut runtimes_resource = world
+                .get_resource_mut::<Runtimes>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
-            call.promise.resolve(&mut runtime.engine, val)?;
+            for runtime in &runtimes_resource.runtimes {
+                // call.promise.resolve(&mut runtime, val)?;
+            }
         }
     }
     Ok(())
