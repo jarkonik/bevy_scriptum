@@ -1,4 +1,7 @@
-use crate::{ScriptingError, ScriptingRuntime};
+use bevy::prelude::Entity;
+use rhai::{CallFnOptions, Dynamic};
+
+use crate::{ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME};
 
 pub struct Runtime {
     rhai_engine: rhai::Engine,
@@ -43,9 +46,7 @@ impl ScriptingRuntime for Runtime {
 
     fn eval(&mut self, code: &str) -> Result<(), ScriptingError> {
         let mut scope = rhai::Scope::new();
-        // scope.push(ENTITY_VAR_NAME, entity);
 
-        // let engine = &runtimes_resource.runtimes;
         let ast = self
             .rhai_engine
             .compile_with_scope(&scope, code)
@@ -55,9 +56,6 @@ impl ScriptingRuntime for Runtime {
             .run_ast_with_scope(&mut scope, &ast)
             .map_err(ScriptingError::RuntimeError)?;
 
-        // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-
-        // commands.entity(entity).insert(ScriptData { ast, scope });
         Ok(())
     }
 
@@ -68,6 +66,24 @@ impl ScriptingRuntime for Runtime {
         function_name: &str,
         args: Vec<rhai::Dynamic>,
     ) -> Result<rhai::Dynamic, ScriptingError> {
+        // scope.push(ENTITY_VAR_NAME, entity);
+        let options = CallFnOptions::new().eval_ast(false);
+        let result = self.rhai_engine.call_fn_with_options::<Dynamic>(
+            options,
+            scope,
+            &ast,
+            function_name,
+            args,
+        )?;
+        // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        return Ok(result);
+    }
+
+    fn set_global_variable(&mut self, name: &str, value: Dynamic) {
+        todo!()
+    }
+
+    fn unset_global_variable(&mut self, name: &str) {
         todo!()
     }
 }

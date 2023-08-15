@@ -25,7 +25,6 @@ fn startup(
     let runtimes = runtimes_resource.runtimes_mut();
 
     for runtime in runtimes {
-        todo!();
         // runtime
         //     .register_type_with_name::<MyType>("MyType")
         //     // Register a method on MyType

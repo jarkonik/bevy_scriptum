@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::tracing};
-use rhai::Scope;
+use rhai::{Dynamic, Scope};
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},
@@ -72,22 +72,9 @@ pub(crate) fn process_new_scripts(
         trace!("process_new_scripts: evaulating a new script");
         if let Some(script) = scripts.get(&script_component.script) {
             for runtime in &mut runtimes_resource.runtimes {
-                runtime.eval(&script.0);
-
-                // let mut scope = Scope::new();
-                // scope.push(ENTITY_VAR_NAME, entity);
-
-                // let engine = &runtimes_resource.runtimes;
-                // let ast = engine
-                //     .compile_with_scope(&scope, script.0.as_str())
-                //     .map_err(ScriptingError::CompileError)?;
-
-                // engine
-                //     .run_ast_with_scope(&mut scope, &ast)
-                //     .map_err(ScriptingError::RuntimeError)?;
-
-                // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-
+                runtime.set_global_variable(ENTITY_VAR_NAME, Dynamic::from(entity));
+                runtime.eval(&script.0)?;
+                runtime.unset_global_variable(ENTITY_VAR_NAME);
                 // commands.entity(entity).insert(ScriptData { ast, scope });
             }
         }
@@ -177,7 +164,7 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
             let val = system.call(&call, world);
-            let mut runtimes_resource = world
+            let runtimes_resource = world
                 .get_resource_mut::<Runtimes>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
             for mut runtime in &runtimes_resource.runtimes {

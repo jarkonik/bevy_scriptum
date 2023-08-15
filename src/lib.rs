@@ -194,7 +194,7 @@ pub use assets::ScriptAsset;
 
 use bevy::prelude::*;
 use callback::{Callback, RegisterCallbackFunction};
-use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError, Scope};
+use rhai::{Dynamic, EvalAltResult, FuncArgs, ParseError, Scope};
 use systems::{init_callbacks, init_engine, log_errors, process_calls};
 use thiserror::Error;
 
@@ -264,24 +264,10 @@ impl Runtimes {
         for runtime in &mut self.runtimes {
             let ast = script_data.ast.clone();
             let scope = &mut script_data.scope;
-            scope.push(ENTITY_VAR_NAME, entity);
-            // let options = CallFnOptions::new().eval_ast(false);
 
-            let result = runtime.call_fn(&ast, scope, function_name, parsed_args.clone());
-            // let result = self.runtimes.call_fn_with_options::<Dynamic>(
-            //     options,
-            //     scope,
-            //     &ast,
-            //     function_name,
-            //     args,
-            // );
-            // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-            // if let Err(err) = result {
-            //     match *err {
-            //         rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-            //         e => Err(Box::new(e))?,
-            //     }
-            // }
+            runtime.set_global_variable(ENTITY_VAR_NAME, Dynamic::from(entity));
+            let _ = runtime.call_fn(&ast, scope, function_name, parsed_args.clone())?;
+            runtime.unset_global_variable(ENTITY_VAR_NAME);
         }
         Ok(())
     }
@@ -329,6 +315,8 @@ pub trait ScriptingRuntime: Sync + Send {
         function_name: &str,
         args: Vec<Dynamic>,
     ) -> Result<Dynamic, ScriptingError>;
+    fn set_global_variable(&mut self, name: &str, value: Dynamic);
+    fn unset_global_variable(&mut self, name: &str);
 }
 
 impl AddScriptFunctionAppExt for App {
