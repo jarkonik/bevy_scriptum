@@ -60,4 +60,14 @@ impl ScriptingRuntime for Runtime {
         // commands.entity(entity).insert(ScriptData { ast, scope });
         Ok(())
     }
+
+    fn call_fn(
+        &mut self,
+        ast: &rhai::AST,
+        scope: &mut rhai::Scope,
+        function_name: &str,
+        args: Vec<rhai::Dynamic>,
+    ) -> Result<rhai::Dynamic, ScriptingError> {
+        todo!()
+    }
 }

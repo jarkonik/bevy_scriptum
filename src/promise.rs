@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 use rhai::{Dynamic, NativeCallContextStore};
 use rhai::{EvalAltResult, FnPtr};
 
+use crate::ScriptingRuntime;
+
 /// A struct that represents a function that will get called when the Promise is resolved.
 pub(crate) struct PromiseCallback {
     callback: Dynamic,
@@ -27,7 +29,7 @@ impl PromiseInner {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve(
         &mut self,
-        engine: &mut rhai::Engine,
+        runtime: &Box<dyn ScriptingRuntime>,
         val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
         for callback in &self.callbacks {
@@ -53,11 +55,11 @@ impl Promise {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve(
         &mut self,
-        engine: &mut rhai::Engine,
+        runtime: &Box<dyn ScriptingRuntime>,
         val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
         if let Ok(mut inner) = self.inner.lock() {
-            inner.resolve(engine, val)?;
+            inner.resolve(runtime, val)?;
         }
         Ok(())
     }

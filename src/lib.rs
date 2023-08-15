@@ -194,7 +194,7 @@ pub use assets::ScriptAsset;
 
 use bevy::prelude::*;
 use callback::{Callback, RegisterCallbackFunction};
-use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
+use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError, Scope};
 use systems::{init_callbacks, init_engine, log_errors, process_calls};
 use thiserror::Error;
 
@@ -259,12 +259,15 @@ impl Runtimes {
         entity: Entity,
         args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
-        for runtime in &self.runtimes {
-            todo!();
-            // let ast = script_data.ast.clone();
-            // let scope = &mut script_data.scope;
-            // scope.push(ENTITY_VAR_NAME, entity);
+        let mut parsed_args = Vec::new();
+        args.parse(&mut parsed_args);
+        for runtime in &mut self.runtimes {
+            let ast = script_data.ast.clone();
+            let scope = &mut script_data.scope;
+            scope.push(ENTITY_VAR_NAME, entity);
             // let options = CallFnOptions::new().eval_ast(false);
+
+            let result = runtime.call_fn(&ast, scope, function_name, parsed_args.clone());
             // let result = self.runtimes.call_fn_with_options::<Dynamic>(
             //     options,
             //     scope,
@@ -319,6 +322,13 @@ pub trait ScriptingRuntime: Sync + Send {
         callback: Box<dyn Fn() -> () + Send + Sync>,
     );
     fn eval(&mut self, code: &str) -> Result<(), ScriptingError>;
+    fn call_fn(
+        &mut self,
+        ast: &rhai::AST,
+        scope: &mut Scope,
+        function_name: &str,
+        args: Vec<Dynamic>,
+    ) -> Result<Dynamic, ScriptingError>;
 }
 
 impl AddScriptFunctionAppExt for App {

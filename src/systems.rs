@@ -180,8 +180,8 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             let mut runtimes_resource = world
                 .get_resource_mut::<Runtimes>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
-            for runtime in &runtimes_resource.runtimes {
-                // call.promise.resolve(&mut runtime, val)?;
+            for mut runtime in &runtimes_resource.runtimes {
+                call.promise.resolve(&mut runtime, val.clone())?;
             }
         }
     }
