@@ -57,7 +57,9 @@ where
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<Dynamic>>, world: &mut World| {
-            Dynamic::from(inner_system.run((), world))
+            let result = inner_system.run((), world);
+            inner_system.apply_deferred(world);
+            Dynamic::from(result)
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
