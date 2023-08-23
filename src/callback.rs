@@ -85,7 +85,9 @@ macro_rules! impl_tuple {
                     let args = (
                         $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
                     );
-                    Dynamic::from(inner_system.run(args, world))
+                    let result = inner_system.run(args, world);
+                    inner_system.apply_deferred(world);
+                    Dynamic::from(result)
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {
