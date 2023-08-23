@@ -1,8 +1,10 @@
 use std::sync::{Arc, Mutex};
 
 #[allow(deprecated)]
-use rhai::{Dynamic, NativeCallContextStore};
+use rhai::Dynamic;
 use rhai::{EvalAltResult, FnPtr};
+
+use crate::ScriptingRuntime;
 
 /// A struct that represents a function that will get called when the Promise is resolved.
 pub(crate) struct PromiseCallback {
@@ -13,8 +15,8 @@ pub(crate) struct PromiseCallback {
 /// Internal representation of a Promise.
 pub(crate) struct PromiseInner {
     pub(crate) callbacks: Vec<PromiseCallback>,
-    #[allow(deprecated)]
-    pub(crate) context_data: NativeCallContextStore,
+    // #[allow(deprecated)]
+    // pub(crate) context_data: NativeCallContextStore,
 }
 
 /// A struct that represents a Promise.
@@ -27,23 +29,23 @@ impl PromiseInner {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve(
         &mut self,
-        engine: &mut rhai::Engine,
+        runtime: &Box<dyn ScriptingRuntime>,
         val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
         for callback in &self.callbacks {
             let f = callback.callback.clone_cast::<FnPtr>();
-            #[allow(deprecated)]
-            let context = self.context_data.create_context(engine);
-            let next_val = if val.is_unit() {
-                f.call_raw(&context, None, [])?
-            } else {
-                f.call_raw(&context, None, [val.clone()])?
-            };
-            callback
-                .following_promise
-                .lock()
-                .unwrap()
-                .resolve(engine, next_val)?;
+            // #[allow(deprecated)]
+            // let context = self.context_data.create_context(engine);
+            // let next_val = if val.is_unit() {
+            //     f.call_raw(&context, None, [])?
+            // } else {
+            //     f.call_raw(&context, None, [val.clone()])?
+            // };
+            // callback
+            //     .following_promise
+            //     .lock()
+            //     .unwrap()
+            //     .resolve(engine, next_val)?;
         }
         Ok(())
     }
@@ -53,11 +55,11 @@ impl Promise {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve(
         &mut self,
-        engine: &mut rhai::Engine,
+        runtime: &Box<dyn ScriptingRuntime>,
         val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
         if let Ok(mut inner) = self.inner.lock() {
-            inner.resolve(engine, val)?;
+            inner.resolve(runtime, val)?;
         }
         Ok(())
     }
@@ -67,7 +69,7 @@ impl Promise {
         let mut inner = self.inner.lock().unwrap();
         let following_inner = Arc::new(Mutex::new(PromiseInner {
             callbacks: vec![],
-            context_data: inner.context_data.clone(),
+            // context_data: inner.context_data.clone(),
         }));
 
         inner.callbacks.push(PromiseCallback {
