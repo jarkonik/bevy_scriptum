@@ -1,12 +1,12 @@
 use bevy::{
-    asset::{AssetLoader, LoadContext, LoadedAsset},
+    asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
     reflect::{TypePath, TypeUuid},
     utils::BoxedFuture,
 };
 use serde::Deserialize;
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
-#[derive(Debug, Deserialize, TypeUuid, TypePath)]
+#[derive(Asset, Debug, Deserialize, TypeUuid, TypePath)]
 #[uuid = "3ed4b68b-4f5d-4d82-96f6-5194e358921a"]
 pub struct RhaiScript(pub String);
 
@@ -15,15 +15,22 @@ pub struct RhaiScript(pub String);
 pub struct RhaiScriptLoader;
 
 impl AssetLoader for RhaiScriptLoader {
+    type Asset = RhaiScript;
+    type Settings = ();
+    type Error = anyhow::Error;
+
     fn load<'a>(
         &'a self,
-        bytes: &'a [u8],
-        load_context: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, Result<(), bevy::asset::Error>> {
+        reader: &'a mut Reader,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext,
+    ) -> BoxedFuture<'a, anyhow::Result<RhaiScript, anyhow::Error>> {
         Box::pin(async move {
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+
             let rhai_script = RhaiScript(String::from_utf8(bytes.to_vec())?);
-            load_context.set_default_asset(LoadedAsset::new(rhai_script));
-            Ok(())
+            Ok(rhai_script)
         })
     }
 

@@ -5,7 +5,7 @@ use rhai::ImmutableString;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::default())
+        .add_plugins(ScriptingPlugin)
         .add_script_function(String::from("fun_without_params"), || {
             println!("called without params");
         })
