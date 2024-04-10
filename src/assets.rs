@@ -1,13 +1,12 @@
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
-    reflect::{TypePath, TypeUuid},
+    reflect::TypePath,
     utils::BoxedFuture,
 };
 use serde::Deserialize;
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
-#[derive(Asset, Debug, Deserialize, TypeUuid, TypePath)]
-#[uuid = "3ed4b68b-4f5d-4d82-96f6-5194e358921a"]
+#[derive(Asset, Debug, Deserialize, TypePath)]
 pub struct RhaiScript(pub String);
 
 /// A loader for [RhaiScript] assets.
