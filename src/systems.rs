@@ -49,9 +49,9 @@ pub(crate) fn reload_scripts(
     mut scripts: Query<(Entity, &mut Script)>,
 ) {
     for ev in ev_asset.iter() {
-        if let AssetEvent::Modified { handle } = ev {
+        if let AssetEvent::Modified { id } = ev {
             for (entity, script) in &mut scripts {
-                if script.script == *handle {
+                if script.script.id() == *id {
                     commands.entity(entity).remove::<ScriptData>();
                 }
             }

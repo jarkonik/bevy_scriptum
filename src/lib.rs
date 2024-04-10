@@ -1,5 +1,3 @@
-//! ⚠️ **Pre-release, alpha version**: API is bound to change, bugs are to be expected.
-//!
 //! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
 //! Currently, only [Rhai](https://rhai.rs/) is supported, but more languages may be added in the future.
 //!
@@ -144,6 +142,7 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|----------------------|
+//! | 0.12         | 0.3                  |
 //! | 0.11         | 0.2                  |
 //! | 0.10         | 0.1                  |
 //!
@@ -218,8 +217,8 @@ pub struct ScriptingPlugin;
 
 impl Plugin for ScriptingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_asset::<RhaiScript>()
-            .init_asset_loader::<RhaiScriptLoader>()
+        app.register_asset_loader(RhaiScriptLoader)
+            .init_asset::<RhaiScript>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
             .add_systems(Startup, init_engine.pipe(log_errors))
