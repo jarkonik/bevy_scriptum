@@ -4,7 +4,7 @@ use bevy_scriptum::{prelude::*, Script};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::default())
+        .add_plugins(ScriptingPlugin)
         .add_systems(Startup, startup)
         .run();
 }

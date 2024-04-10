@@ -13,7 +13,7 @@ fn main() {
             loop {
                 if let Some(app_exit_events) = app.world.get_resource_mut::<Events<AppExit>>() {
                     if app_exit_event_reader
-                        .iter(&app_exit_events)
+                        .read(&app_exit_events)
                         .last()
                         .is_some()
                     {
@@ -24,7 +24,7 @@ fn main() {
             }
         })
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::default())
+        .add_plugins(ScriptingPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, print_entity_names_and_quit)
         .add_script_function(String::from("spawn_entity"), spawn_entity)
