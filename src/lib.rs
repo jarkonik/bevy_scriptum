@@ -187,7 +187,7 @@ use std::sync::{Arc, Mutex};
 pub use crate::components::{Script, ScriptData};
 pub use assets::RhaiScript;
 
-use bevy::prelude::*;
+use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
 use systems::{init_callbacks, init_engine, log_errors, process_calls};
@@ -213,18 +213,26 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct Scripting;
+
 #[derive(Default)]
 pub struct ScriptingPlugin;
 
 impl Plugin for ScriptingPlugin {
     fn build(&self, app: &mut App) {
+        app.world
+            .resource_mut::<MainScheduleOrder>()
+            .insert_after(Update, Scripting);
+
         app.register_asset_loader(RhaiScriptLoader)
+            .init_schedule(Scripting)
             .init_asset::<RhaiScript>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
             .add_systems(Startup, init_engine.pipe(log_errors))
             .add_systems(
-                Update,
+                Scripting,
                 (
                     reload_scripts,
                     process_calls.pipe(log_errors).after(process_new_scripts),

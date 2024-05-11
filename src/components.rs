@@ -12,7 +12,7 @@ pub struct Script {
 /// and [rhai::AST] which is a cached AST representation of the script.
 #[derive(Component)]
 pub struct ScriptData {
-    pub(crate) scope: rhai::Scope<'static>,
+    pub scope: rhai::Scope<'static>,
     pub(crate) ast: rhai::AST,
 }
 
