@@ -182,19 +182,20 @@ mod components;
 mod promise;
 mod systems;
 
-mod lua_support;
-mod rhai_support;
+pub mod lua_support;
+pub mod rhai_support;
 
 use std::sync::{Arc, Mutex};
 
 pub use crate::components::{Script, ScriptData};
-pub use crate::rhai_support::RhaiScript;
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
-use lua_support::LuaScript;
+use lua_support::{LuaScript, LuaScriptData};
+use promise::Promise;
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
-use systems::{init_callbacks, init_engine, log_errors, process_calls};
+use rhai_support::{RhaiScript, RhaiScriptData};
+use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
@@ -235,26 +236,72 @@ impl Plugin for ScriptingPlugin {
             .init_asset::<RhaiScript>()
             .init_asset::<LuaScript>()
             .init_resource::<Callbacks>()
-            .insert_resource(ScriptingRuntime::default())
-            .add_systems(Startup, init_engine.pipe(log_errors))
+            .insert_resource(ScriptingRuntime::<rhai::Engine>::default())
+            .insert_resource(ScriptingRuntime::<LuaEngine>::default())
             .add_systems(
                 Scripting,
                 (
-                    reload_scripts,
-                    process_calls.pipe(log_errors).after(process_new_scripts),
+                    reload_scripts::<RhaiScript>,
+                    reload_scripts::<LuaScript>,
+                    process_calls
+                        .pipe(log_errors)
+                        .after(process_new_scripts::<RhaiScript, RhaiScriptData>),
+                    process_calls
+                        .pipe(log_errors)
+                        .after(process_new_scripts::<LuaScript, LuaScriptData>),
                     init_callbacks.pipe(log_errors),
-                    process_new_scripts.pipe(log_errors).after(init_callbacks),
+                    process_new_scripts::<RhaiScript, RhaiScriptData>
+                        .pipe(log_errors)
+                        .after(init_callbacks),
+                    process_new_scripts::<LuaScript, LuaScriptData>
+                        .pipe(log_errors)
+                        .after(init_callbacks),
                 ),
             );
     }
 }
 
-#[derive(Resource, Default)]
-pub struct ScriptingRuntime {
-    engine: Engine,
+#[derive(Resource)]
+pub struct ScriptingRuntime<T: Default> {
+    engine: T,
 }
 
-impl ScriptingRuntime {
+type LuaEngine = Arc<Mutex<mlua::Lua>>;
+
+impl Default for ScriptingRuntime<LuaEngine> {
+    fn default() -> Self {
+        Self {
+            engine: Arc::new(Mutex::new(mlua::Lua::new())),
+        }
+    }
+}
+
+impl Default for ScriptingRuntime<rhai::Engine> {
+    fn default() -> Self {
+        let mut engine = rhai::Engine::default();
+
+        engine
+            .register_type_with_name::<Entity>("Entity")
+            .register_fn("index", |entity: &mut Entity| entity.index());
+        engine
+            .register_type_with_name::<Promise>("Promise")
+            .register_fn("then", Promise::then);
+        engine
+            .register_type_with_name::<Vec3>("Vec3")
+            .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
+                Vec3::new(x as f32, y as f32, z as f32)
+            })
+            .register_get("x", |vec: &mut Vec3| vec.x as f64)
+            .register_get("y", |vec: &mut Vec3| vec.y as f64)
+            .register_get("z", |vec: &mut Vec3| vec.z as f64);
+        #[allow(deprecated)]
+        engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+
+        Self { engine }
+    }
+}
+
+impl ScriptingRuntime<rhai::Engine> {
     /// Get a  mutable reference to the internal [rhai::Engine].
     pub fn engine_mut(&mut self) -> &mut Engine {
         &mut self.engine
@@ -264,10 +311,12 @@ impl ScriptingRuntime {
     pub fn call_fn(
         &mut self,
         function_name: &str,
-        script_data: &mut ScriptData,
+        script_data: &mut ScriptData<RhaiScriptData>,
         entity: Entity,
         args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
+        let script_data = &mut script_data.data;
+
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;
         scope.push(ENTITY_VAR_NAME, entity);

@@ -19,7 +19,7 @@ struct MyType {
 
 fn startup(
     mut commands: Commands,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
+    mut scripting_runtime: ResMut<ScriptingRuntime<rhai::Engine>>,
     assets_server: Res<AssetServer>,
 ) {
     let engine = scripting_runtime.engine_mut();

@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script, ScriptData, ScriptingRuntime};
+use bevy_scriptum::{
+    lua_support::LuaScriptData, prelude::*, rhai_support::RhaiScriptData, Script, ScriptData,
+    ScriptingRuntime,
+};
 
 use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
 
@@ -17,8 +20,15 @@ fn test_rhai_function_gets_called_from_rust() {
         app.add_systems(Update, call_rhai_on_update_from_rust);
     });
 
-    let script_data = app.world.get::<ScriptData>(entity_id).unwrap();
-    let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
+    let script_data = app
+        .world
+        .get::<ScriptData<RhaiScriptData>>(entity_id)
+        .unwrap();
+    let state = script_data
+        .data
+        .scope
+        .get_value::<rhai::Map>("state")
+        .unwrap();
     assert_eq!(state["times_called"].clone_cast::<i64>(), 1);
 }
 
@@ -50,8 +60,8 @@ fn test_rust_function_gets_called_from_rhai() {
 }
 
 fn call_rhai_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut ScriptData)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
+    mut scripted_entities: Query<(Entity, &mut ScriptData<RhaiScriptData>)>,
+    mut scripting_runtime: ResMut<ScriptingRuntime<rhai::Engine>>,
 ) {
     let (entity, mut script_data) = scripted_entities.single_mut();
     scripting_runtime
