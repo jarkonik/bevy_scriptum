@@ -1,5 +1,5 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
-use bevy_scriptum::{prelude::*, Script};
+use bevy_scriptum::{lua_support::LuaScript, prelude::*, Script};
 
 #[derive(Component)]
 struct Comp;
@@ -36,7 +36,7 @@ fn spawn_entity(mut commands: Commands) {
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
-    commands.spawn((Script::new(
+    commands.spawn((Script::<LuaScript>::new(
         assets_server.load("examples/side_effects.rhai"),
     ),));
 }

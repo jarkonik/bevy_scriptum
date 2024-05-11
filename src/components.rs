@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
-use super::rhai_support::RhaiScript;
-
 /// A component that represents a script.
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Script<T: Asset> {
     pub script: Handle<T>,
 }
@@ -13,11 +11,4 @@ pub struct Script<T: Asset> {
 #[derive(Component)]
 pub struct ScriptData<T> {
     pub data: T,
-}
-
-impl Script<RhaiScript> {
-    /// Create a new script component from a handle to a [RhaiScript] obtained using [AssetServer].
-    pub fn new(script: Handle<RhaiScript>) -> Self {
-        Self { script }
-    }
 }

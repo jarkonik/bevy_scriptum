@@ -1,7 +1,7 @@
 use std::any::TypeId;
 
 use bevy::{
-    asset::Asset,
+    asset::{Asset, Handle},
     ecs::{component::Component, entity::Entity},
     math::Vec3,
     reflect::TypePath,
@@ -10,8 +10,8 @@ use rhai::{CallFnOptions, Dynamic, FuncArgs, Scope};
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine,
-    RegisterRawFn, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, RegisterRawFn,
+    Script, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
 };
 
 /// A rhai language script that can be loaded by the [crate::ScriptingPlugin].
@@ -30,7 +30,7 @@ impl FileExtension for RhaiScript {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 pub struct RhaiScriptData {
     pub scope: rhai::Scope<'static>,
     pub(crate) ast: rhai::AST,
@@ -69,7 +69,7 @@ impl CreateScriptData<rhai::Engine> for RhaiScript {
 }
 
 impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<rhai::Engine> {
-    fn register_raw_fn<'types>(
+    fn register_raw_fn(
         &mut self,
         name: &str,
         arg_types: Vec<TypeId>,
@@ -136,5 +136,12 @@ impl Default for ScriptingRuntime<rhai::Engine> {
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
         Self { engine }
+    }
+}
+
+impl Script<RhaiScript> {
+    /// Create a new script component from a handle to a [RhaiScript] obtained using [AssetServer].
+    pub fn new(script: Handle<RhaiScript>) -> Self {
+        Self { script }
     }
 }

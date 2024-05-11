@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    prelude::*, rhai_support::RhaiScriptData, Script, ScriptData,
-    ScriptingRuntime,
+    prelude::*,
+    rhai_support::{RhaiScript, RhaiScriptData},
+    Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;
 
@@ -16,7 +17,7 @@ fn test_rhai_function_gets_called_from_rust() {
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load("tests/rhai/rhai_function_gets_called_from_rust.rhai");
-    let entity_id = app.world.spawn(Script::new(asset)).id();
+    let entity_id = app.world.spawn(Script::<RhaiScript>::new(asset)).id();
 
     run_scripting_with(&mut app, |app| {
         app.add_systems(Update, call_rhai_on_update_from_rust);
@@ -47,7 +48,7 @@ fn test_rust_function_gets_called_from_rhai() {
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load("tests/rhai/rust_function_gets_called_from_rhai.rhai");
-    app.world.spawn(Script::new(asset));
+    app.world.spawn(Script::<RhaiScript>::new(asset));
 
     run_scripting_with(&mut app, |app| {
         app.add_systems(Update, call_rhai_on_update_from_rust);

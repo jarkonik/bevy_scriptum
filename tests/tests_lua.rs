@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    lua_support::{LuaEngine, LuaScriptData},
+    lua_support::{LuaEngine, LuaScript, LuaScriptData},
     prelude::*,
     Script, ScriptData, ScriptingRuntime,
 };
@@ -17,7 +17,7 @@ fn test_lua_function_gets_called_from_rust() {
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load("tests/lua/lua_function_gets_called_from_rust.lua");
-    let entity_id = app.world.spawn(Script::new(asset)).id();
+    let entity_id = app.world.spawn(Script::<LuaScript>::new(asset)).id();
 
     run_scripting_with(&mut app, |app| {
         app.add_systems(Update, call_lua_on_update_from_rust);
@@ -43,8 +43,8 @@ fn test_rust_function_gets_called_from_lua() {
     });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset = asset_server.load("tests/rhai/rust_function_gets_called_from_lua.lua");
-    app.world.spawn(Script::new(asset));
+    let asset = asset_server.load("tests/lua/rust_function_gets_called_from_lua.lua");
+    app.world.spawn(Script::<LuaScript>::new(asset));
 
     run_scripting_with(&mut app, |app| {
         app.add_systems(Update, call_lua_on_update_from_rust);

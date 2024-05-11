@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script};
+use bevy_scriptum::{prelude::*, rhai_support::RhaiScript, Script};
 
 fn main() {
     App::new()
@@ -10,7 +10,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
-    commands.spawn(Script::new(
+    commands.spawn(Script::<RhaiScript>::new(
         assets_server.load("examples/entity_variable.rhai"),
     ));
 }
