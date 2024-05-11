@@ -1,55 +1,56 @@
 use std::sync::{Arc, Mutex};
 
 #[allow(deprecated)]
-use rhai::{Dynamic};
+use rhai::Dynamic;
 use rhai::{EvalAltResult, FnPtr};
 
 /// A struct that represents a function that will get called when the Promise is resolved.
-pub(crate) struct PromiseCallback<D> {
+pub(crate) struct PromiseCallback<D, C> {
     callback: Dynamic,
-    following_promise: Arc<Mutex<PromiseInner<D>>>,
+    following_promise: Arc<Mutex<PromiseInner<D, C>>>,
 }
 
 /// Internal representation of a Promise.
-pub(crate) struct PromiseInner<D> {
-    pub(crate) callbacks: Vec<PromiseCallback<D>>,
+pub(crate) struct PromiseInner<D, C> {
+    pub(crate) callbacks: Vec<PromiseCallback<D, C>>,
     #[allow(deprecated)]
     pub(crate) context_data: D,
 }
 
 /// A struct that represents a Promise.
 #[derive(Clone)]
-pub struct Promise<D> {
-    pub(crate) inner: Arc<Mutex<PromiseInner<D>>>,
+pub struct Promise<D, C> {
+    pub(crate) inner: Arc<Mutex<PromiseInner<D, C>>>,
 }
 
-impl PromiseInner<rhai::NativeCallContextStore> {
+impl<D, C> PromiseInner<D, C> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve(
         &mut self,
         engine: &mut rhai::Engine,
         val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
-        for callback in &self.callbacks {
-            let f = callback.callback.clone_cast::<FnPtr>();
-            #[allow(deprecated)]
-            let context = self.context_data.create_context(engine);
-            let next_val = if val.is_unit() {
-                f.call_raw(&context, None, [])?
-            } else {
-                f.call_raw(&context, None, [val.clone()])?
-            };
-            callback
-                .following_promise
-                .lock()
-                .unwrap()
-                .resolve(engine, next_val)?;
-        }
-        Ok(())
+        todo!();
+        // for callback in &self.callbacks {
+        //     let f = callback.callback.clone_cast::<FnPtr>();
+        //     #[allow(deprecated)]
+        //     let context = self.context_data.create_context(engine);
+        //     let next_val = if val.is_unit() {
+        //         f.call_raw(&context, None, [])?
+        //     } else {
+        //         f.call_raw(&context, None, [val.clone()])?
+        //     };
+        //     callback
+        //         .following_promise
+        //         .lock()
+        //         .unwrap()
+        //         .resolve(engine, next_val)?;
+        // }
+        // Ok(())
     }
 }
 
-impl Promise<rhai::NativeCallContextStore> {
+impl<D: Clone + Send + 'static, C: Clone + 'static> Promise<D, C> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve(
         &mut self,

@@ -1,3 +1,3 @@
-function Test_func()
-	Rust_func()
+function test_func()
+	rust_func()
 end

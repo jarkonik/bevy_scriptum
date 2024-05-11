@@ -187,6 +187,7 @@ pub mod rhai_support;
 
 use std::{
     any::TypeId,
+    fmt::Debug,
     sync::{Arc, Mutex},
 };
 
@@ -194,10 +195,10 @@ pub use crate::components::{Script, ScriptData};
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
-use lua_support::{LuaEngine, LuaScript, LuaScriptData};
+use lua_support::{LuaCallback, LuaEngine, LuaScript, LuaScriptData};
 use promise::Promise;
 use rhai::{EvalAltResult, ParseError};
-use rhai_support::{RhaiScript, RhaiScriptData};
+use rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -238,7 +239,8 @@ impl Plugin for ScriptingPlugin {
             .init_schedule(Scripting)
             .init_asset::<RhaiScript>()
             .init_asset::<LuaScript>()
-            .init_resource::<Callbacks<rhai::NativeCallContextStore>>()
+            .init_resource::<Callbacks<(), RhaiCallback>>()
+            .init_resource::<Callbacks<(), LuaCallback>>()
             .insert_resource(ScriptingRuntime::<rhai::Engine>::default())
             .insert_resource(ScriptingRuntime::<LuaEngine>::default())
             .add_systems(
@@ -246,36 +248,36 @@ impl Plugin for ScriptingPlugin {
                 (
                     reload_scripts::<RhaiScript>,
                     reload_scripts::<LuaScript>,
-                    process_calls
+                    process_calls::<(), RhaiCallback>
                         .pipe(log_errors)
                         .after(process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>),
-                    process_calls
+                    process_calls::<(), LuaCallback>
                         .pipe(log_errors)
                         .after(process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>),
-                    init_callbacks::<rhai::Engine>.pipe(log_errors),
-                    init_callbacks::<LuaEngine>.pipe(log_errors),
+                    init_callbacks::<rhai::Engine, RhaiCallback, ()>.pipe(log_errors),
+                    init_callbacks::<LuaEngine, LuaCallback, ()>.pipe(log_errors),
                     process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>
                         .pipe(log_errors)
-                        .after(init_callbacks::<rhai::Engine>),
+                        .after(init_callbacks::<rhai::Engine, RhaiCallback, ()>),
                     process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>
                         .pipe(log_errors)
-                        .after(init_callbacks::<LuaEngine>),
+                        .after(init_callbacks::<LuaEngine, LuaCallback, ()>),
                 ),
             );
     }
 }
 
-#[derive(Resource)]
-pub struct ScriptingRuntime<T: Default> {
+#[derive(Resource, Debug)]
+pub struct ScriptingRuntime<T: Default + Debug> {
     engine: T,
 }
 
-pub trait RegisterRawFn<D> {
+pub trait RegisterRawFn<D, C> {
     fn register_raw_fn(
         &mut self,
         name: &str,
         arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<D> + Send + Sync + 'static,
+        f: impl Fn() -> Promise<D, C> + Send + Sync + 'static,
     );
 }
 
@@ -303,12 +305,12 @@ pub trait AddScriptFunctionAppExt {
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
 #[derive(Resource)]
-struct Callbacks<D> {
-    uninitialized_callbacks: Vec<Callback<D>>,
-    callbacks: Mutex<Vec<Callback<D>>>,
+struct Callbacks<D, C> {
+    uninitialized_callbacks: Vec<Callback<D, C>>,
+    callbacks: Mutex<Vec<Callback<D, C>>>,
 }
 
-impl<D> Default for Callbacks<D> {
+impl<D, C> Default for Callbacks<D, C> {
     fn default() -> Self {
         Self {
             callbacks: Mutex::new(Vec::new()),
@@ -333,9 +335,7 @@ impl AddScriptFunctionAppExt for App {
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
     ) -> &mut Self {
         let system = system.into_callback_system(&mut self.world);
-        let mut callbacks_resource = self
-            .world
-            .resource_mut::<Callbacks<rhai::NativeCallContextStore>>();
+        let mut callbacks_resource = self.world.resource_mut::<Callbacks<(), ()>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
@@ -344,6 +344,16 @@ impl AddScriptFunctionAppExt for App {
         });
         self
     }
+}
+
+pub trait CallFunction<T> {
+    fn call_fn(
+        &mut self,
+        function_name: &str,
+        script_data: &mut ScriptData<T>,
+        entity: Entity,
+        args: (),
+    ) -> Result<(), ScriptingError>;
 }
 
 pub mod prelude {

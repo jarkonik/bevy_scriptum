@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_scriptum::{
     lua_support::{LuaEngine, LuaScript, LuaScriptData},
     prelude::*,
-    Script, ScriptData, ScriptingRuntime,
+    CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;
 
@@ -61,10 +61,10 @@ fn test_rust_function_gets_called_from_lua() {
 
 fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData<LuaScriptData>)>,
-    _scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
+    mut scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
 ) {
-    let (_entity, _script_data) = scripted_entities.single_mut();
-    // scripting_runtime
-    //     .call_fn("test_func", &mut script_data, entity, ())
-    //     .unwrap();
+    let (entity, mut script_data) = scripted_entities.single_mut();
+    scripting_runtime
+        .call_fn("test_func", &mut script_data, entity, ())
+        .unwrap();
 }

@@ -5,14 +5,14 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::component::Component,
+    ecs::{component::Component, entity::Entity},
     reflect::TypePath,
 };
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, RegisterRawFn,
-    Script, ScriptingRuntime,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, CallFunction, GetEngine,
+    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
 };
 
 /// A lua language script that can be loaded by the [crate::ScriptingPlugin].
@@ -31,18 +31,25 @@ impl FileExtension for LuaScript {
     }
 }
 
-impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<LuaEngine> {
+impl<D, C> RegisterRawFn<D, C> for ScriptingRuntime<LuaEngine> {
     fn register_raw_fn(
         &mut self,
-        _name: &str,
+        name: &str,
         _arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<rhai::NativeCallContextStore>,
+        f: impl Fn() -> Promise<D, C> + Sync + Send + 'static,
     ) {
         let engine = self.engine.lock().expect("Could not lock engine mutex");
-        engine.create_function(|context, args: ()| {
-            // let result = f();
-            Ok(())
-        });
+        let fun = engine
+            .create_function(move |_, args: ()| {
+                let result = f();
+                Ok(())
+            })
+            .expect("Error creating function");
+
+        engine
+            .globals()
+            .set(name, fun)
+            .expect("Error setting function");
     }
 }
 
@@ -60,10 +67,30 @@ impl CreateScriptData<LuaEngine> for LuaScript {
 
     fn create_script_data(
         &self,
-        _entity: bevy::prelude::Entity,
-        _engine: &mut LuaEngine,
+        entity: bevy::prelude::Entity,
+        engine: &mut LuaEngine,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        Ok(LuaScriptData {})
+        //
+        // let mut scope = Scope::new();
+        //
+        // scope.push(ENTITY_VAR_NAME, entity);
+        //
+        // let ast = engine
+        //     .compile_with_scope(&scope, &self.0)
+        //     .map_err(ScriptingError::CompileError)?;
+        //
+        // engine
+        //     .run_ast_with_scope(&mut scope, &ast)
+        //     .map_err(ScriptingError::RuntimeError)?;
+        //
+        // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        //
+        // Ok(Self::ScriptData { ast, scope })
+        //
+        let engine = engine.lock().expect("Could not lock engine");
+        engine.load(&self.0).exec().expect("Error runnning script");
+
+        Ok(Self::ScriptData {})
     }
 }
 
@@ -83,3 +110,31 @@ impl Script<LuaScript> {
         Self { script }
     }
 }
+
+impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
+    /// Get a  mutable reference to the internal [rhai::Engine].
+
+    /// Call a function that is available in the scope of the script.
+    fn call_fn(
+        &mut self,
+        function_name: &str,
+        script_data: &mut ScriptData<LuaScriptData>,
+        entity: Entity,
+        args: (), // args: impl FuncArgs,
+    ) -> Result<(), ScriptingError> {
+        let engine = self.engine.lock().expect("Could not lock engine");
+        engine
+            .load(format!("{function_name}()"))
+            .exec()
+            .expect("Error calling function");
+        // engine
+        //     .globals()
+        //     .get::<>("function_name")
+        //     .expect("Function not found");
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LuaCallback;

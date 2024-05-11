@@ -10,8 +10,8 @@ use rhai::{CallFnOptions, Dynamic, FuncArgs, Scope};
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, RegisterRawFn,
-    Script, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, CallFunction, GetEngine,
+    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
 };
 
 /// A rhai language script that can be loaded by the [crate::ScriptingPlugin].
@@ -68,12 +68,14 @@ impl CreateScriptData<rhai::Engine> for RhaiScript {
     }
 }
 
-impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<rhai::Engine> {
+impl<D: Send + Clone + 'static, C: Clone + 'static> RegisterRawFn<D, C>
+    for ScriptingRuntime<rhai::Engine>
+{
     fn register_raw_fn(
         &mut self,
         name: &str,
         arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<rhai::NativeCallContextStore> + Sync + Send + 'static,
+        f: impl Fn() -> Promise<D, C> + Sync + Send + 'static,
     ) {
         self.engine
             .register_raw_fn(name, arg_types, move |_context, _args| {
@@ -83,33 +85,33 @@ impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<rhai::Engi
     }
 }
 
-impl ScriptingRuntime<rhai::Engine> {
+impl CallFunction<RhaiScriptData> for ScriptingRuntime<rhai::Engine> {
     /// Get a  mutable reference to the internal [rhai::Engine].
 
     /// Call a function that is available in the scope of the script.
-    pub fn call_fn(
+    fn call_fn(
         &mut self,
         function_name: &str,
         script_data: &mut ScriptData<RhaiScriptData>,
         entity: Entity,
-        args: impl FuncArgs,
+        args: (), // args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
-        let script_data = &mut script_data.data;
-
-        let ast = script_data.ast.clone();
-        let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
-        let options = CallFnOptions::new().eval_ast(false);
-        let result =
-            self.engine
-                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-                e => Err(Box::new(e))?,
-            }
-        }
+        // let script_data = &mut script_data.data;
+        //
+        // let ast = script_data.ast.clone();
+        // let scope = &mut script_data.scope;
+        // scope.push(ENTITY_VAR_NAME, entity);
+        // let options = CallFnOptions::new().eval_ast(false);
+        // let result =
+        //     self.engine
+        //         .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
+        // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        // if let Err(err) = result {
+        //     match *err {
+        //         rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
+        //         e => Err(Box::new(e))?,
+        //     }
+        // }
         Ok(())
     }
 }
@@ -122,8 +124,8 @@ impl Default for ScriptingRuntime<rhai::Engine> {
             .register_type_with_name::<Entity>("Entity")
             .register_fn("index", |entity: &mut Entity| entity.index());
         engine
-            .register_type_with_name::<Promise<rhai::NativeCallContextStore>>("Promise")
-            .register_fn("then", Promise::then);
+            .register_type_with_name::<Promise<(), RhaiCallback>>("Promise")
+            .register_fn("then", Promise::<(), RhaiCallback>::then);
         engine
             .register_type_with_name::<Vec3>("Vec3")
             .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
@@ -145,3 +147,6 @@ impl Script<RhaiScript> {
         Self { script }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct RhaiCallback;

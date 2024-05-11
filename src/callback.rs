@@ -12,23 +12,23 @@ pub struct CallbackSystem {
     pub(crate) arg_types: Vec<TypeId>,
 }
 
-pub(crate) struct FunctionCallEvent<D> {
+pub(crate) struct FunctionCallEvent<D, C> {
     pub(crate) params: Vec<Dynamic>,
-    pub(crate) promise: Promise<D>,
+    pub(crate) promise: Promise<D, C>,
 }
 
 /// A struct representing a Bevy system that can be called from a script.
 #[derive(Clone)]
-pub(crate) struct Callback<D> {
+pub(crate) struct Callback<D, C> {
     pub(crate) name: String,
     pub(crate) system: Arc<Mutex<CallbackSystem>>,
-    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<D>>>>,
+    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<D, C>>>>,
 }
 
 impl CallbackSystem {
-    pub(crate) fn call(
+    pub(crate) fn call<D, C>(
         &mut self,
-        call: &FunctionCallEvent<rhai::NativeCallContextStore>,
+        call: &FunctionCallEvent<D, C>,
         world: &mut World,
     ) -> Dynamic {
         self.system.run(call.params.clone(), world)

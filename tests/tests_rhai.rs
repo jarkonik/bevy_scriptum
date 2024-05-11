@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiScript, RhaiScriptData},
-    Script, ScriptData, ScriptingRuntime,
+    rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData},
+    CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;
 

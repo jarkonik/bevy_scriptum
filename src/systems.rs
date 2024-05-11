@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use bevy::{
     prelude::*,
     utils::tracing::{self},
@@ -6,8 +8,10 @@ use std::fmt::{Debug, Display};
 use tracing::instrument;
 
 use crate::{
-    callback::FunctionCallEvent, components::ScriptData, Callback, Callbacks, GetEngine,
-    RegisterRawFn, ScriptingError,
+    callback::FunctionCallEvent,
+    components::ScriptData,
+    promise::{Promise, PromiseInner},
+    Callback, Callbacks, GetEngine, RegisterRawFn, ScriptingError,
 };
 
 use super::{components::Script, ScriptingRuntime};
@@ -44,7 +48,7 @@ pub trait CreateScriptData<E> {
 pub(crate) fn process_new_scripts<
     A: Asset + CreateScriptData<E> + Debug,
     D: Send + Sync + 'static,
-    E: Send + Sync + 'static + Default,
+    E: Send + Sync + 'static + Default + Debug,
 >(
     mut commands: Commands,
     mut added_scripted_entities: Query<(Entity, &mut Script<A>), Without<ScriptData<D>>>,
@@ -71,20 +75,24 @@ where
 
 /// Initializes callbacks. Registers them in the scripting engine.
 #[instrument(skip(world))]
-pub(crate) fn init_callbacks<E: Send + Sync + 'static + Default>(
+pub(crate) fn init_callbacks<
+    E: Send + Sync + 'static + Default + Debug,
+    C: Clone + 'static,
+    D: Clone + Send + Default + 'static,
+>(
     world: &mut World,
 ) -> Result<(), ScriptingError>
 where
-    ScriptingRuntime<E>: RegisterRawFn<rhai::NativeCallContextStore>,
+    ScriptingRuntime<E>: RegisterRawFn<D, C>,
 {
     let mut callbacks_resource = world
-        .get_resource_mut::<Callbacks<rhai::NativeCallContextStore>>()
+        .get_resource_mut::<Callbacks<D, C>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let mut callbacks = callbacks_resource
         .uninitialized_callbacks
         .drain(..)
-        .collect::<Vec<Callback<rhai::NativeCallContextStore>>>();
+        .collect::<Vec<Callback<D, C>>>();
 
     for callback in callbacks.iter_mut() {
         if let Ok(mut system) = callback.system.lock() {
@@ -102,30 +110,31 @@ where
                 system.arg_types.clone(),
                 // move |context, args| {
                 move || {
-                    todo!();
                     // #[allow(deprecated)]
                     // let context_data = context.store_data();
 
-                    // let promise = Promise {
-                    //     inner: Arc::new(Mutex::new(PromiseInner {
-                    //         callbacks: vec![],
-                    //         context_data,
-                    //     })),
-                    // };
-                    //
-                    // let mut calls = callback.calls.lock().unwrap();
-                    // calls.push(FunctionCallEvent {
-                    //     promise: promise.clone(),
-                    //     params: args.iter_mut().map(|arg| arg.clone()).collect(),
-                    // });
-                    // Ok(promise)
+                    let promise = Promise {
+                        inner: Arc::new(Mutex::new(PromiseInner {
+                            callbacks: vec![],
+                            context_data: D::default(),
+                        })),
+                    };
+
+                    let mut calls = callback.calls.lock().unwrap();
+                    calls.push(FunctionCallEvent {
+                        promise: promise.clone(),
+                        // params: args.iter_mut().map(|arg| arg.clone()).collect(),
+                        params: vec![],
+                    });
+
+                    promise
                 },
             );
         }
     }
 
     let callbacks_resource = world
-        .get_resource_mut::<Callbacks<rhai::NativeCallContextStore>>()
+        .get_resource_mut::<Callbacks<D, C>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
     callbacks_resource
         .callbacks
@@ -137,9 +146,11 @@ where
 }
 
 /// Processes calls. Calls the user-defined callback systems
-pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
+pub(crate) fn process_calls<D: Send + Clone + 'static, C: Clone + 'static>(
+    world: &mut World,
+) -> Result<(), ScriptingError> {
     let callbacks_resource = world
-        .get_resource::<Callbacks<rhai::NativeCallContextStore>>()
+        .get_resource::<Callbacks<D, C>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let callbacks = callbacks_resource.callbacks.lock().unwrap().clone();
@@ -150,7 +161,7 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             .lock()
             .unwrap()
             .drain(..)
-            .collect::<Vec<FunctionCallEvent<rhai::NativeCallContextStore>>>();
+            .collect::<Vec<FunctionCallEvent<D, C>>>();
         for mut call in calls {
             trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
@@ -158,7 +169,7 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             let mut runtime = world
                 .get_resource_mut::<ScriptingRuntime<rhai::Engine>>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
-            call.promise.resolve(&mut runtime.engine, val)?;
+            // call.promise.resolve(&mut runtime.engine, val)?;
         }
     }
     Ok(())
