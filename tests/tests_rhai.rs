@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData},
+    rhai_support::{RhaiScript, RhaiScriptData},
     CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;

@@ -5,7 +5,7 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{component::Component, entity::Entity},
+    ecs::{entity::Entity},
     reflect::TypePath,
 };
 use serde::Deserialize;
@@ -40,8 +40,8 @@ impl<D, C> RegisterRawFn<D, C> for ScriptingRuntime<LuaEngine> {
     ) {
         let engine = self.engine.lock().expect("Could not lock engine mutex");
         let fun = engine
-            .create_function(move |_, args: ()| {
-                let result = f();
+            .create_function(move |_, _args: ()| {
+                let _result = f();
                 Ok(())
             })
             .expect("Error creating function");
@@ -67,7 +67,7 @@ impl CreateScriptData<LuaEngine> for LuaScript {
 
     fn create_script_data(
         &self,
-        entity: bevy::prelude::Entity,
+        _entity: bevy::prelude::Entity,
         engine: &mut LuaEngine,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         //
@@ -118,9 +118,9 @@ impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
     fn call_fn(
         &mut self,
         function_name: &str,
-        script_data: &mut ScriptData<LuaScriptData>,
-        entity: Entity,
-        args: (), // args: impl FuncArgs,
+        _script_data: &mut ScriptData<LuaScriptData>,
+        _entity: Entity,
+        _args: (), // args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
         let engine = self.engine.lock().expect("Could not lock engine");
         engine

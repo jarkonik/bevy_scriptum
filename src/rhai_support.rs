@@ -2,11 +2,11 @@ use std::any::TypeId;
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{component::Component, entity::Entity},
+    ecs::{entity::Entity},
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{CallFnOptions, Dynamic, FuncArgs, Scope};
+use rhai::{Scope};
 use serde::Deserialize;
 
 use crate::{
@@ -91,10 +91,10 @@ impl CallFunction<RhaiScriptData> for ScriptingRuntime<rhai::Engine> {
     /// Call a function that is available in the scope of the script.
     fn call_fn(
         &mut self,
-        function_name: &str,
-        script_data: &mut ScriptData<RhaiScriptData>,
-        entity: Entity,
-        args: (), // args: impl FuncArgs,
+        _function_name: &str,
+        _script_data: &mut ScriptData<RhaiScriptData>,
+        _entity: Entity,
+        _args: (), // args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
         // let script_data = &mut script_data.data;
         //

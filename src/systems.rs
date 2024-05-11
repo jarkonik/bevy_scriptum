@@ -162,11 +162,11 @@ pub(crate) fn process_calls<D: Send + Clone + 'static, C: Clone + 'static>(
             .unwrap()
             .drain(..)
             .collect::<Vec<FunctionCallEvent<D, C>>>();
-        for mut call in calls {
+        for call in calls {
             trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
-            let val = system.call(&call, world);
-            let mut runtime = world
+            let _val = system.call(&call, world);
+            let _runtime = world
                 .get_resource_mut::<ScriptingRuntime<rhai::Engine>>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
             // call.promise.resolve(&mut runtime.engine, val)?;

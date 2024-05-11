@@ -1,7 +1,7 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData},
+    rhai_support::{RhaiScript, RhaiScriptData},
     CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 

@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 #[allow(deprecated)]
 use rhai::Dynamic;
-use rhai::{EvalAltResult, FnPtr};
+use rhai::{EvalAltResult};
 
 /// A struct that represents a function that will get called when the Promise is resolved.
 pub(crate) struct PromiseCallback<D, C> {
@@ -27,8 +27,8 @@ impl<D, C> PromiseInner<D, C> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve(
         &mut self,
-        engine: &mut rhai::Engine,
-        val: Dynamic,
+        _engine: &mut rhai::Engine,
+        _val: Dynamic,
     ) -> Result<(), Box<EvalAltResult>> {
         todo!();
         // for callback in &self.callbacks {
