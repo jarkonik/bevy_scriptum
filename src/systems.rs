@@ -4,15 +4,13 @@ use bevy::{
 };
 use std::{
     fmt::{Debug, Display},
-    sync::{Arc, Mutex},
 };
 use tracing::instrument;
 
 use crate::{
     callback::FunctionCallEvent,
     components::ScriptData,
-    promise::{Promise, PromiseInner},
-    Callback, Callbacks, GetEngine, RegisterRawFn, ScriptingError, ENTITY_VAR_NAME,
+    Callback, Callbacks, GetEngine, RegisterRawFn, ScriptingError,
 };
 
 use super::{components::Script, ScriptingRuntime};

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 #[allow(deprecated)]
-use rhai::{Dynamic, NativeCallContextStore};
+use rhai::{Dynamic};
 use rhai::{EvalAltResult, FnPtr};
 
 /// A struct that represents a function that will get called when the Promise is resolved.

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    lua_support::LuaScriptData, prelude::*, rhai_support::RhaiScriptData, Script, ScriptData,
+    prelude::*, rhai_support::RhaiScriptData, Script, ScriptData,
     ScriptingRuntime,
 };
 use tracing_test::traced_test;

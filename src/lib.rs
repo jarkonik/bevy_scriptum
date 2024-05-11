@@ -196,7 +196,7 @@ use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
 use lua_support::{LuaEngine, LuaScript, LuaScriptData};
 use promise::Promise;
-use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
+use rhai::{EvalAltResult, ParseError};
 use rhai_support::{RhaiScript, RhaiScriptData};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -271,9 +271,9 @@ pub struct ScriptingRuntime<T: Default> {
 }
 
 pub trait RegisterRawFn<D> {
-    fn register_raw_fn<'name>(
+    fn register_raw_fn(
         &mut self,
-        name: &'name str,
+        name: &str,
         arg_types: Vec<TypeId>,
         f: impl Fn() -> Promise<D> + Send + Sync + 'static,
     );

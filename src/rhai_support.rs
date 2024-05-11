@@ -10,7 +10,7 @@ use rhai::{CallFnOptions, Dynamic, FuncArgs, Scope};
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, LuaEngine,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine,
     RegisterRawFn, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
 };
 
@@ -69,14 +69,14 @@ impl CreateScriptData<rhai::Engine> for RhaiScript {
 }
 
 impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<rhai::Engine> {
-    fn register_raw_fn<'name, 'types>(
+    fn register_raw_fn<'types>(
         &mut self,
-        name: &'name str,
+        name: &str,
         arg_types: Vec<TypeId>,
         f: impl Fn() -> Promise<rhai::NativeCallContextStore> + Sync + Send + 'static,
     ) {
         self.engine
-            .register_raw_fn(name, arg_types, move |context, args| {
+            .register_raw_fn(name, arg_types, move |_context, _args| {
                 let result = f();
                 Ok(result)
             });

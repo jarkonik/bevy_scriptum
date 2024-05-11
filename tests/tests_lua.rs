@@ -23,7 +23,7 @@ fn test_lua_function_gets_called_from_rust() {
         app.add_systems(Update, call_lua_on_update_from_rust);
     });
 
-    let script_data = app
+    let _script_data = app
         .world
         .get::<ScriptData<LuaScriptData>>(entity_id)
         .unwrap();
@@ -61,9 +61,9 @@ fn test_rust_function_gets_called_from_lua() {
 
 fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData<LuaScriptData>)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
+    _scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
 ) {
-    let (entity, mut script_data) = scripted_entities.single_mut();
+    let (_entity, _script_data) = scripted_entities.single_mut();
     // scripting_runtime
     //     .call_fn("test_func", &mut script_data, entity, ())
     //     .unwrap();

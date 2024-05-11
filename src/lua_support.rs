@@ -7,8 +7,7 @@ use bevy::{asset::Asset, ecs::component::Component, reflect::TypePath};
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, RegisterRawFn,
-    ScriptingError, ScriptingRuntime,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, GetEngine, RegisterRawFn, ScriptingRuntime,
 };
 
 /// A lua language script that can be loaded by the [crate::ScriptingPlugin].
@@ -28,11 +27,11 @@ impl FileExtension for LuaScript {
 }
 
 impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<LuaEngine> {
-    fn register_raw_fn<'name, 'types>(
+    fn register_raw_fn<'types>(
         &mut self,
-        name: &'name str,
-        arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<rhai::NativeCallContextStore>,
+        _name: &str,
+        _arg_types: Vec<TypeId>,
+        _f: impl Fn() -> Promise<rhai::NativeCallContextStore>,
     ) {
         todo!()
     }
@@ -52,8 +51,8 @@ impl CreateScriptData<LuaEngine> for LuaScript {
 
     fn create_script_data(
         &self,
-        entity: bevy::prelude::Entity,
-        engine: &mut LuaEngine,
+        _entity: bevy::prelude::Entity,
+        _engine: &mut LuaEngine,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         todo!()
     }
