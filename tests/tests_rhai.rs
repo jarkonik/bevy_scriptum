@@ -26,22 +26,6 @@ fn test_rhai_function_gets_called_from_rust() {
     assert_eq!(state["times_called"].clone_cast::<i64>(), 1);
 }
 
-fn call_rhai_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut ScriptData)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
-) {
-    let (entity, mut script_data) = scripted_entities.single_mut();
-    scripting_runtime
-        .call_fn("test_func", &mut script_data, entity, ())
-        .unwrap();
-}
-
-fn run_scripting_with(app: &mut App, f: impl FnOnce(&mut App)) {
-    app.update(); // Execute plugin internal systems
-    f(app);
-    app.update(); // Execute systems added by callback
-}
-
 #[test]
 fn test_rust_function_gets_called_from_rhai() {
     let mut app = build_test_app();
@@ -72,4 +56,20 @@ fn test_rust_function_gets_called_from_rhai() {
             .times_called,
         1
     );
+}
+
+fn call_rhai_on_update_from_rust(
+    mut scripted_entities: Query<(Entity, &mut ScriptData)>,
+    mut scripting_runtime: ResMut<ScriptingRuntime>,
+) {
+    let (entity, mut script_data) = scripted_entities.single_mut();
+    scripting_runtime
+        .call_fn("test_func", &mut script_data, entity, ())
+        .unwrap();
+}
+
+fn run_scripting_with(app: &mut App, f: impl FnOnce(&mut App)) {
+    app.update(); // Execute plugin internal systems
+    f(app);
+    app.update(); // Execute systems added by callback
 }
