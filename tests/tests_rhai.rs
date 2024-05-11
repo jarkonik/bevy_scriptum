@@ -3,12 +3,14 @@ use bevy_scriptum::{
     lua_support::LuaScriptData, prelude::*, rhai_support::RhaiScriptData, Script, ScriptData,
     ScriptingRuntime,
 };
+use tracing_test::traced_test;
 
 use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
 
 mod utils;
 
 #[test]
+#[traced_test]
 fn test_rhai_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
@@ -33,6 +35,7 @@ fn test_rhai_function_gets_called_from_rust() {
 }
 
 #[test]
+#[traced_test]
 fn test_rust_function_gets_called_from_rhai() {
     let mut app = build_test_app();
 

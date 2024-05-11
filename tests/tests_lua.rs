@@ -1,11 +1,17 @@
 use bevy::prelude::*;
-use bevy_scriptum::{lua_support::LuaScriptData, prelude::*, Script, ScriptData, ScriptingRuntime};
+use bevy_scriptum::{
+    lua_support::{LuaEngine, LuaScriptData},
+    prelude::*,
+    Script, ScriptData, ScriptingRuntime,
+};
+use tracing_test::traced_test;
 
 use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
 
 mod utils;
 
 #[test]
+#[traced_test]
 fn test_lua_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
@@ -26,6 +32,7 @@ fn test_lua_function_gets_called_from_rust() {
 }
 
 #[test]
+#[traced_test]
 fn test_rust_function_gets_called_from_lua() {
     let mut app = build_test_app();
 
@@ -54,7 +61,7 @@ fn test_rust_function_gets_called_from_lua() {
 
 fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData<LuaScriptData>)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime<rhai::Engine>>,
+    mut scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
 ) {
     let (entity, mut script_data) = scripted_entities.single_mut();
     // scripting_runtime

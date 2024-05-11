@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script, ScriptingRuntime};
+use bevy_scriptum::{prelude::*, GetEngine as _, Script, ScriptingRuntime};
 
 fn main() {
     App::new()

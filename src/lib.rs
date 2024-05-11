@@ -185,13 +185,16 @@ mod systems;
 pub mod lua_support;
 pub mod rhai_support;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    any::TypeId,
+    sync::{Arc, Mutex},
+};
 
 pub use crate::components::{Script, ScriptData};
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
-use lua_support::{LuaScript, LuaScriptData};
+use lua_support::{LuaEngine, LuaScript, LuaScriptData};
 use promise::Promise;
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
 use rhai_support::{RhaiScript, RhaiScriptData};
@@ -235,7 +238,7 @@ impl Plugin for ScriptingPlugin {
             .init_schedule(Scripting)
             .init_asset::<RhaiScript>()
             .init_asset::<LuaScript>()
-            .init_resource::<Callbacks>()
+            .init_resource::<Callbacks<rhai::NativeCallContextStore>>()
             .insert_resource(ScriptingRuntime::<rhai::Engine>::default())
             .insert_resource(ScriptingRuntime::<LuaEngine>::default())
             .add_systems(
@@ -245,17 +248,18 @@ impl Plugin for ScriptingPlugin {
                     reload_scripts::<LuaScript>,
                     process_calls
                         .pipe(log_errors)
-                        .after(process_new_scripts::<RhaiScript, RhaiScriptData>),
+                        .after(process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>),
                     process_calls
                         .pipe(log_errors)
-                        .after(process_new_scripts::<LuaScript, LuaScriptData>),
-                    init_callbacks.pipe(log_errors),
-                    process_new_scripts::<RhaiScript, RhaiScriptData>
+                        .after(process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>),
+                    init_callbacks::<rhai::Engine>.pipe(log_errors),
+                    init_callbacks::<LuaEngine>.pipe(log_errors),
+                    process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>
                         .pipe(log_errors)
-                        .after(init_callbacks),
-                    process_new_scripts::<LuaScript, LuaScriptData>
+                        .after(init_callbacks::<rhai::Engine>),
+                    process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>
                         .pipe(log_errors)
-                        .after(init_callbacks),
+                        .after(init_callbacks::<LuaEngine>),
                 ),
             );
     }
@@ -266,73 +270,17 @@ pub struct ScriptingRuntime<T: Default> {
     engine: T,
 }
 
-type LuaEngine = Arc<Mutex<mlua::Lua>>;
-
-impl Default for ScriptingRuntime<LuaEngine> {
-    fn default() -> Self {
-        Self {
-            engine: Arc::new(Mutex::new(mlua::Lua::new())),
-        }
-    }
-}
-
-impl Default for ScriptingRuntime<rhai::Engine> {
-    fn default() -> Self {
-        let mut engine = rhai::Engine::default();
-
-        engine
-            .register_type_with_name::<Entity>("Entity")
-            .register_fn("index", |entity: &mut Entity| entity.index());
-        engine
-            .register_type_with_name::<Promise>("Promise")
-            .register_fn("then", Promise::then);
-        engine
-            .register_type_with_name::<Vec3>("Vec3")
-            .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-                Vec3::new(x as f32, y as f32, z as f32)
-            })
-            .register_get("x", |vec: &mut Vec3| vec.x as f64)
-            .register_get("y", |vec: &mut Vec3| vec.y as f64)
-            .register_get("z", |vec: &mut Vec3| vec.z as f64);
-        #[allow(deprecated)]
-        engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
-
-        Self { engine }
-    }
-}
-
-impl ScriptingRuntime<rhai::Engine> {
-    /// Get a  mutable reference to the internal [rhai::Engine].
-    pub fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
-    }
-
-    /// Call a function that is available in the scope of the script.
-    pub fn call_fn(
+pub trait RegisterRawFn<D> {
+    fn register_raw_fn<'name>(
         &mut self,
-        function_name: &str,
-        script_data: &mut ScriptData<RhaiScriptData>,
-        entity: Entity,
-        args: impl FuncArgs,
-    ) -> Result<(), ScriptingError> {
-        let script_data = &mut script_data.data;
+        name: &'name str,
+        arg_types: Vec<TypeId>,
+        f: impl Fn() -> Promise<D> + Send + Sync + 'static,
+    );
+}
 
-        let ast = script_data.ast.clone();
-        let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
-        let options = CallFnOptions::new().eval_ast(false);
-        let result =
-            self.engine
-                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-                e => Err(Box::new(e))?,
-            }
-        }
-        Ok(())
-    }
+pub trait GetEngine<T> {
+    fn engine_mut(&mut self) -> &mut T;
 }
 
 /// An extension trait for [App] that allows to register a script function.
@@ -354,10 +302,19 @@ pub trait AddScriptFunctionAppExt {
 }
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
-#[derive(Resource, Default)]
-struct Callbacks {
-    uninitialized_callbacks: Vec<Callback>,
-    callbacks: Mutex<Vec<Callback>>,
+#[derive(Resource)]
+struct Callbacks<D> {
+    uninitialized_callbacks: Vec<Callback<D>>,
+    callbacks: Mutex<Vec<Callback<D>>>,
+}
+
+impl<D> Default for Callbacks<D> {
+    fn default() -> Self {
+        Self {
+            callbacks: Mutex::new(Vec::new()),
+            uninitialized_callbacks: Vec::new(),
+        }
+    }
 }
 
 impl AddScriptFunctionAppExt for App {
@@ -376,7 +333,9 @@ impl AddScriptFunctionAppExt for App {
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
     ) -> &mut Self {
         let system = system.into_callback_system(&mut self.world);
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks>();
+        let mut callbacks_resource = self
+            .world
+            .resource_mut::<Callbacks<rhai::NativeCallContextStore>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,

@@ -5,25 +5,25 @@ use rhai::{Dynamic, NativeCallContextStore};
 use rhai::{EvalAltResult, FnPtr};
 
 /// A struct that represents a function that will get called when the Promise is resolved.
-pub(crate) struct PromiseCallback {
+pub(crate) struct PromiseCallback<D> {
     callback: Dynamic,
-    following_promise: Arc<Mutex<PromiseInner>>,
+    following_promise: Arc<Mutex<PromiseInner<D>>>,
 }
 
 /// Internal representation of a Promise.
-pub(crate) struct PromiseInner {
-    pub(crate) callbacks: Vec<PromiseCallback>,
+pub(crate) struct PromiseInner<D> {
+    pub(crate) callbacks: Vec<PromiseCallback<D>>,
     #[allow(deprecated)]
-    pub(crate) context_data: NativeCallContextStore,
+    pub(crate) context_data: D,
 }
 
 /// A struct that represents a Promise.
 #[derive(Clone)]
-pub struct Promise {
-    pub(crate) inner: Arc<Mutex<PromiseInner>>,
+pub struct Promise<D> {
+    pub(crate) inner: Arc<Mutex<PromiseInner<D>>>,
 }
 
-impl PromiseInner {
+impl PromiseInner<rhai::NativeCallContextStore> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve(
         &mut self,
@@ -49,7 +49,7 @@ impl PromiseInner {
     }
 }
 
-impl Promise {
+impl Promise<rhai::NativeCallContextStore> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve(
         &mut self,

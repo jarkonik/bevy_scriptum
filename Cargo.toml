@@ -21,3 +21,7 @@ rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"] }
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 mlua = { version = "0.9.7", features = ["lua52", "vendored", "send", "async"] }
+tracing = "0.1.40"
+
+[dev-dependencies]
+tracing-test = "0.2.4"

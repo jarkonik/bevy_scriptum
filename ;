@@ -3,7 +3,6 @@ use std::any::TypeId;
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity},
-    math::Vec3,
     reflect::TypePath,
 };
 use rhai::{CallFnOptions, Dynamic, FuncArgs, Scope};
@@ -68,15 +67,15 @@ impl CreateScriptData<rhai::Engine> for RhaiScript {
     }
 }
 
-impl RegisterRawFn<rhai::NativeCallContextStore> for ScriptingRuntime<rhai::Engine> {
+impl RegisterRawFn for ScriptingRuntime<rhai::Engine> {
     fn register_raw_fn<'name, 'types>(
         &mut self,
         name: &'name str,
         arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<rhai::NativeCallContextStore> + Sync + Send + 'static,
+        f: impl Fn() -> Promise + Sync,
     ) {
         self.engine
-            .register_raw_fn(name, arg_types, move |context, args| {
+            .register_raw_fn(name, arg_types, |context, args| {
                 let result = f();
                 Ok(result)
             });
@@ -111,30 +110,5 @@ impl ScriptingRuntime<rhai::Engine> {
             }
         }
         Ok(())
-    }
-}
-
-impl Default for ScriptingRuntime<rhai::Engine> {
-    fn default() -> Self {
-        let mut engine = rhai::Engine::default();
-
-        engine
-            .register_type_with_name::<Entity>("Entity")
-            .register_fn("index", |entity: &mut Entity| entity.index());
-        engine
-            .register_type_with_name::<Promise<rhai::NativeCallContextStore>>("Promise")
-            .register_fn("then", Promise::then);
-        engine
-            .register_type_with_name::<Vec3>("Vec3")
-            .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-                Vec3::new(x as f32, y as f32, z as f32)
-            })
-            .register_get("x", |vec: &mut Vec3| vec.x as f64)
-            .register_get("y", |vec: &mut Vec3| vec.y as f64)
-            .register_get("z", |vec: &mut Vec3| vec.z as f64);
-        #[allow(deprecated)]
-        engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
-
-        Self { engine }
     }
 }
