@@ -182,19 +182,23 @@ mod components;
 mod promise;
 mod systems;
 
+mod lua_support;
+mod rhai_support;
+
 use std::sync::{Arc, Mutex};
 
 pub use crate::components::{Script, ScriptData};
-pub use assets::RhaiScript;
+pub use crate::rhai_support::RhaiScript;
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
+use lua_support::LuaScript;
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
 use systems::{init_callbacks, init_engine, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
-    assets::RhaiScriptLoader,
+    assets::ScriptLoader,
     systems::{process_new_scripts, reload_scripts},
 };
 
@@ -225,9 +229,11 @@ impl Plugin for ScriptingPlugin {
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, Scripting);
 
-        app.register_asset_loader(RhaiScriptLoader)
+        app.register_asset_loader(ScriptLoader::<RhaiScript>::default())
+            .register_asset_loader(ScriptLoader::<LuaScript>::default())
             .init_schedule(Scripting)
             .init_asset::<RhaiScript>()
+            .init_asset::<LuaScript>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
             .add_systems(Startup, init_engine.pipe(log_errors))

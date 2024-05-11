@@ -6,15 +6,15 @@ use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
 mod utils;
 
 #[test]
-fn test_rhai_function_gets_called_from_rust() {
+fn test_lua_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset = asset_server.load("tests/rhai/rhai_function_gets_called_from_rust.rhai");
+    let asset = asset_server.load("tests/lua/lua_function_gets_called_from_rust.lua");
     let entity_id = app.world.spawn(Script::new(asset)).id();
 
     run_scripting_with(&mut app, |app| {
-        app.add_systems(Update, call_rhai_on_update_from_rust);
+        app.add_systems(Update, call_lua_on_update_from_rust);
     });
 
     let script_data = app.world.get::<ScriptData>(entity_id).unwrap();
@@ -23,7 +23,7 @@ fn test_rhai_function_gets_called_from_rust() {
 }
 
 #[test]
-fn test_rust_function_gets_called_from_rhai() {
+fn test_rust_function_gets_called_from_lua() {
     let mut app = build_test_app();
 
     app.world.init_resource::<TimesCalled>();
@@ -33,11 +33,11 @@ fn test_rust_function_gets_called_from_rhai() {
     });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset = asset_server.load("tests/rhai/rust_function_gets_called_from_rhai.rhai");
+    let asset = asset_server.load("tests/rhai/rust_function_gets_called_from_lua.lua");
     app.world.spawn(Script::new(asset));
 
     run_scripting_with(&mut app, |app| {
-        app.add_systems(Update, call_rhai_on_update_from_rust);
+        app.add_systems(Update, call_lua_on_update_from_rust);
     });
 
     assert_eq!(
@@ -49,7 +49,7 @@ fn test_rust_function_gets_called_from_rhai() {
     );
 }
 
-fn call_rhai_on_update_from_rust(
+fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData)>,
     mut scripting_runtime: ResMut<ScriptingRuntime>,
 ) {

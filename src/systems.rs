@@ -12,7 +12,7 @@ use crate::{
     Callback, Callbacks, ScriptingError, ENTITY_VAR_NAME,
 };
 
-use super::{assets::RhaiScript, components::Script, ScriptingRuntime};
+use super::{components::Script, rhai_support::RhaiScript, ScriptingRuntime};
 
 /// Initialize the scripting engine. Adds built-in types and functions.
 pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
@@ -46,7 +46,7 @@ pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
 pub(crate) fn reload_scripts(
     mut commands: Commands,
     mut ev_asset: EventReader<AssetEvent<RhaiScript>>,
-    mut scripts: Query<(Entity, &mut Script)>,
+    mut scripts: Query<(Entity, &mut Script<RhaiScript>)>,
 ) {
     for ev in ev_asset.read() {
         if let AssetEvent::Modified { id } = ev {
@@ -62,7 +62,7 @@ pub(crate) fn reload_scripts(
 /// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
 pub(crate) fn process_new_scripts(
     mut commands: Commands,
-    mut added_scripted_entities: Query<(Entity, &mut Script), Without<ScriptData>>,
+    mut added_scripted_entities: Query<(Entity, &mut Script<RhaiScript>), Without<ScriptData>>,
     scripting_runtime: ResMut<ScriptingRuntime>,
     scripts: Res<Assets<RhaiScript>>,
 ) -> Result<(), ScriptingError> {
