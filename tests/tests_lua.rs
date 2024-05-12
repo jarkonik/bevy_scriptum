@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    lua_support::{LuaEngine, LuaRuntimeBuilder, LuaScript, LuaScriptData, LuaScriptingRuntime},
+    lua_support::{LuaRuntimeBuilder, LuaScript, LuaScriptData, LuaScriptingRuntime},
     prelude::*,
-    AddScriptingRuntimeAppExt, CallFunction as _, GetEngine, Script, ScriptData, ScriptingRuntime,
+    AddScriptingRuntimeAppExt, CallFunction as _, GetEngine, Script, ScriptData,
 };
 use tracing_test::traced_test;
 

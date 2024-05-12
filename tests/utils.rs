@@ -1,10 +1,8 @@
 use bevy::{
     app::App,
-    asset::AssetPlugin,
-    core::TaskPoolPlugin,
     ecs::{component::Component, system::Resource},
 };
-use bevy_scriptum::{rhai_support::RhaiScriptingRuntime, ScriptingPlugin};
+
 
 #[derive(Component, Default)]
 struct MyCompnent;

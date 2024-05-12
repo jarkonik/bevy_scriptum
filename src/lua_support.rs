@@ -12,7 +12,7 @@ use bevy::{
     reflect::TypePath,
 };
 use mlua::Lua;
-use rhai::Engine;
+
 use serde::Deserialize;
 
 use crate::{

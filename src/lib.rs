@@ -196,15 +196,15 @@ pub use crate::components::{Script, ScriptData};
 
 use assets::FileExtension;
 use bevy::{
-    app::{MainScheduleOrder, Plugins},
+    app::{MainScheduleOrder},
     ecs::schedule::ScheduleLabel,
     prelude::*,
 };
 use callback::{Callback, RegisterCallbackFunction};
-use lua_support::{LuaCallback, LuaEngine, LuaScript, LuaScriptData};
+
 use promise::Promise;
 use rhai::{EvalAltResult, ParseError};
-use rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData};
+
 use systems::{init_callbacks, log_errors, process_calls, CreateScriptData};
 use thiserror::Error;
 

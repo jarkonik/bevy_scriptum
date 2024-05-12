@@ -4,16 +4,15 @@ use bevy::{
     prelude::*,
     utils::tracing::{self},
 };
-use rhai::Engine;
-use std::fmt::{Debug, Display};
+
+use std::fmt::{Display};
 use tracing::instrument;
 
 use crate::{
     callback::FunctionCallEvent,
     components::ScriptData,
     promise::{Promise, PromiseInner},
-    rhai_support::RhaiScript,
-    Callback, Callbacks, GetEngine, RegisterRawFn, Runtime, RuntimeConfig, ScriptingError,
+    Callback, Callbacks, RegisterRawFn, RuntimeConfig, ScriptingError,
 };
 
 use super::{components::Script, ScriptingRuntime};
@@ -53,7 +52,7 @@ pub(crate) fn process_new_scripts<C: RuntimeConfig>(
         (Entity, &mut Script<C::ScriptAsset>),
         Without<ScriptData<C::ScriptData>>,
     >,
-    mut scripting_runtime: ResMut<C::Runtime>,
+    scripting_runtime: ResMut<C::Runtime>,
     scripts: Res<Assets<C::ScriptAsset>>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
