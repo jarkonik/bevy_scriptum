@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
     rhai_support::{RhaiScript, RhaiScriptData},
-    CallFunction as _, Script, ScriptData, ScriptingRuntime,
+    AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
+    ScriptingRuntimeBuilder,
 };
 use tracing_test::traced_test;
 
@@ -42,8 +43,10 @@ fn test_rust_function_gets_called_from_rhai() {
 
     app.world.init_resource::<TimesCalled>();
 
-    app.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
-        res.times_called += 1;
+    app.add_scripting_runtime::<ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>>>(|r| {
+        r.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+            res.times_called += 1;
+        });
     });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();

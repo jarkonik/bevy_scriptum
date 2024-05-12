@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy_scriptum::{
     lua_support::{LuaEngine, LuaScript, LuaScriptData},
     prelude::*,
-    CallFunction as _, Script, ScriptData, ScriptingRuntime,
+    rhai_support::RhaiRuntimeBuilder,
+    AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;
 
@@ -38,8 +39,10 @@ fn test_rust_function_gets_called_from_lua() {
 
     app.world.init_resource::<TimesCalled>();
 
-    app.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
-        res.times_called += 1;
+    app.add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+        r.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+            res.times_called += 1;
+        });
     });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();

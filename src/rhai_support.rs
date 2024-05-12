@@ -2,16 +2,17 @@ use std::any::TypeId;
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{entity::Entity},
+    ecs::entity::Entity,
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{Scope};
+use rhai::Scope;
 use serde::Deserialize;
 
 use crate::{
     assets::FileExtension, promise::Promise, systems::CreateScriptData, CallFunction, GetEngine,
-    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime, ENTITY_VAR_NAME,
+    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime, ScriptingRuntimeBuilder,
+    ENTITY_VAR_NAME,
 };
 
 /// A rhai language script that can be loaded by the [crate::ScriptingPlugin].
@@ -150,3 +151,5 @@ impl Script<RhaiScript> {
 
 #[derive(Debug, Clone)]
 pub struct RhaiCallback;
+
+pub type RhaiRuntimeBuilder<'app> = ScriptingRuntimeBuilder<'app, ScriptingRuntime<rhai::Engine>>;

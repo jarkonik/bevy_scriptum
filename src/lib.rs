@@ -188,6 +188,7 @@ pub mod rhai_support;
 use std::{
     any::TypeId,
     fmt::Debug,
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
@@ -241,8 +242,6 @@ impl Plugin for ScriptingPlugin {
             .init_asset::<LuaScript>()
             .init_resource::<Callbacks<(), RhaiCallback>>()
             .init_resource::<Callbacks<(), LuaCallback>>()
-            .insert_resource(ScriptingRuntime::<rhai::Engine>::default())
-            .insert_resource(ScriptingRuntime::<LuaEngine>::default())
             .add_systems(
                 Scripting,
                 (
@@ -286,7 +285,7 @@ pub trait GetEngine<T> {
 }
 
 /// An extension trait for [App] that allows to register a script function.
-pub trait AddScriptFunctionAppExt {
+pub trait AddScriptFunction {
     fn add_script_function<
         Out,
         Marker,
@@ -319,29 +318,101 @@ impl<D, C> Default for Callbacks<D, C> {
     }
 }
 
-impl AddScriptFunctionAppExt for App {
+pub trait BuildScriptingRuntime {
+    type Runtime: Resource;
+    type Callbacks;
+
+    fn build(self) -> Self::Runtime;
+}
+
+pub struct ScriptingRuntimeBuilder<'app, R> {
+    _phantom_data: PhantomData<R>,
+    app: &'app mut App,
+}
+
+impl<'app, R> ScriptingRuntimeBuilder<'app, R> {
+    pub fn new(app: &'app mut App) -> Self {
+        Self {
+            app,
+            _phantom_data: PhantomData::default(),
+        }
+    }
+}
+
+impl<'app> BuildScriptingRuntime for ScriptingRuntimeBuilder<'app, ScriptingRuntime<rhai::Engine>> {
+    type Callbacks = ();
+    type Runtime = ScriptingRuntime<rhai::Engine>;
+
+    fn build(self) -> Self::Runtime {
+        todo!()
+    }
+}
+
+impl<'app, R> AddScriptFunction for ScriptingRuntimeBuilder<'app, R> {
     fn add_script_function<
         Out,
         Marker,
         A: 'static,
         const N: usize,
         const X: bool,
-        R: 'static,
+        Y: 'static,
         const F: bool,
         Args,
     >(
         &mut self,
         name: String,
-        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
+        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, Y, F, Args>,
     ) -> &mut Self {
-        let system = system.into_callback_system(&mut self.world);
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks<(), ()>>();
+        let system = system.into_callback_system(&mut self.app.world);
+        let mut callbacks_resource = self.app.world.resource_mut::<Callbacks<(), ()>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
             system: Arc::new(Mutex::new(system)),
             calls: Arc::new(Mutex::new(vec![])),
         });
+        self
+    }
+}
+
+pub trait AddScriptingRuntimeAppExt {
+    fn add_scripting_runtime<B: AddScriptFunction + BuildScriptingRuntime + Default + NewWithApp>(
+        &mut self,
+        f: impl Fn(&mut B),
+    ) -> &mut App;
+}
+
+pub trait NewWithApp {
+    fn new_with_app<'b>(app: &'b mut App) -> Self;
+}
+
+impl<'app, R> NewWithApp for ScriptingRuntimeBuilder<'app, R> {
+    fn new_with_app<'b>(app: &'b mut App) -> Self
+    where
+        'b: 'app,
+    {
+        Self {
+            app,
+            _phantom_data: PhantomData::default(),
+        }
+    }
+}
+
+impl AddScriptingRuntimeAppExt for App {
+    fn add_scripting_runtime<
+        B: AddScriptFunction + BuildScriptingRuntime + Default + NewWithApp,
+    >(
+        &mut self,
+        f: impl Fn(&mut B),
+    ) -> &mut Self {
+        let runtime = {
+            let mut builder = B::new_with_app(self);
+            f(&mut builder);
+            builder.build()
+        };
+
+        self.insert_resource(runtime);
+
         self
     }
 }
@@ -357,5 +428,5 @@ pub trait CallFunction<T> {
 }
 
 pub mod prelude {
-    pub use crate::{AddScriptFunctionAppExt, ScriptingPlugin};
+    pub use crate::{AddScriptFunction, ScriptingPlugin};
 }

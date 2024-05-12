@@ -1,8 +1,8 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiScript, RhaiScriptData},
-    CallFunction as _, Script, ScriptData, ScriptingRuntime,
+    rhai_support::{RhaiRuntimeBuilder, RhaiScript, RhaiScriptData},
+    AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 
 fn main() {
@@ -28,8 +28,10 @@ fn main() {
         .add_plugins(ScriptingPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, call_rhai_on_update_from_rust)
-        .add_script_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
-            exit.send(AppExit);
+        .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+            r.add_script_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
+                exit.send(AppExit);
+            });
         })
         .run();
 }
