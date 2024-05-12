@@ -102,7 +102,7 @@ where
                 .get_resource_mut::<ScriptingRuntime<E>>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
-            trace!("registering callback: '{}'", callback.name);
+            tracing::trace!("registering callback: '{}'", callback.name);
             let callback = callback.clone();
 
             scripting_runtime.register_raw_fn(
@@ -146,6 +146,7 @@ where
 }
 
 /// Processes calls. Calls the user-defined callback systems
+#[instrument]
 pub(crate) fn process_calls<D: Send + Clone + 'static, C: Clone + 'static>(
     world: &mut World,
 ) -> Result<(), ScriptingError> {
@@ -163,7 +164,7 @@ pub(crate) fn process_calls<D: Send + Clone + 'static, C: Clone + 'static>(
             .drain(..)
             .collect::<Vec<FunctionCallEvent<D, C>>>();
         for call in calls {
-            trace!("process_calls: calling '{}'", callback.name);
+            tracing::trace!(?callback.name, "calling");
             let mut system = callback.system.lock().unwrap();
             let _val = system.call(&call, world);
             let _runtime = world
