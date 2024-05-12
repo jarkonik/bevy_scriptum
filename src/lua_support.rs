@@ -5,16 +5,20 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{component::Component, entity::Entity, world::World},
+    ecs::{
+        component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource,
+        world::World,
+    },
     reflect::TypePath,
 };
+use mlua::Lua;
 use rhai::Engine;
 use serde::Deserialize;
 
 use crate::{
     assets::FileExtension, promise::Promise, systems::CreateScriptData, BuildScriptingRuntime,
-    CallFunction, GetEngine, RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
-    ScriptingRuntimeBuilder,
+    CallFunction, GetEngine, RegisterRawFn, RuntimeConfig, Script, ScriptData, ScriptingError,
+    ScriptingRuntime, ScriptingRuntimeBuilder,
 };
 
 /// A lua language script that can be loaded by the [crate::ScriptingPlugin].
@@ -33,7 +37,7 @@ impl FileExtension for LuaScript {
     }
 }
 
-impl RegisterRawFn for ScriptingRuntime<LuaEngine> {
+impl RegisterRawFn for LuaScriptingRuntime {
     fn register_raw_fn(
         &mut self,
         name: &str,
@@ -58,7 +62,8 @@ impl RegisterRawFn for ScriptingRuntime<LuaEngine> {
 #[derive(Component, Debug)]
 pub struct LuaScriptData;
 
-struct LuaScriptingRuntime {
+#[derive(Resource, Debug)]
+pub struct LuaScriptingRuntime {
     engine: LuaEngine,
 }
 
@@ -121,7 +126,7 @@ impl Script<LuaScript> {
     }
 }
 
-impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
+impl CallFunction<LuaScriptData> for LuaScriptingRuntime {
     /// Get a  mutable reference to the internal [rhai::Engine].
 
     /// Call a function that is available in the scope of the script.
@@ -137,10 +142,6 @@ impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
             .load(format!("{function_name}()"))
             .exec()
             .expect("Error calling function");
-        // engine
-        //     .globals()
-        //     .get::<>("function_name")
-        //     .expect("Function not found");
 
         Ok(())
     }
@@ -153,9 +154,24 @@ pub type LuaRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<LuaEngine>
 
 impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<LuaEngine>> {
     type Callbacks = ();
-    type Runtime = ScriptingRuntime<rhai::Engine>;
+    type Runtime = ScriptingRuntime<LuaEngine>;
 
     fn build(self) -> (World, Self::Runtime) {
-        todo!()
+        (
+            self.world.expect("no world"),
+            ScriptingRuntime {
+                engine: Arc::new(Mutex::new(Lua::new())),
+            },
+        )
     }
+}
+
+#[derive(Default, ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LuaSchedule;
+
+impl RuntimeConfig for LuaScriptingRuntime {
+    type ScriptAsset = LuaScript;
+    type Schedule = LuaSchedule;
+    type Runtime = Self;
+    type ScriptData = LuaScriptData;
 }

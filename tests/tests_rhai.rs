@@ -7,9 +7,17 @@ use bevy_scriptum::{
 };
 use tracing_test::traced_test;
 
-use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
+use crate::utils::{run_scripting_with, TimesCalled};
 
 mod utils;
+
+pub fn build_test_app() -> App {
+    let mut app = App::new();
+    app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))
+        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::default());
+    app.update();
+    app
+}
 
 #[test]
 #[traced_test]

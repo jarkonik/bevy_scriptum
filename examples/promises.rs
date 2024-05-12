@@ -11,7 +11,7 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::build())
+        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::default())
         // .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
         //     r.add_script_function(
         //         String::from("get_player_name"),

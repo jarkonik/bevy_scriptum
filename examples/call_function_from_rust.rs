@@ -44,7 +44,7 @@ fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
 
 fn call_rhai_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData<RhaiScriptData>)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime<rhai::Engine>>,
+    mut scripting_runtime: ResMut<RhaiScriptingRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
         scripting_runtime

@@ -1,18 +1,25 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    lua_support::{LuaEngine, LuaRuntimeBuilder, LuaScript, LuaScriptData},
+    lua_support::{LuaEngine, LuaRuntimeBuilder, LuaScript, LuaScriptData, LuaScriptingRuntime},
     prelude::*,
-    AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
+    AddScriptingRuntimeAppExt, CallFunction as _, GetEngine, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;
 
-use crate::utils::{build_test_app, run_scripting_with, TimesCalled};
+use crate::utils::{run_scripting_with, TimesCalled};
 
 mod utils;
 
+pub fn build_test_app() -> App {
+    let mut app = App::new();
+    app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))
+        .add_plugins(ScriptingPlugin::<LuaScriptingRuntime>::default());
+    app.update();
+    app
+}
+
 #[test]
 #[traced_test]
-#[ignore]
 fn test_lua_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
@@ -28,13 +35,16 @@ fn test_lua_function_gets_called_from_rust() {
         .world
         .get::<ScriptData<LuaScriptData>>(entity_id)
         .unwrap();
-    // let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
-    // assert_eq!(state["times_called"].clone_cast::<i64>(), 1);
+    let mut r = app.world.get_resource_mut::<LuaScriptingRuntime>().unwrap();
+    let e = r.engine_mut(); // FIXME: Proivided non-mut api and use here
+    let e = e.lock().unwrap();
+    let state = e.globals().get::<_, mlua::Table>("state").unwrap();
+    let times_called = state.get::<_, u8>("times_called").unwrap();
+    assert_eq!(times_called, 1);
 }
 
 #[test]
 #[traced_test]
-#[ignore]
 fn test_rust_function_gets_called_from_lua() {
     let mut app = build_test_app();
 
@@ -65,7 +75,7 @@ fn test_rust_function_gets_called_from_lua() {
 
 fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut ScriptData<LuaScriptData>)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime<LuaEngine>>,
+    mut scripting_runtime: ResMut<LuaScriptingRuntime>,
 ) {
     let (entity, mut script_data) = scripted_entities.single_mut();
     scripting_runtime

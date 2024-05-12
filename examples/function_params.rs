@@ -1,47 +1,47 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiRuntime, RhaiRuntimeBuilder, RhaiScript},
-    AddScriptingRuntimeAppExt, Script,
+    rhai_support::{RhaiScript, RhaiScriptingRuntime},
+    Script,
 };
 use rhai::ImmutableString;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default())
-        .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
-            r.add_script_function(String::from("fun_without_params"), || {
-                println!("called without params");
-            })
-            .add_script_function(
-                String::from("fun_with_string_param"),
-                |In((x,)): In<(ImmutableString,)>| {
-                    println!("called with string: '{}'", x);
-                },
-            )
-            .add_script_function(
-                String::from("fun_with_i64_param"),
-                |In((x,)): In<(i64,)>| {
-                    println!("called with i64: {}", x);
-                },
-            )
-            .add_script_function(
-                String::from("fun_with_multiple_params"),
-                |In((x, y)): In<(i64, ImmutableString)>| {
-                    println!("called with i64: {} and string: '{}'", x, y);
-                },
-            )
-            .add_script_function(
-                String::from("fun_with_i64_and_array_param"),
-                |In((x, y)): In<(i64, rhai::Array)>| {
-                    println!(
-                        "called with i64: {} and dynamically typed array: '{:?}'",
-                        x, y
-                    );
-                },
-            );
-        })
+        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::default())
+        // .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+        //     r.add_script_function(String::from("fun_without_params"), || {
+        //         println!("called without params");
+        //     })
+        //     .add_script_function(
+        //         String::from("fun_with_string_param"),
+        //         |In((x,)): In<(ImmutableString,)>| {
+        //             println!("called with string: '{}'", x);
+        //         },
+        //     )
+        //     .add_script_function(
+        //         String::from("fun_with_i64_param"),
+        //         |In((x,)): In<(i64,)>| {
+        //             println!("called with i64: {}", x);
+        //         },
+        //     )
+        //     .add_script_function(
+        //         String::from("fun_with_multiple_params"),
+        //         |In((x, y)): In<(i64, ImmutableString)>| {
+        //             println!("called with i64: {} and string: '{}'", x, y);
+        //         },
+        //     )
+        //     .add_script_function(
+        //         String::from("fun_with_i64_and_array_param"),
+        //         |In((x, y)): In<(i64, rhai::Array)>| {
+        //             println!(
+        //                 "called with i64: {} and dynamically typed array: '{:?}'",
+        //                 x, y
+        //             );
+        //         },
+        //     );
+        // })
         .add_systems(Startup, startup)
         .run();
 }

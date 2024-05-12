@@ -1,19 +1,19 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiRuntime, RhaiRuntimeBuilder, RhaiScript},
+    rhai_support::{RhaiScript, RhaiScriptingRuntime},
     AddScriptingRuntimeAppExt, GetEngine as _, Script, ScriptingRuntime,
 };
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default())
-        .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
-            r.add_script_function(String::from("hello_bevy"), || {
-                println!("hello bevy, called from script");
-            });
-        })
+        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::default())
+        // .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+        //     r.add_script_function(String::from("hello_bevy"), || {
+        //         println!("hello bevy, called from script");
+        //     });
+        // })
         .add_systems(Startup, startup)
         .run();
 }
@@ -25,7 +25,7 @@ struct MyType {
 
 fn startup(
     mut commands: Commands,
-    mut scripting_runtime: ResMut<ScriptingRuntime<rhai::Engine>>,
+    mut scripting_runtime: ResMut<RhaiScriptingRuntime>,
     assets_server: Res<AssetServer>,
 ) {
     let engine = scripting_runtime.engine_mut();

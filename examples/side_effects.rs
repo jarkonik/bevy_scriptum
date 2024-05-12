@@ -1,8 +1,6 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
 use bevy_scriptum::{
-    lua_support::LuaScript,
-    prelude::*,
-    rhai_support::{RhaiRuntime, RhaiRuntimeBuilder},
+    lua_support::LuaScript, prelude::*, rhai_support::RhaiScriptingRuntime,
     AddScriptingRuntimeAppExt, Script,
 };
 
@@ -29,12 +27,12 @@ fn main() {
             }
         })
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default())
+        .add_plugins(ScriptingPlugin::<RhaiScriptingRuntime>::default())
         .add_systems(Startup, startup)
         .add_systems(Update, print_entity_names_and_quit)
-        .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
-            r.add_script_function(String::from("spawn_entity"), spawn_entity);
-        })
+        // .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+        //     r.add_script_function(String::from("spawn_entity"), spawn_entity);
+        // })
         .run();
 }
 

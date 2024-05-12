@@ -1,4 +1,4 @@
-local state = {
+state = {
 	times_called = 0
 };
 
