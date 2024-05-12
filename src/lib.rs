@@ -376,21 +376,20 @@ impl<'app, R> AddScriptFunction for ScriptingRuntimeBuilder<'app, R> {
 }
 
 pub trait AddScriptingRuntimeAppExt {
-    fn add_scripting_runtime<B: AddScriptFunction + BuildScriptingRuntime + Default + NewWithApp>(
+    fn add_scripting_runtime<
+        B: AddScriptFunction + BuildScriptingRuntime + for<'a> NewWithApp<'a>,
+    >(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut App;
 }
 
-pub trait NewWithApp {
-    fn new_with_app<'b>(app: &'b mut App) -> Self;
+pub trait NewWithApp<'a> {
+    fn new_with_app(app: &'a mut App) -> Self;
 }
 
-impl<'app, R> NewWithApp for ScriptingRuntimeBuilder<'app, R> {
-    fn new_with_app<'b>(app: &'b mut App) -> Self
-    where
-        'b: 'app,
-    {
+impl<'a, R> NewWithApp<'a> for ScriptingRuntimeBuilder<'a, R> {
+    fn new_with_app(app: &'a mut App) -> Self {
         Self {
             app,
             _phantom_data: PhantomData::default(),
@@ -400,18 +399,19 @@ impl<'app, R> NewWithApp for ScriptingRuntimeBuilder<'app, R> {
 
 impl AddScriptingRuntimeAppExt for App {
     fn add_scripting_runtime<
-        B: AddScriptFunction + BuildScriptingRuntime + Default + NewWithApp,
+        B: AddScriptFunction + BuildScriptingRuntime + for<'a> NewWithApp<'a>,
     >(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut Self {
-        let runtime = {
-            let mut builder = B::new_with_app(self);
-            f(&mut builder);
-            builder.build()
-        };
+        let builder = B::new_with_app(self);
 
-        self.insert_resource(runtime);
+        // let runtime = {
+        // f(&mut builder);
+        // builder.build()
+        // };
+
+        // self.insert_resource(runtime);
 
         self
     }
