@@ -76,7 +76,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = "0.2"
+//! bevy_scriptum = "0.4"
 //! ```
 //!
 //! or execute `cargo add bevy_scriptum` from your project directory.
@@ -330,7 +330,7 @@ pub struct ScriptingRuntimeBuilder<R> {
     world: Option<World>,
 }
 
-impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<R> {
+impl<R> AddScriptFunction for ScriptingRuntimeBuilder<R> {
     fn add_script_function<
         Out,
         Marker,

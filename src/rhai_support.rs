@@ -154,7 +154,7 @@ pub struct RhaiCallback;
 
 pub type RhaiRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>>;
 
-impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>> {
+impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>> {
     type Callbacks = ();
     type Runtime = ScriptingRuntime<rhai::Engine>;
 
