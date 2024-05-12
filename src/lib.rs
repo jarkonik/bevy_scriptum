@@ -355,7 +355,7 @@ impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<'a, R> {
         name: String,
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, Y, F, Args>,
     ) -> &mut Self {
-        let system = system.into_callback_system(&mut self.world);
+        let system = system.into_callback_system(self.world);
         let mut callbacks_resource = self.world.resource_mut::<Callbacks<(), ()>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
@@ -395,11 +395,15 @@ impl AddScriptingRuntimeAppExt for App {
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut Self {
-        let builder = ScriptingRuntimeBuilder::<ScriptingRuntime<rhai::Engine>>::new_with_world(
-            &mut self.world,
-        );
+        // FIXME: Can this be done without unsafe?
+        // works if using concrete type:
+        // let builder = ScriptingRuntimeBuilder::<ScriptingRuntime<rhai::Engine>>::new_with_world(
+        //     &mut self.world,
+        // );
+        let world_ptr = &mut self.world as *mut World;
+        let mut builder = B::new_with_world(unsafe { &mut *world_ptr });
 
-        // f(&mut builder);
+        f(&mut builder);
 
         let runtime = builder.build();
 
