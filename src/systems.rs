@@ -37,12 +37,12 @@ pub(crate) fn reload_scripts<C: RuntimeConfig>(
     }
 }
 
-pub trait CreateScriptData<A> {
+pub trait CreateScriptData<A, D> {
     fn create_script_data(
         &self,
         entity: Entity,
         script: &A,
-    ) -> Result<ScriptData<()>, ScriptingError>;
+    ) -> Result<ScriptData<D>, ScriptingError>;
 }
 
 /// Processes new scripts.
@@ -51,10 +51,9 @@ pub(crate) fn process_new_scripts<C: RuntimeConfig>(
     mut commands: Commands,
     mut added_scripted_entities: Query<
         (Entity, &mut Script<C::ScriptAsset>),
-        Without<ScriptData<()>>,
+        Without<ScriptData<C::ScriptData>>,
     >,
     mut scripting_runtime: ResMut<C::Runtime>,
-    // scripts: Res<Assets<<C::Runtime as CreateScriptData>::ScriptAsset>>,
     scripts: Res<Assets<C::ScriptAsset>>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
@@ -64,7 +63,7 @@ pub(crate) fn process_new_scripts<C: RuntimeConfig>(
                 .create_script_data(entity, script)
                 .unwrap();
 
-            // commands.entity(entity).insert(script_data);
+            commands.entity(entity).insert(script_data);
         }
     }
     Ok(())

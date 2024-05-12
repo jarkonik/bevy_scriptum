@@ -9,7 +9,7 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::Scope;
+use rhai::{CallFnOptions, Dynamic, Scope};
 use serde::Deserialize;
 
 use crate::{
@@ -53,12 +53,12 @@ impl GetEngine for RhaiScriptingRuntime {
     }
 }
 
-impl CreateScriptData<RhaiScript> for RhaiScriptingRuntime {
+impl CreateScriptData<RhaiScript, RhaiScriptData> for RhaiScriptingRuntime {
     fn create_script_data(
         &self,
         entity: Entity,
         script: &RhaiScript,
-    ) -> Result<ScriptData<()>, ScriptingError> {
+    ) -> Result<ScriptData<RhaiScriptData>, ScriptingError> {
         let mut scope = Scope::new();
 
         scope.push(ENTITY_VAR_NAME, entity);
@@ -75,7 +75,9 @@ impl CreateScriptData<RhaiScript> for RhaiScriptingRuntime {
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
 
         // Ok(ScriptData { ast, scope })
-        Ok(ScriptData { data: () })
+        Ok(ScriptData {
+            data: RhaiScriptData { ast, scope },
+        })
     }
 }
 
@@ -94,33 +96,34 @@ impl RegisterRawFn for RhaiScriptingRuntime {
     }
 }
 
-impl CallFunction<RhaiScriptData> for ScriptingRuntime<rhai::Engine> {
+impl CallFunction<RhaiScriptData> for RhaiScriptingRuntime {
     /// Get a  mutable reference to the internal [rhai::Engine].
 
     /// Call a function that is available in the scope of the script.
     fn call_fn(
         &mut self,
-        _function_name: &str,
-        _script_data: &mut ScriptData<RhaiScriptData>,
-        _entity: Entity,
-        _args: (), // args: impl FuncArgs,
+        function_name: &str,
+        script_data: &mut ScriptData<RhaiScriptData>,
+        entity: Entity,
+        args: (), // args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {
-        // let script_data = &mut script_data.data;
-        //
-        // let ast = script_data.ast.clone();
-        // let scope = &mut script_data.scope;
-        // scope.push(ENTITY_VAR_NAME, entity);
-        // let options = CallFnOptions::new().eval_ast(false);
-        // let result =
-        //     self.engine
-        //         .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        // scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        // if let Err(err) = result {
-        //     match *err {
-        //         rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-        //         e => Err(Box::new(e))?,
-        //     }
-        // }
+        let script_data = &mut script_data.data;
+
+        let ast = script_data.ast.clone();
+        let scope = &mut script_data.scope;
+
+        scope.push(ENTITY_VAR_NAME, entity);
+        let options = CallFnOptions::new().eval_ast(false);
+        let result =
+            self.engine
+                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
+        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        if let Err(err) = result {
+            match *err {
+                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
+                e => Err(Box::new(e))?,
+            }
+        }
         Ok(())
     }
 }
@@ -181,4 +184,5 @@ impl RuntimeConfig for RhaiScriptingRuntime {
     type ScriptAsset = RhaiScript;
     type Schedule = RhaiSchedule;
     type Runtime = Self;
+    type ScriptData = RhaiScriptData;
 }

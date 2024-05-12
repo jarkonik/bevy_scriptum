@@ -233,14 +233,21 @@ pub struct ScriptingPlugin<R: RuntimeConfig> {
     _phantom_data: PhantomData<R>,
 }
 
-pub trait Runtime<A>: Resource + Default + CreateScriptData<A> + RegisterRawFn + Debug {}
+pub trait Runtime<A, D>:
+    Resource + Default + CreateScriptData<A, D> + RegisterRawFn + Debug
+{
+}
 
-impl<A, T: Resource + Default + CreateScriptData<A> + RegisterRawFn + Debug> Runtime<A> for T {}
+impl<A, D, T: Resource + Default + CreateScriptData<A, D> + RegisterRawFn + Debug> Runtime<A, D>
+    for T
+{
+}
 
 pub trait RuntimeConfig: Send + Sync + 'static {
     type ScriptAsset: FileExtension + From<String> + Default + Asset + Debug;
     type Schedule: ScheduleLabel + Debug + Clone + Default + Debug;
-    type Runtime: Runtime<Self::ScriptAsset>;
+    type Runtime: Runtime<Self::ScriptAsset, Self::ScriptData>;
+    type ScriptData: Send + Sync + 'static + Debug;
 }
 
 impl<C: RuntimeConfig> Plugin for ScriptingPlugin<C> {

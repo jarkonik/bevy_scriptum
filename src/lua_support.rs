@@ -56,7 +56,7 @@ impl RegisterRawFn for ScriptingRuntime<LuaEngine> {
 }
 
 #[derive(Component, Debug)]
-pub struct LuaScriptData {}
+pub struct LuaScriptData;
 
 struct LuaScriptingRuntime {
     engine: LuaEngine,
@@ -69,12 +69,12 @@ impl GetEngine for LuaScriptingRuntime {
     }
 }
 
-impl CreateScriptData<LuaScript> for LuaScriptingRuntime {
+impl CreateScriptData<LuaScript, LuaScriptData> for LuaScriptingRuntime {
     fn create_script_data(
         &self,
         _entity: bevy::prelude::Entity,
         script: &LuaScript,
-    ) -> Result<ScriptData<()>, crate::ScriptingError> {
+    ) -> Result<ScriptData<LuaScriptData>, crate::ScriptingError> {
         //
         // let mut scope = Scope::new();
         //
@@ -98,7 +98,9 @@ impl CreateScriptData<LuaScript> for LuaScriptingRuntime {
             .exec()
             .expect("Error runnning script");
 
-        Ok(ScriptData { data: () })
+        Ok(ScriptData {
+            data: LuaScriptData,
+        })
     }
 }
 
