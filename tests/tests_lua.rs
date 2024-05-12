@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_scriptum::{
     lua_support::{LuaEngine, LuaRuntimeBuilder, LuaScript, LuaScriptData},
     prelude::*,
-    rhai_support::RhaiRuntimeBuilder,
     AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
 };
 use tracing_test::traced_test;

@@ -189,7 +189,6 @@ use std::{
     any::TypeId,
     fmt::Debug,
     marker::PhantomData,
-    mem::take,
     sync::{Arc, Mutex},
 };
 
