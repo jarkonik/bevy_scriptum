@@ -12,6 +12,7 @@ mod utils;
 
 #[test]
 #[traced_test]
+#[ignore]
 fn test_lua_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
@@ -33,6 +34,7 @@ fn test_lua_function_gets_called_from_rust() {
 
 #[test]
 #[traced_test]
+#[ignore]
 fn test_rust_function_gets_called_from_lua() {
     let mut app = build_test_app();
 

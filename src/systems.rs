@@ -46,7 +46,8 @@ pub trait CreateScriptData<E> {
 /// Processes new scripts.
 #[instrument(skip(commands, added_scripted_entities, scripting_runtime, scripts))]
 pub(crate) fn process_new_scripts<
-    A: Asset + CreateScriptData<E> + Debug,
+    // A: Asset + CreateScriptData<E> + Debug,
+    A: Asset + Debug,
     D: Send + Sync + 'static,
     E: Send + Sync + 'static + Default + Debug,
 >(
@@ -56,20 +57,20 @@ pub(crate) fn process_new_scripts<
     scripts: Res<Assets<A>>,
 ) -> Result<(), ScriptingError>
 where
-    ScriptData<<A as CreateScriptData<E>>::ScriptData>: Component,
+    // ScriptData<<A as CreateScriptData<E>>::ScriptData>: Component,
     ScriptingRuntime<E>: GetEngine<E>,
 {
-    for (entity, script_component) in &mut added_scripted_entities {
-        tracing::trace!(script = ?script_component, "adding script");
-        if let Some(script) = scripts.get(&script_component.script) {
-            let engine = scripting_runtime.engine_mut();
-            let script_data = script.create_script_data(entity, engine)?; // TODO: Should we return here?
-
-            commands
-                .entity(entity)
-                .insert(ScriptData { data: script_data });
-        }
-    }
+    // for (entity, script_component) in &mut added_scripted_entities {
+    //     tracing::trace!(script = ?script_component, "adding script");
+    //     if let Some(script) = scripts.get(&script_component.script) {
+    //         let engine = scripting_runtime.engine_mut();
+    //         let script_data = script.create_script_data(entity, engine)?; // TODO: Should we return here?
+    //
+    //         commands
+    //             .entity(entity)
+    //             .insert(ScriptData { data: script_data });
+    //     }
+    // }
     Ok(())
 }
 

@@ -194,13 +194,18 @@ use std::{
 
 pub use crate::components::{Script, ScriptData};
 
-use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use assets::FileExtension;
+use bevy::{
+    app::{MainScheduleOrder, Plugins},
+    ecs::schedule::ScheduleLabel,
+    prelude::*,
+};
 use callback::{Callback, RegisterCallbackFunction};
 use lua_support::{LuaCallback, LuaEngine, LuaScript, LuaScriptData};
 use promise::Promise;
 use rhai::{EvalAltResult, ParseError};
 use rhai_support::{RhaiCallback, RhaiScript, RhaiScriptData};
-use systems::{init_callbacks, log_errors, process_calls};
+use systems::{init_callbacks, log_errors, process_calls, CreateScriptData};
 use thiserror::Error;
 
 use self::{
@@ -223,44 +228,42 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
-#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
-struct Scripting;
-
 #[derive(Default)]
-pub struct ScriptingPlugin;
+pub struct ScriptingPlugin<R: RuntimeConfig> {
+    _phantom_data: PhantomData<R>,
+}
 
-impl Plugin for ScriptingPlugin {
+pub trait RuntimeConfig: Send + Sync + 'static {
+    type ScriptAsset: FileExtension + From<String> + Default + Asset + Debug;
+    type Schedule: ScheduleLabel + Debug + Clone + Default;
+    type Runtime: Resource + Default;
+    type Engine;
+}
+
+impl<R: RuntimeConfig> Plugin for ScriptingPlugin<R> {
     fn build(&self, app: &mut App) {
+        let schedule = R::Schedule::default();
+
         app.world
             .resource_mut::<MainScheduleOrder>()
-            .insert_after(Update, Scripting);
+            .insert_after(Update, schedule.clone());
 
-        app.register_asset_loader(ScriptLoader::<RhaiScript>::default())
-            .register_asset_loader(ScriptLoader::<LuaScript>::default())
-            .init_schedule(Scripting)
-            .init_asset::<RhaiScript>()
-            .init_asset::<LuaScript>()
-            .init_resource::<Callbacks<(), RhaiCallback>>()
-            .init_resource::<Callbacks<(), LuaCallback>>()
+        app.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
+            .init_schedule(R::Schedule::default())
+            .init_asset::<R::ScriptAsset>()
+            .init_resource::<R::Runtime>()
+            .init_resource::<Callbacks<(), ()>>()
             .add_systems(
-                Scripting,
+                schedule,
                 (
                     reload_scripts::<RhaiScript>,
-                    reload_scripts::<LuaScript>,
-                    process_calls::<(), RhaiCallback>
+                    process_calls::<(), ()>
                         .pipe(log_errors)
-                        .after(process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>),
-                    process_calls::<(), LuaCallback>
+                        .after(process_new_scripts::<R::ScriptAsset, (), rhai::Engine>),
+                    init_callbacks::<rhai::Engine, (), ()>.pipe(log_errors),
+                    process_new_scripts::<RhaiScript, (), rhai::Engine>
                         .pipe(log_errors)
-                        .after(process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>),
-                    init_callbacks::<rhai::Engine, RhaiCallback, ()>.pipe(log_errors),
-                    init_callbacks::<LuaEngine, LuaCallback, ()>.pipe(log_errors),
-                    process_new_scripts::<RhaiScript, RhaiScriptData, rhai::Engine>
-                        .pipe(log_errors)
-                        .after(init_callbacks::<rhai::Engine, RhaiCallback, ()>),
-                    process_new_scripts::<LuaScript, LuaScriptData, LuaEngine>
-                        .pipe(log_errors)
-                        .after(init_callbacks::<LuaEngine, LuaCallback, ()>),
+                        .after(init_callbacks::<rhai::Engine, (), ()>),
                 ),
             );
     }

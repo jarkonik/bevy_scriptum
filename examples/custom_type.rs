@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    rhai_support::{RhaiRuntimeBuilder, RhaiScript},
+    rhai_support::{RhaiRuntime, RhaiRuntimeBuilder, RhaiScript},
     AddScriptingRuntimeAppExt, GetEngine as _, Script, ScriptingRuntime,
 };
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin)
+        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default())
         .add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
             r.add_script_function(String::from("hello_bevy"), || {
                 println!("hello bevy, called from script");

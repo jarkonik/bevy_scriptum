@@ -1,10 +1,14 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, rhai_support::RhaiScript, Script};
+use bevy_scriptum::{
+    prelude::*,
+    rhai_support::{RhaiRuntime, RhaiScript},
+    Script,
+};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin)
+        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default())
         .add_systems(Startup, startup)
         .run();
 }

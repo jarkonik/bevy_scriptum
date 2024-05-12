@@ -1,10 +1,21 @@
-use bevy::{app::App, asset::AssetPlugin, core::TaskPoolPlugin, ecs::system::Resource};
-use bevy_scriptum::ScriptingPlugin;
+use bevy::{
+    app::App,
+    asset::AssetPlugin,
+    core::TaskPoolPlugin,
+    ecs::{component::Component, system::Resource},
+};
+use bevy_scriptum::{
+    rhai_support::{RhaiRuntime, RhaiSchedule, RhaiScript},
+    RuntimeConfig, ScriptingPlugin,
+};
+
+#[derive(Component, Default)]
+struct MyCompnent;
 
 pub fn build_test_app() -> App {
     let mut app = App::new();
     app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))
-        .add_plugins(ScriptingPlugin);
+        .add_plugins(ScriptingPlugin::<RhaiRuntime>::default());
     app.update();
     app
 }

@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{entity::Entity, world::World},
+    ecs::{entity::Entity, schedule::ScheduleLabel, world::World},
     math::Vec3,
     reflect::TypePath,
 };
@@ -11,8 +11,8 @@ use serde::Deserialize;
 
 use crate::{
     assets::FileExtension, promise::Promise, systems::CreateScriptData, BuildScriptingRuntime,
-    CallFunction, GetEngine, RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
-    ScriptingRuntimeBuilder, ENTITY_VAR_NAME,
+    CallFunction, GetEngine, RegisterRawFn, RuntimeConfig, Script, ScriptData, ScriptingError,
+    ScriptingRuntime, ScriptingRuntimeBuilder, ENTITY_VAR_NAME,
 };
 
 /// A rhai language script that can be loaded by the [crate::ScriptingPlugin].
@@ -152,6 +152,7 @@ impl Script<RhaiScript> {
 #[derive(Debug, Clone)]
 pub struct RhaiCallback;
 
+pub type RhaiRuntime = ScriptingRuntime<rhai::Engine>;
 pub type RhaiRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>>;
 
 impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>> {
@@ -159,6 +160,21 @@ impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::En
     type Runtime = ScriptingRuntime<rhai::Engine>;
 
     fn build(self) -> (World, Self::Runtime) {
-        todo!()
+        (
+            self.world.expect("no world"),
+            ScriptingRuntime {
+                engine: rhai::Engine::default(),
+            },
+        )
     }
+}
+
+#[derive(Default, ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RhaiSchedule;
+
+impl RuntimeConfig for ScriptingRuntime<rhai::Engine> {
+    type ScriptAsset = RhaiScript;
+    type Schedule = RhaiSchedule;
+    type Engine = rhai::Engine;
+    type Runtime = ScriptingRuntime<rhai::Engine>;
 }
