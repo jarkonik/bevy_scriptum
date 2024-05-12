@@ -5,7 +5,7 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::entity::Entity,
+    ecs::{entity::Entity, world::World},
     reflect::TypePath,
 };
 use serde::Deserialize;
@@ -140,13 +140,13 @@ impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
 #[derive(Debug, Clone)]
 pub struct LuaCallback;
 
-pub type LuaRuntimeBuilder<'a> = ScriptingRuntimeBuilder<'a, ScriptingRuntime<LuaEngine>>;
+pub type LuaRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<LuaEngine>>;
 
-impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<'a, ScriptingRuntime<LuaEngine>> {
+impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<LuaEngine>> {
     type Callbacks = ();
     type Runtime = ScriptingRuntime<rhai::Engine>;
 
-    fn build(self) -> Self::Runtime {
+    fn build(self) -> (World, Self::Runtime) {
         todo!()
     }
 }

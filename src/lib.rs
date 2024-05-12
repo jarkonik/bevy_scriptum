@@ -323,24 +323,15 @@ pub trait BuildScriptingRuntime {
     type Runtime: Resource;
     type Callbacks;
 
-    fn build(self) -> Self::Runtime;
+    fn build(self) -> (World, Self::Runtime);
 }
 
-pub struct ScriptingRuntimeBuilder<'a, R> {
+pub struct ScriptingRuntimeBuilder<R> {
     _phantom_data: PhantomData<R>,
-    world: &'a mut World,
+    world: Option<World>,
 }
 
-impl<'a, R> ScriptingRuntimeBuilder<'a, R> {
-    pub fn new(world: &'a mut World) -> Self {
-        Self {
-            world,
-            _phantom_data: PhantomData::default(),
-        }
-    }
-}
-
-impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<'a, R> {
+impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<R> {
     fn add_script_function<
         Out,
         Marker,
@@ -355,59 +346,67 @@ impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<'a, R> {
         name: String,
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, Y, F, Args>,
     ) -> &mut Self {
-        let system = system.into_callback_system(self.world);
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks<(), ()>>();
+        let mut world = self.world.take().expect("World has not been set");
+        let system = system.into_callback_system(&mut world);
+        let mut callbacks_resource = world.resource_mut::<Callbacks<(), ()>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
             system: Arc::new(Mutex::new(system)),
             calls: Arc::new(Mutex::new(vec![])),
         });
+        self.world = Some(world);
+
         self
     }
 }
 
+impl<R> Default for ScriptingRuntimeBuilder<R> {
+    fn default() -> Self {
+        Self {
+            _phantom_data: Default::default(),
+            world: Default::default(),
+        }
+    }
+}
+
 pub trait AddScriptingRuntimeAppExt {
-    fn add_scripting_runtime<'a, B: AddScriptFunction + BuildScriptingRuntime + NewWithWorld<'a>>(
+    fn add_scripting_runtime<B: AddScriptFunction + BuildScriptingRuntime + SetWorld + Default>(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut App;
 }
 
-pub trait NewWithWorld<'a> {
-    fn new_with_world(world: &'a mut World) -> Self;
+pub trait SetWorld {
+    fn set_world(&mut self, world: World);
 }
 
-impl<'a, R> NewWithWorld<'a> for ScriptingRuntimeBuilder<'a, R> {
-    fn new_with_world(world: &'a mut World) -> Self {
-        Self {
-            world,
-            _phantom_data: PhantomData::default(),
-        }
+impl<R> SetWorld for ScriptingRuntimeBuilder<R> {
+    fn set_world(&mut self, world: World) {
+        self.world = Some(world);
     }
 }
 
 impl AddScriptingRuntimeAppExt for App {
     fn add_scripting_runtime<
         'a,
-        B: AddScriptFunction + BuildScriptingRuntime + NewWithWorld<'a>,
+        B: AddScriptFunction + BuildScriptingRuntime + SetWorld + Default,
     >(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut Self {
-        // FIXME: Can this be done without unsafe?
-        // works if using concrete type:
-        // let builder = ScriptingRuntimeBuilder::<ScriptingRuntime<rhai::Engine>>::new_with_world(
-        //     &mut self.world,
-        // );
-        let world_ptr = &mut self.world as *mut World;
-        let mut builder = B::new_with_world(unsafe { &mut *world_ptr });
+        let world = std::mem::take(&mut self.world);
+
+        let mut builder = B::default();
+        builder.set_world(world);
 
         f(&mut builder);
 
-        let runtime = builder.build();
+        let (world, runtime) = builder.build();
 
         self.insert_resource(runtime);
+
+        self.world = world;
 
         self
     }

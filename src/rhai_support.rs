@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::entity::Entity,
+    ecs::{entity::Entity, world::World},
     math::Vec3,
     reflect::TypePath,
 };
@@ -152,13 +152,13 @@ impl Script<RhaiScript> {
 #[derive(Debug, Clone)]
 pub struct RhaiCallback;
 
-pub type RhaiRuntimeBuilder<'a> = ScriptingRuntimeBuilder<'a, ScriptingRuntime<rhai::Engine>>;
+pub type RhaiRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>>;
 
-impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<'a, ScriptingRuntime<rhai::Engine>> {
+impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>> {
     type Callbacks = ();
     type Runtime = ScriptingRuntime<rhai::Engine>;
 
-    fn build(self) -> Self::Runtime {
+    fn build(self) -> (World, Self::Runtime) {
         todo!()
     }
 }
