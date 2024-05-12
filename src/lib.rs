@@ -233,37 +233,40 @@ pub struct ScriptingPlugin<R: RuntimeConfig> {
     _phantom_data: PhantomData<R>,
 }
 
+pub trait Runtime<A>: Resource + Default + CreateScriptData<A> + RegisterRawFn + Debug {}
+
+impl<A, T: Resource + Default + CreateScriptData<A> + RegisterRawFn + Debug> Runtime<A> for T {}
+
 pub trait RuntimeConfig: Send + Sync + 'static {
     type ScriptAsset: FileExtension + From<String> + Default + Asset + Debug;
-    type Schedule: ScheduleLabel + Debug + Clone + Default;
-    type Runtime: Resource + Default;
-    type Engine;
+    type Schedule: ScheduleLabel + Debug + Clone + Default + Debug;
+    type Runtime: Runtime<Self::ScriptAsset>;
 }
 
-impl<R: RuntimeConfig> Plugin for ScriptingPlugin<R> {
+impl<C: RuntimeConfig> Plugin for ScriptingPlugin<C> {
     fn build(&self, app: &mut App) {
-        let schedule = R::Schedule::default();
+        let schedule = C::Schedule::default();
 
         app.world
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, schedule.clone());
 
-        app.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
-            .init_schedule(R::Schedule::default())
-            .init_asset::<R::ScriptAsset>()
-            .init_resource::<R::Runtime>()
+        app.register_asset_loader(ScriptLoader::<C::ScriptAsset>::default())
+            .init_schedule(C::Schedule::default())
+            .init_asset::<C::ScriptAsset>()
+            .init_resource::<C::Runtime>()
             .init_resource::<Callbacks<(), ()>>()
             .add_systems(
                 schedule,
                 (
-                    reload_scripts::<RhaiScript>,
-                    process_calls::<(), ()>
+                    reload_scripts::<C>,
+                    process_calls
                         .pipe(log_errors)
-                        .after(process_new_scripts::<R::ScriptAsset, (), rhai::Engine>),
-                    init_callbacks::<rhai::Engine, (), ()>.pipe(log_errors),
-                    process_new_scripts::<RhaiScript, (), rhai::Engine>
+                        .after(process_new_scripts::<C>),
+                    init_callbacks::<C>.pipe(log_errors),
+                    process_new_scripts::<C>
                         .pipe(log_errors)
-                        .after(init_callbacks::<rhai::Engine, (), ()>),
+                        .after(init_callbacks::<C>),
                 ),
             );
     }
@@ -274,17 +277,19 @@ pub struct ScriptingRuntime<T: Default + Debug> {
     engine: T,
 }
 
-pub trait RegisterRawFn<D, C> {
+pub trait RegisterRawFn {
     fn register_raw_fn(
         &mut self,
         name: &str,
         arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<D, C> + Send + Sync + 'static,
+        f: impl Fn() -> Promise<(), ()> + Send + Sync + 'static,
     );
 }
 
-pub trait GetEngine<T> {
-    fn engine_mut(&mut self) -> &mut T;
+pub trait GetEngine {
+    type Engine;
+
+    fn engine_mut(&mut self) -> &mut Self::Engine;
 }
 
 /// An extension trait for [App] that allows to register a script function.

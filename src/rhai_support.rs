@@ -2,7 +2,10 @@ use std::any::TypeId;
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{entity::Entity, schedule::ScheduleLabel, world::World},
+    ecs::{
+        component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource,
+        world::World,
+    },
     math::Vec3,
     reflect::TypePath,
 };
@@ -31,52 +34,57 @@ impl FileExtension for RhaiScript {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub struct RhaiScriptData {
     pub scope: rhai::Scope<'static>,
     pub(crate) ast: rhai::AST,
 }
 
-impl GetEngine<rhai::Engine> for ScriptingRuntime<rhai::Engine> {
+#[derive(Default, Resource, Debug)]
+pub struct RhaiScriptingRuntime {
+    engine: rhai::Engine,
+}
+
+impl GetEngine for RhaiScriptingRuntime {
+    type Engine = rhai::Engine;
+
     fn engine_mut(&mut self) -> &mut rhai::Engine {
         &mut self.engine
     }
 }
 
-impl CreateScriptData<rhai::Engine> for RhaiScript {
-    type ScriptData = RhaiScriptData;
-
+impl CreateScriptData<RhaiScript> for RhaiScriptingRuntime {
     fn create_script_data(
         &self,
         entity: Entity,
-        engine: &mut rhai::Engine,
-    ) -> Result<Self::ScriptData, ScriptingError> {
+        script: &RhaiScript,
+    ) -> Result<ScriptData<()>, ScriptingError> {
         let mut scope = Scope::new();
 
         scope.push(ENTITY_VAR_NAME, entity);
 
-        let ast = engine
-            .compile_with_scope(&scope, &self.0)
+        let ast = self
+            .engine
+            .compile_with_scope(&scope, &script.0)
             .map_err(ScriptingError::CompileError)?;
 
-        engine
+        self.engine
             .run_ast_with_scope(&mut scope, &ast)
             .map_err(ScriptingError::RuntimeError)?;
 
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
 
-        Ok(Self::ScriptData { ast, scope })
+        // Ok(ScriptData { ast, scope })
+        Ok(ScriptData { data: () })
     }
 }
 
-impl<D: Send + Clone + 'static, C: Clone + 'static> RegisterRawFn<D, C>
-    for ScriptingRuntime<rhai::Engine>
-{
+impl RegisterRawFn for RhaiScriptingRuntime {
     fn register_raw_fn(
         &mut self,
         name: &str,
         arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<D, C> + Sync + Send + 'static,
+        f: impl Fn() -> Promise<(), ()> + Sync + Send + 'static,
     ) {
         self.engine
             .register_raw_fn(name, arg_types, move |_context, _args| {
@@ -152,9 +160,6 @@ impl Script<RhaiScript> {
 #[derive(Debug, Clone)]
 pub struct RhaiCallback;
 
-pub type RhaiRuntime = ScriptingRuntime<rhai::Engine>;
-pub type RhaiRuntimeBuilder = ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>>;
-
 impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::Engine>> {
     type Callbacks = ();
     type Runtime = ScriptingRuntime<rhai::Engine>;
@@ -172,9 +177,8 @@ impl BuildScriptingRuntime for ScriptingRuntimeBuilder<ScriptingRuntime<rhai::En
 #[derive(Default, ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RhaiSchedule;
 
-impl RuntimeConfig for ScriptingRuntime<rhai::Engine> {
+impl RuntimeConfig for RhaiScriptingRuntime {
     type ScriptAsset = RhaiScript;
     type Schedule = RhaiSchedule;
-    type Engine = rhai::Engine;
-    type Runtime = ScriptingRuntime<rhai::Engine>;
+    type Runtime = Self;
 }

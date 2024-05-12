@@ -5,9 +5,10 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{entity::Entity, world::World},
+    ecs::{component::Component, entity::Entity, world::World},
     reflect::TypePath,
 };
+use rhai::Engine;
 use serde::Deserialize;
 
 use crate::{
@@ -32,12 +33,12 @@ impl FileExtension for LuaScript {
     }
 }
 
-impl<D, C> RegisterRawFn<D, C> for ScriptingRuntime<LuaEngine> {
+impl RegisterRawFn for ScriptingRuntime<LuaEngine> {
     fn register_raw_fn(
         &mut self,
         name: &str,
         _arg_types: Vec<TypeId>,
-        f: impl Fn() -> Promise<D, C> + Sync + Send + 'static,
+        f: impl Fn() -> Promise<(), ()> + Sync + Send + 'static,
     ) {
         let engine = self.engine.lock().expect("Could not lock engine mutex");
         let fun = engine
@@ -54,23 +55,26 @@ impl<D, C> RegisterRawFn<D, C> for ScriptingRuntime<LuaEngine> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Component, Debug)]
 pub struct LuaScriptData {}
 
-impl GetEngine<LuaEngine> for ScriptingRuntime<LuaEngine> {
-    fn engine_mut(&mut self) -> &mut LuaEngine {
+struct LuaScriptingRuntime {
+    engine: LuaEngine,
+}
+
+impl GetEngine for LuaScriptingRuntime {
+    type Engine = LuaEngine;
+    fn engine_mut(&mut self) -> &mut Self::Engine {
         &mut self.engine
     }
 }
 
-impl CreateScriptData<LuaEngine> for LuaScript {
-    type ScriptData = LuaScriptData;
-
+impl CreateScriptData<LuaScript> for LuaScriptingRuntime {
     fn create_script_data(
         &self,
         _entity: bevy::prelude::Entity,
-        engine: &mut LuaEngine,
-    ) -> Result<Self::ScriptData, crate::ScriptingError> {
+        script: &LuaScript,
+    ) -> Result<ScriptData<()>, crate::ScriptingError> {
         //
         // let mut scope = Scope::new();
         //
@@ -88,16 +92,19 @@ impl CreateScriptData<LuaEngine> for LuaScript {
         //
         // Ok(Self::ScriptData { ast, scope })
         //
-        let engine = engine.lock().expect("Could not lock engine");
-        engine.load(&self.0).exec().expect("Error runnning script");
+        let engine = self.engine.lock().expect("Could not lock engine");
+        engine
+            .load(&script.0)
+            .exec()
+            .expect("Error runnning script");
 
-        Ok(Self::ScriptData {})
+        Ok(ScriptData { data: () })
     }
 }
 
 pub type LuaEngine = Arc<Mutex<mlua::Lua>>;
 
-impl Default for ScriptingRuntime<LuaEngine> {
+impl Default for LuaScriptingRuntime {
     fn default() -> Self {
         Self {
             engine: Arc::new(Mutex::new(mlua::Lua::new())),
