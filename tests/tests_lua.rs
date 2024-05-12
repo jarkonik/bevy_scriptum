@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    lua_support::{LuaEngine, LuaScript, LuaScriptData},
+    lua_support::{LuaEngine, LuaRuntimeBuilder, LuaScript, LuaScriptData},
     prelude::*,
     rhai_support::RhaiRuntimeBuilder,
     AddScriptingRuntimeAppExt, CallFunction as _, Script, ScriptData, ScriptingRuntime,
@@ -39,7 +39,7 @@ fn test_rust_function_gets_called_from_lua() {
 
     app.world.init_resource::<TimesCalled>();
 
-    app.add_scripting_runtime::<RhaiRuntimeBuilder>(|r| {
+    app.add_scripting_runtime::<LuaRuntimeBuilder>(|r| {
         r.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
             res.times_called += 1;
         });

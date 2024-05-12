@@ -189,6 +189,7 @@ use std::{
     any::TypeId,
     fmt::Debug,
     marker::PhantomData,
+    mem::take,
     sync::{Arc, Mutex},
 };
 
@@ -325,30 +326,21 @@ pub trait BuildScriptingRuntime {
     fn build(self) -> Self::Runtime;
 }
 
-pub struct ScriptingRuntimeBuilder<'app, R> {
+pub struct ScriptingRuntimeBuilder<'a, R> {
     _phantom_data: PhantomData<R>,
-    app: &'app mut App,
+    world: &'a mut World,
 }
 
-impl<'app, R> ScriptingRuntimeBuilder<'app, R> {
-    pub fn new(app: &'app mut App) -> Self {
+impl<'a, R> ScriptingRuntimeBuilder<'a, R> {
+    pub fn new(world: &'a mut World) -> Self {
         Self {
-            app,
+            world,
             _phantom_data: PhantomData::default(),
         }
     }
 }
 
-impl<'app> BuildScriptingRuntime for ScriptingRuntimeBuilder<'app, ScriptingRuntime<rhai::Engine>> {
-    type Callbacks = ();
-    type Runtime = ScriptingRuntime<rhai::Engine>;
-
-    fn build(self) -> Self::Runtime {
-        todo!()
-    }
-}
-
-impl<'app, R> AddScriptFunction for ScriptingRuntimeBuilder<'app, R> {
+impl<'a, R> AddScriptFunction for ScriptingRuntimeBuilder<'a, R> {
     fn add_script_function<
         Out,
         Marker,
@@ -363,8 +355,8 @@ impl<'app, R> AddScriptFunction for ScriptingRuntimeBuilder<'app, R> {
         name: String,
         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, Y, F, Args>,
     ) -> &mut Self {
-        let system = system.into_callback_system(&mut self.app.world);
-        let mut callbacks_resource = self.app.world.resource_mut::<Callbacks<(), ()>>();
+        let system = system.into_callback_system(&mut self.world);
+        let mut callbacks_resource = self.world.resource_mut::<Callbacks<(), ()>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
@@ -376,22 +368,20 @@ impl<'app, R> AddScriptFunction for ScriptingRuntimeBuilder<'app, R> {
 }
 
 pub trait AddScriptingRuntimeAppExt {
-    fn add_scripting_runtime<
-        B: AddScriptFunction + BuildScriptingRuntime + for<'a> NewWithApp<'a>,
-    >(
+    fn add_scripting_runtime<'a, B: AddScriptFunction + BuildScriptingRuntime + NewWithWorld<'a>>(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut App;
 }
 
-pub trait NewWithApp<'a> {
-    fn new_with_app(app: &'a mut App) -> Self;
+pub trait NewWithWorld<'a> {
+    fn new_with_world(world: &'a mut World) -> Self;
 }
 
-impl<'a, R> NewWithApp<'a> for ScriptingRuntimeBuilder<'a, R> {
-    fn new_with_app(app: &'a mut App) -> Self {
+impl<'a, R> NewWithWorld<'a> for ScriptingRuntimeBuilder<'a, R> {
+    fn new_with_world(world: &'a mut World) -> Self {
         Self {
-            app,
+            world,
             _phantom_data: PhantomData::default(),
         }
     }
@@ -399,19 +389,21 @@ impl<'a, R> NewWithApp<'a> for ScriptingRuntimeBuilder<'a, R> {
 
 impl AddScriptingRuntimeAppExt for App {
     fn add_scripting_runtime<
-        B: AddScriptFunction + BuildScriptingRuntime + for<'a> NewWithApp<'a>,
+        'a,
+        B: AddScriptFunction + BuildScriptingRuntime + NewWithWorld<'a>,
     >(
         &mut self,
         f: impl Fn(&mut B),
     ) -> &mut Self {
-        let builder = B::new_with_app(self);
+        let builder = ScriptingRuntimeBuilder::<ScriptingRuntime<rhai::Engine>>::new_with_world(
+            &mut self.world,
+        );
 
-        // let runtime = {
         // f(&mut builder);
-        // builder.build()
-        // };
 
-        // self.insert_resource(runtime);
+        let runtime = builder.build();
+
+        self.insert_resource(runtime);
 
         self
     }

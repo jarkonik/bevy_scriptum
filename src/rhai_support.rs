@@ -10,9 +10,9 @@ use rhai::Scope;
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, CallFunction, GetEngine,
-    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime, ScriptingRuntimeBuilder,
-    ENTITY_VAR_NAME,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, BuildScriptingRuntime,
+    CallFunction, GetEngine, RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
+    ScriptingRuntimeBuilder, ENTITY_VAR_NAME,
 };
 
 /// A rhai language script that can be loaded by the [crate::ScriptingPlugin].
@@ -152,4 +152,13 @@ impl Script<RhaiScript> {
 #[derive(Debug, Clone)]
 pub struct RhaiCallback;
 
-pub type RhaiRuntimeBuilder<'app> = ScriptingRuntimeBuilder<'app, ScriptingRuntime<rhai::Engine>>;
+pub type RhaiRuntimeBuilder<'a> = ScriptingRuntimeBuilder<'a, ScriptingRuntime<rhai::Engine>>;
+
+impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<'a, ScriptingRuntime<rhai::Engine>> {
+    type Callbacks = ();
+    type Runtime = ScriptingRuntime<rhai::Engine>;
+
+    fn build(self) -> Self::Runtime {
+        todo!()
+    }
+}

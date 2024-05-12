@@ -5,14 +5,15 @@ use std::{
 
 use bevy::{
     asset::{Asset, Handle},
-    ecs::{entity::Entity},
+    ecs::entity::Entity,
     reflect::TypePath,
 };
 use serde::Deserialize;
 
 use crate::{
-    assets::FileExtension, promise::Promise, systems::CreateScriptData, CallFunction, GetEngine,
-    RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
+    assets::FileExtension, promise::Promise, systems::CreateScriptData, BuildScriptingRuntime,
+    CallFunction, GetEngine, RegisterRawFn, Script, ScriptData, ScriptingError, ScriptingRuntime,
+    ScriptingRuntimeBuilder,
 };
 
 /// A lua language script that can be loaded by the [crate::ScriptingPlugin].
@@ -138,3 +139,14 @@ impl CallFunction<LuaScriptData> for ScriptingRuntime<LuaEngine> {
 
 #[derive(Debug, Clone)]
 pub struct LuaCallback;
+
+pub type LuaRuntimeBuilder<'a> = ScriptingRuntimeBuilder<'a, ScriptingRuntime<LuaEngine>>;
+
+impl<'a> BuildScriptingRuntime for ScriptingRuntimeBuilder<'a, ScriptingRuntime<LuaEngine>> {
+    type Callbacks = ();
+    type Runtime = ScriptingRuntime<rhai::Engine>;
+
+    fn build(self) -> Self::Runtime {
+        todo!()
+    }
+}
