@@ -4,7 +4,6 @@ use bevy_scriptum::{
     runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime},
     Script, ScriptingPluginBuilder,
 };
-
 fn build_test_app() -> App {
     let mut app = App::new();
     app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))

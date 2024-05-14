@@ -21,3 +21,4 @@ rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"] }
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 rlua = "0.20.0"
+tracing = "0.1.40"

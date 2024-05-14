@@ -35,7 +35,7 @@ pub(crate) fn process_new_scripts<R: Runtime>(
     mut commands: Commands,
     mut added_scripted_entities: Query<
         (Entity, &mut Script<R::ScriptAsset>),
-        Without<RhaiScriptData>,
+        Without<R::ScriptData>,
     >,
     scripting_runtime: ResMut<R>,
     scripts: Res<Assets<R::ScriptAsset>>,
@@ -47,7 +47,9 @@ pub(crate) fn process_new_scripts<R: Runtime>(
                 Ok(script_data) => {
                     commands.entity(entity).insert(script_data);
                 }
-                Err(e) => tracing::error!(?e),
+                Err(e) => {
+                    tracing::error!(?e);
+                }
             }
         }
     }

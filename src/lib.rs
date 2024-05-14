@@ -226,9 +226,6 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
-#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
-struct Scripting;
-
 pub trait EngineMut {
     type Engine;
 
@@ -304,7 +301,7 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
             .init_resource::<Callbacks<R::CallContext, R::Value>>()
             .insert_resource(R::default())
             .add_systems(
-                Scripting,
+                R::Schedule::default(),
                 (
                     reload_scripts::<R>,
                     process_calls::<R>

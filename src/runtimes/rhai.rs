@@ -9,7 +9,7 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{Engine, Scope, Shared};
+use rhai::{CallFnOptions, Dynamic, Engine, Scope, Shared};
 use serde::Deserialize;
 
 use crate::{
@@ -117,23 +117,21 @@ impl Runtime for RhaiScriptingRuntime {
         entity: Entity,
         args: impl rhai::FuncArgs,
     ) -> Result<(), ScriptingError> {
-        todo!()
-
-        //         let ast = script_data.ast.clone();
-        //         let scope = &mut script_data.scope;
-        //         scope.push(ENTITY_VAR_NAME, entity);
-        //         let options = CallFnOptions::new().eval_ast(false);
-        //         let result =
-        //             self.engine
-        //                 .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        //         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        //         if let Err(err) = result {
-        //             match *err {
-        //                 rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-        //                 e => Err(Box::new(e))?,
-        //             }
-        //         }
-        //         Ok(())
+        let ast = script_data.ast.clone();
+        let scope = &mut script_data.scope;
+        scope.push(ENTITY_VAR_NAME, entity);
+        let options = CallFnOptions::new().eval_ast(false);
+        let result = self
+            .engine
+            .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
+        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        if let Err(err) = result {
+            match *err {
+                rhai::EvalAltResult::ErrorFunctionNotFound(n, _) if n == name => {}
+                e => Err(Box::new(e))?,
+            }
+        }
+        Ok(())
     }
 }
 
