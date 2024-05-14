@@ -186,9 +186,11 @@ pub mod runtimes;
 
 pub use crate::components::Script;
 use assets::GetExtensions;
+use promise::Promise;
 use runtimes::rhai::RhaiScriptData;
 
 use std::{
+    any::TypeId,
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
@@ -232,11 +234,20 @@ pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
+    type CallContext: Send + Clone;
+    type Value: Send + Clone;
 
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
         entity: Entity,
+    ) -> Result<Self::ScriptData, ScriptingError>;
+
+    fn register_fn(
+        &self,
+        name: String,
+        arg_types: Vec<TypeId>,
+        f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
     ) -> Result<Self::ScriptData, ScriptingError>;
 }
 
@@ -271,60 +282,55 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
         app.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
             .init_schedule(R::Schedule::default())
             .init_asset::<R::ScriptAsset>()
-            .init_resource::<Callbacks>()
-            .insert_resource(ScriptingRuntime::default())
+            .init_resource::<Callbacks<R::CallContext, R::Value>>()
+            .insert_resource(R::default())
             .add_systems(
                 Scripting,
                 (
                     reload_scripts::<R>,
-                    process_calls
+                    process_calls::<R>
                         .pipe(log_errors)
                         .after(process_new_scripts::<R>),
-                    init_callbacks.pipe(log_errors),
+                    init_callbacks::<R>.pipe(log_errors),
                     process_new_scripts::<R>
                         .pipe(log_errors)
-                        .after(init_callbacks),
+                        .after(init_callbacks::<R>),
                 ),
             );
     }
 }
 
-#[derive(Resource, Default)]
-pub struct ScriptingRuntime {
-    engine: Engine,
-}
-
-impl ScriptingRuntime {
-    /// Get a  mutable reference to the internal [rhai::Engine].
-    pub fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
-    }
-
-    /// Call a function that is available in the scope of the script.
-    pub fn call_fn(
-        &mut self,
-        function_name: &str,
-        script_data: &mut RhaiScriptData,
-        entity: Entity,
-        args: impl FuncArgs,
-    ) -> Result<(), ScriptingError> {
-        let ast = script_data.ast.clone();
-        let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
-        let options = CallFnOptions::new().eval_ast(false);
-        let result =
-            self.engine
-                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-                e => Err(Box::new(e))?,
-            }
-        }
-        Ok(())
-    }
-}
+// impl ScriptingRuntime {
+//     /// Get a  mutable reference to the internal [rhai::Engine].
+//     pub fn engine_mut(&mut self) -> &mut Engine {
+//         &mut self.engine
+//     }
+//
+//     /// Call a function that is available in the scope of the script.
+//     pub fn call_fn(
+//         &mut self,
+//         function_name: &str,
+//         script_data: &mut RhaiScriptData,
+//         entity: Entity,
+//         args: impl FuncArgs,
+//     ) -> Result<(), ScriptingError> {
+//         let ast = script_data.ast.clone();
+//         let scope = &mut script_data.scope;
+//         scope.push(ENTITY_VAR_NAME, entity);
+//         let options = CallFnOptions::new().eval_ast(false);
+//         let result =
+//             self.engine
+//                 .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
+//         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+//         if let Err(err) = result {
+//             match *err {
+//                 rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
+//                 e => Err(Box::new(e))?,
+//             }
+//         }
+//         Ok(())
+//     }
+// }
 
 /// An extension trait for [App] that allows to register a script function.
 pub trait AddScriptFunctionAppExt {
@@ -345,35 +351,44 @@ pub trait AddScriptFunctionAppExt {
 }
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
-#[derive(Resource, Default)]
-struct Callbacks {
-    uninitialized_callbacks: Vec<Callback>,
-    callbacks: Mutex<Vec<Callback>>,
+#[derive(Resource)]
+struct Callbacks<C: Send, V> {
+    uninitialized_callbacks: Vec<Callback<C, V>>,
+    callbacks: Mutex<Vec<Callback<C, V>>>,
 }
 
-impl AddScriptFunctionAppExt for App {
-    fn add_script_function<
-        Out,
-        Marker,
-        A: 'static,
-        const N: usize,
-        const X: bool,
-        R: 'static,
-        const F: bool,
-        Args,
-    >(
-        &mut self,
-        name: String,
-        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
-    ) -> &mut Self {
-        let system = system.into_callback_system(&mut self.world);
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks>();
-
-        callbacks_resource.uninitialized_callbacks.push(Callback {
-            name,
-            system: Arc::new(Mutex::new(system)),
-            calls: Arc::new(Mutex::new(vec![])),
-        });
-        self
+impl<C: Send, V> Default for Callbacks<C, V> {
+    fn default() -> Self {
+        Self {
+            uninitialized_callbacks: Default::default(),
+            callbacks: Default::default(),
+        }
     }
 }
+
+// impl AddScriptFunctionAppExt for App {
+//     fn add_script_function<
+//         Out,
+//         Marker,
+//         A: 'static,
+//         const N: usize,
+//         const X: bool,
+//         R: 'static,
+//         const F: bool,
+//         Args,
+//     >(
+//         &mut self,
+//         name: String,
+//         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
+//     ) -> &mut Self {
+//         let system = system.into_callback_system(&mut self.world);
+//         let mut callbacks_resource = self.world.resource_mut::<Callbacks>();
+//
+//         callbacks_resource.uninitialized_callbacks.push(Callback {
+//             name,
+//             system: Arc::new(Mutex::new(system)),
+//             calls: Arc::new(Mutex::new(vec![])),
+//         });
+//         self
+//     }
+// }

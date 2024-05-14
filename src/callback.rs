@@ -7,26 +7,26 @@ use rhai::{Dynamic, Variant};
 use crate::promise::Promise;
 
 /// A system that can be used to call a script function.
-pub struct CallbackSystem {
-    pub(crate) system: Box<dyn System<In = Vec<Dynamic>, Out = Dynamic>>,
+pub struct CallbackSystem<V> {
+    pub(crate) system: Box<dyn System<In = Vec<V>, Out = V>>,
     pub(crate) arg_types: Vec<TypeId>,
 }
 
-pub(crate) struct FunctionCallEvent {
-    pub(crate) params: Vec<Dynamic>,
-    pub(crate) promise: Promise,
+pub(crate) struct FunctionCallEvent<C: Send, V> {
+    pub(crate) params: Vec<V>,
+    pub(crate) promise: Promise<C>,
 }
 
 /// A struct representing a Bevy system that can be called from a script.
 #[derive(Clone)]
-pub(crate) struct Callback {
+pub(crate) struct Callback<C: Send, V> {
     pub(crate) name: String,
-    pub(crate) system: Arc<Mutex<CallbackSystem>>,
-    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent>>>,
+    pub(crate) system: Arc<Mutex<CallbackSystem<V>>>,
+    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>,
 }
 
-impl CallbackSystem {
-    pub(crate) fn call(&mut self, call: &FunctionCallEvent, world: &mut World) -> Dynamic {
+impl<V: Clone> CallbackSystem<V> {
+    pub(crate) fn call<C: Send>(&mut self, call: &FunctionCallEvent<C, V>, world: &mut World) -> V {
         self.system.run(call.params.clone(), world)
     }
 }
@@ -45,7 +45,7 @@ pub trait RegisterCallbackFunction<
 {
     /// Convert this function into a [CallbackSystem].
     #[must_use]
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem;
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
 }
 
 impl<Out, FN, Marker> RegisterCallbackFunction<Out, Marker, (), 1, false, Dynamic, false, ()> for FN
@@ -53,7 +53,7 @@ where
     FN: IntoSystem<(), Out, Marker>,
     Out: Sync + Variant + Clone,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<Dynamic> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<Dynamic>>, world: &mut World| {
@@ -78,7 +78,7 @@ macro_rules! impl_tuple {
             Out: Sync + Variant + Clone,
             $($t: 'static + Clone,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<Dynamic> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
                 let system_fn = move |args: In<Vec<Dynamic>>, world: &mut World| {

@@ -1,5 +1,4 @@
 use bevy::{prelude::*, utils::tracing};
-use rhai::Scope;
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},
@@ -9,10 +8,10 @@ use crate::{
     callback::FunctionCallEvent,
     promise::{Promise, PromiseInner},
     runtimes::rhai::RhaiScriptData,
-    Callback, Callbacks, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    Callback, Callbacks, Runtime, ScriptingError,
 };
 
-use super::{components::Script, ScriptingRuntime};
+use super::components::Script;
 
 /// Reloads scripts when they are modified.
 pub(crate) fn reload_scripts<R: Runtime>(
@@ -56,37 +55,38 @@ pub(crate) fn process_new_scripts<R: Runtime>(
 }
 
 /// Initializes callbacks. Registers them in the scripting engine.
-pub(crate) fn init_callbacks(world: &mut World) -> Result<(), ScriptingError> {
+pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
     let mut callbacks_resource = world
-        .get_resource_mut::<Callbacks>()
+        .get_resource_mut::<Callbacks<R::CallContext, R::Value>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let mut callbacks = callbacks_resource
         .uninitialized_callbacks
         .drain(..)
-        .collect::<Vec<Callback>>();
+        .collect::<Vec<Callback<R::CallContext, R::Value>>>();
 
     for callback in callbacks.iter_mut() {
         if let Ok(mut system) = callback.system.lock() {
             system.system.initialize(world);
 
             let mut scripting_runtime = world
-                .get_resource_mut::<ScriptingRuntime>()
+                .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
             trace!("init_callbacks: registering callback: '{}'", callback.name);
-            let engine = &mut scripting_runtime.engine;
+
             let callback = callback.clone();
-            engine.register_raw_fn(
+
+            scripting_runtime.register_fn(
                 callback.name,
                 system.arg_types.clone(),
                 move |context, args| {
-                    #[allow(deprecated)]
-                    let context_data = context.store_data();
+                    // let context_data = context.store_data();
+
                     let promise = Promise {
                         inner: Arc::new(Mutex::new(PromiseInner {
                             callbacks: vec![],
-                            context_data,
+                            context_data: context,
                         })),
                     };
 
@@ -95,14 +95,14 @@ pub(crate) fn init_callbacks(world: &mut World) -> Result<(), ScriptingError> {
                         promise: promise.clone(),
                         params: args.iter_mut().map(|arg| arg.clone()).collect(),
                     });
-                    Ok(promise)
+                    promise
                 },
             );
         }
     }
 
     let callbacks_resource = world
-        .get_resource_mut::<Callbacks>()
+        .get_resource_mut::<Callbacks<R::CallContext, R::Value>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
     callbacks_resource
         .callbacks
@@ -114,9 +114,9 @@ pub(crate) fn init_callbacks(world: &mut World) -> Result<(), ScriptingError> {
 }
 
 /// Processes calls. Calls the user-defined callback systems
-pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
+pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
     let callbacks_resource = world
-        .get_resource::<Callbacks>()
+        .get_resource::<Callbacks<R::CallContext, R::Value>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let callbacks = callbacks_resource.callbacks.lock().unwrap().clone();
@@ -127,15 +127,16 @@ pub(crate) fn process_calls(world: &mut World) -> Result<(), ScriptingError> {
             .lock()
             .unwrap()
             .drain(..)
-            .collect::<Vec<FunctionCallEvent>>();
+            .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value>>>();
         for mut call in calls {
             trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
             let val = system.call(&call, world);
             let mut runtime = world
-                .get_resource_mut::<ScriptingRuntime>()
+                .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
-            call.promise.resolve(&mut runtime.engine, val)?;
+
+            call.promise.resolve(&mut runtime, val)?;
         }
     }
     Ok(())

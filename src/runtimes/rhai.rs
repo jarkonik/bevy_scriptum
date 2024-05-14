@@ -48,6 +48,8 @@ impl Runtime for RhaiScriptingRuntime {
     type Schedule = RhaiSchedule;
     type ScriptAsset = RhaiScript;
     type ScriptData = RhaiScriptData;
+    type CallContext = rhai::NativeCallContextStore;
+    type Value = rhai::Dynamic;
 
     fn create_script_data(
         &self,
@@ -71,6 +73,15 @@ impl Runtime for RhaiScriptingRuntime {
 
         Ok(Self::ScriptData { ast, scope })
     }
+
+    fn register_fn(
+        &self,
+        name: String,
+        arg_types: Vec<std::any::TypeId>,
+        f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
+    ) -> Result<Self::ScriptData, ScriptingError> {
+        todo!()
+    }
 }
 
 impl Default for RhaiScriptingRuntime {
@@ -81,8 +92,8 @@ impl Default for RhaiScriptingRuntime {
             .register_type_with_name::<Entity>("Entity")
             .register_fn("index", |entity: &mut Entity| entity.index());
         engine
-            .register_type_with_name::<Promise>("Promise")
-            .register_fn("then", Promise::then);
+            .register_type_with_name::<Promise<rhai::NativeCallContextStore>>("Promise")
+            .register_fn("then", Promise::<rhai::NativeCallContextStore>::then);
         engine
             .register_type_with_name::<Vec3>("Vec3")
             .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
