@@ -252,8 +252,14 @@ pub trait Runtime: Resource + Default + EngineMut {
         &mut self,
         name: String,
         arg_types: Vec<TypeId>,
-        f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
-    ) -> Result<Self::ScriptData, ScriptingError>;
+        f: impl Fn(
+                Self::CallContext,
+                Vec<Self::Value>,
+            ) -> Result<Promise<Self::CallContext>, ScriptingError>
+            + Send
+            + Sync
+            + 'static,
+    ) -> Result<(), ScriptingError>;
 
     fn call_fn(
         &self,
@@ -312,23 +318,6 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
             );
     }
 }
-
-// impl ScriptingRuntime {
-//     /// Get a  mutable reference to the internal [rhai::Engine].
-//     pub fn engine_mut(&mut self) -> &mut Engine {
-//         &mut self.engine
-//     }
-//
-//     /// Call a function that is available in the scope of the script.
-//     pub fn call_fn(
-//         &mut self,
-//         function_name: &str,
-//         script_data: &mut RhaiScriptData,
-//         entity: Entity,
-//         args: impl FuncArgs,
-//     ) -> Result<(), ScriptingError> {
-//     }
-// }
 
 /// An extension trait for [App] that allows to register a script function.
 pub trait AddScriptFunctionAppExt {

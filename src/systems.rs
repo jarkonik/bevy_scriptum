@@ -80,22 +80,21 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
             let result = scripting_runtime.register_fn(
                 callback.name,
                 system.arg_types.clone(),
-                move |context, args| {
-                    // let context_data = context.store_data();
-
+                move |context, params| {
                     let promise = Promise {
                         inner: Arc::new(Mutex::new(PromiseInner {
                             callbacks: vec![],
-                            context_data: context,
+                            context,
                         })),
                     };
 
                     let mut calls = callback.calls.lock().unwrap();
+
                     calls.push(FunctionCallEvent {
                         promise: promise.clone(),
-                        params: args.to_vec(),
+                        params,
                     });
-                    promise
+                    Ok(promise)
                 },
             );
             if let Err(e) = result {

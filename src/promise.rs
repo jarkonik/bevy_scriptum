@@ -16,7 +16,7 @@ pub(crate) struct PromiseCallback<C: Send> {
 pub(crate) struct PromiseInner<C: Send> {
     pub(crate) callbacks: Vec<PromiseCallback<C>>,
     #[allow(deprecated)]
-    pub(crate) context_data: C,
+    pub(crate) context: C,
 }
 
 /// A struct that represents a Promise.
@@ -65,7 +65,7 @@ impl<C: Clone + Send + 'static> Promise<C> {
         let mut inner = self.inner.lock().unwrap();
         let following_inner = Arc::new(Mutex::new(PromiseInner {
             callbacks: vec![],
-            context_data: inner.context_data.clone(),
+            context: inner.context.clone(),
         }));
 
         inner.callbacks.push(PromiseCallback {

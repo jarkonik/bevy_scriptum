@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use bevy::{
     asset::Asset,
     ecs::{
@@ -7,11 +9,14 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{Engine, Scope};
+use rhai::{Engine, Scope, Shared};
 use serde::Deserialize;
 
 use crate::{
-    assets::GetExtensions, promise::Promise, EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    assets::GetExtensions,
+    callback::FunctionCallEvent,
+    promise::{Promise, PromiseInner},
+    EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
@@ -88,9 +93,21 @@ impl Runtime for RhaiScriptingRuntime {
         &mut self,
         name: String,
         arg_types: Vec<std::any::TypeId>,
-        f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
-    ) -> Result<Self::ScriptData, ScriptingError> {
-        todo!()
+        f: impl Fn(
+                Self::CallContext,
+                Vec<Self::Value>,
+            ) -> Result<Promise<Self::CallContext>, ScriptingError>
+            + Send
+            + Sync
+            + 'static,
+    ) -> Result<(), ScriptingError> {
+        self.engine
+            .register_raw_fn(name, arg_types, move |context, args| {
+                let args = args.iter_mut().map(|arg| arg.clone()).collect();
+                let promise = f(context.store_data(), args).unwrap();
+                Ok(promise)
+            });
+        Ok(())
     }
 
     fn call_fn(
