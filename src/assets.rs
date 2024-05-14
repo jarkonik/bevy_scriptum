@@ -2,10 +2,8 @@ use std::marker::PhantomData;
 
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
-    reflect::TypePath,
     utils::BoxedFuture,
 };
-use serde::Deserialize;
 
 /// A loader for [RhaiScript] assets.
 pub struct ScriptLoader<A: Asset + From<String>> {

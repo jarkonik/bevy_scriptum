@@ -7,8 +7,8 @@ use std::{
 
 use crate::{
     callback::FunctionCallEvent,
-    components::ScriptData,
     promise::{Promise, PromiseInner},
+    runtimes::rhai::RhaiScriptData,
     Callback, Callbacks, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
@@ -52,7 +52,7 @@ pub(crate) fn reload_scripts<R: Runtime>(
         if let AssetEvent::Modified { id } = ev {
             for (entity, script) in &mut scripts {
                 if script.script.id() == *id {
-                    commands.entity(entity).remove::<ScriptData>();
+                    commands.entity(entity).remove::<RhaiScriptData>();
                 }
             }
         }
@@ -62,30 +62,22 @@ pub(crate) fn reload_scripts<R: Runtime>(
 /// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
 pub(crate) fn process_new_scripts<R: Runtime>(
     mut commands: Commands,
-    mut added_scripted_entities: Query<(Entity, &mut Script<R::ScriptAsset>), Without<ScriptData>>,
-    scripting_runtime: ResMut<ScriptingRuntime>,
+    mut added_scripted_entities: Query<
+        (Entity, &mut Script<R::ScriptAsset>),
+        Without<RhaiScriptData>,
+    >,
+    scripting_runtime: ResMut<R>,
     scripts: Res<Assets<R::ScriptAsset>>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
-        trace!("process_new_scripts: evaulating a new script");
+        tracing::trace!("evaulating a new script");
         if let Some(script) = scripts.get(&script_component.script) {
-            let mut scope = Scope::new();
-
-            scope.push(ENTITY_VAR_NAME, entity);
-
-            let engine = &scripting_runtime.engine;
-
-            let ast = engine
-                .compile_with_scope(&scope, script.0.as_str())
-                .map_err(ScriptingError::CompileError)?;
-
-            engine
-                .run_ast_with_scope(&mut scope, &ast)
-                .map_err(ScriptingError::RuntimeError)?;
-
-            scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-
-            commands.entity(entity).insert(ScriptData { ast, scope });
+            match scripting_runtime.create_script_data(script, entity) {
+                Ok(script_data) => {
+                    commands.entity(entity).insert(script_data);
+                }
+                Err(e) => tracing::error!(?e),
+            }
         }
     }
     Ok(())

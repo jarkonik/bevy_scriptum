@@ -1,5 +1,8 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
-use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
+use bevy_scriptum::{
+    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
+    Script, ScriptingPluginBuilder,
+};
 
 #[derive(Component)]
 struct Comp;
@@ -36,7 +39,7 @@ fn spawn_entity(mut commands: Commands) {
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
-    commands.spawn((Script::new(
+    commands.spawn((Script::<RhaiScript>::new(
         assets_server.load("examples/side_effects.rhai"),
     ),));
 }

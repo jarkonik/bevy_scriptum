@@ -184,8 +184,9 @@ mod systems;
 
 pub mod runtimes;
 
-pub use crate::components::{Script, ScriptData};
+pub use crate::components::Script;
 use assets::GetExtensions;
+use runtimes::rhai::RhaiScriptData;
 
 use std::{
     fmt::Debug,
@@ -194,7 +195,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use bevy::{
+    app::MainScheduleOrder,
+    ecs::{entity, schedule::ScheduleLabel},
+    prelude::*,
+};
 use callback::{Callback, RegisterCallbackFunction};
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
 use systems::{init_callbacks, init_engine, log_errors, process_calls};
@@ -226,6 +231,13 @@ struct Scripting;
 pub trait Runtime: Resource {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
+    type ScriptData: Component;
+
+    fn create_script_data(
+        &self,
+        script: &Self::ScriptAsset,
+        entity: Entity,
+    ) -> Result<Self::ScriptData, ScriptingError>;
 }
 
 #[derive(Default)]
@@ -292,7 +304,7 @@ impl ScriptingRuntime {
     pub fn call_fn(
         &mut self,
         function_name: &str,
-        script_data: &mut ScriptData,
+        script_data: &mut RhaiScriptData,
         entity: Entity,
         args: impl FuncArgs,
     ) -> Result<(), ScriptingError> {

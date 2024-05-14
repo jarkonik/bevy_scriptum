@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
-    runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder, ScriptingRuntime,
+    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
+    Script, ScriptingPluginBuilder, ScriptingRuntime,
 };
 
 fn main() {
@@ -35,5 +36,7 @@ fn startup(
         // Register a "constructor" for MyType
         .register_fn("new_my_type", || MyType { my_field: 42 });
 
-    commands.spawn(Script::new(assets_server.load("examples/custom_type.rhai")));
+    commands.spawn(Script::<RhaiScript>::new(
+        assets_server.load("examples/custom_type.rhai"),
+    ));
 }

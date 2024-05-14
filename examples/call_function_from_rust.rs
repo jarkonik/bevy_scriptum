@@ -1,7 +1,7 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
 use bevy_scriptum::{
-    runtimes::rhai::RhaiScriptingRuntime, Script, ScriptData, ScriptingPluginBuilder,
-    ScriptingRuntime,
+    runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime},
+    Script, ScriptingPluginBuilder, ScriptingRuntime,
 };
 
 fn main() {
@@ -34,13 +34,13 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
-    commands.spawn(Script::new(
+    commands.spawn(Script::<RhaiScript>::new(
         assets_server.load("examples/call_function_from_rust.rhai"),
     ));
 }
 
 fn call_rhai_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut ScriptData)>,
+    mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>,
     mut scripting_runtime: ResMut<ScriptingRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {

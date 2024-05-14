@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
+use bevy_scriptum::{
+    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
+    Script, ScriptingPluginBuilder,
+};
 
 #[derive(Component)]
 struct Player;
@@ -18,5 +21,7 @@ fn main() {
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn((Player, Name::new("John")));
-    commands.spawn(Script::new(assets_server.load("examples/promises.rhai")));
+    commands.spawn(Script::<RhaiScript>::new(
+        assets_server.load("examples/promises.rhai"),
+    ));
 }

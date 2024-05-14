@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
+use bevy_scriptum::{
+    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
+    Script, ScriptingPluginBuilder,
+};
 
 fn main() {
     App::new()
@@ -11,7 +14,9 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
-    commands.spawn(Script::new(assets_server.load("examples/hello_world.rhai")));
+    commands.spawn(Script::<RhaiScript>::new(
+        assets_server.load("examples/hello_world.rhai"),
+    ));
 }
 
 fn hello_bevy_callback_system() {
