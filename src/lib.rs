@@ -202,7 +202,7 @@ use bevy::{
 };
 use callback::{Callback, RegisterCallbackFunction};
 use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
-use systems::{init_callbacks, init_engine, log_errors, process_calls};
+use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
@@ -228,7 +228,7 @@ pub enum ScriptingError {
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 struct Scripting;
 
-pub trait Runtime: Resource {
+pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
@@ -245,6 +245,7 @@ pub struct ScriptingPlugin<R: Runtime> {
     _phantom_data: PhantomData<R>,
 }
 
+#[derive(Default)]
 pub struct ScriptingPluginBuilder<R> {
     _phantom_data: PhantomData<R>,
 }
@@ -257,7 +258,7 @@ impl<R: Runtime> ScriptingPluginBuilder<R> {
     }
 
     pub fn build(self) -> ScriptingPlugin<R> {
-        todo!()
+        ScriptingPlugin::default()
     }
 }
 
@@ -272,7 +273,6 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
             .init_asset::<R::ScriptAsset>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
-            .add_systems(Startup, init_engine.pipe(log_errors))
             .add_systems(
                 Scripting,
                 (

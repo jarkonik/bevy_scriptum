@@ -1,12 +1,16 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
+    ecs::{
+        component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource,
+        world::World,
+    },
+    math::Vec3,
     reflect::TypePath,
 };
-use rhai::Scope;
+use rhai::{Engine, Scope};
 use serde::Deserialize;
 
-use crate::{assets::GetExtensions, Runtime, ScriptingError, ENTITY_VAR_NAME};
+use crate::{assets::GetExtensions, promise::Promise, Runtime, ScriptingError, ENTITY_VAR_NAME};
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -66,5 +70,30 @@ impl Runtime for RhaiScriptingRuntime {
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
 
         Ok(Self::ScriptData { ast, scope })
+    }
+}
+
+impl Default for RhaiScriptingRuntime {
+    fn default() -> Self {
+        let mut engine = Engine::new();
+
+        engine
+            .register_type_with_name::<Entity>("Entity")
+            .register_fn("index", |entity: &mut Entity| entity.index());
+        engine
+            .register_type_with_name::<Promise>("Promise")
+            .register_fn("then", Promise::then);
+        engine
+            .register_type_with_name::<Vec3>("Vec3")
+            .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
+                Vec3::new(x as f32, y as f32, z as f32)
+            })
+            .register_get("x", |vec: &mut Vec3| vec.x as f64)
+            .register_get("y", |vec: &mut Vec3| vec.y as f64)
+            .register_get("z", |vec: &mut Vec3| vec.z as f64);
+        #[allow(deprecated)]
+        engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+
+        RhaiScriptingRuntime { engine }
     }
 }

@@ -14,34 +14,6 @@ use crate::{
 
 use super::{components::Script, ScriptingRuntime};
 
-/// Initialize the scripting engine. Adds built-in types and functions.
-pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
-    let mut scripting_runtime = world
-        .get_resource_mut::<ScriptingRuntime>()
-        .ok_or(ScriptingError::NoRuntimeResource)?;
-
-    let engine = &mut scripting_runtime.engine;
-
-    engine
-        .register_type_with_name::<Entity>("Entity")
-        .register_fn("index", |entity: &mut Entity| entity.index());
-    engine
-        .register_type_with_name::<Promise>("Promise")
-        .register_fn("then", Promise::then);
-    engine
-        .register_type_with_name::<Vec3>("Vec3")
-        .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-            Vec3::new(x as f32, y as f32, z as f32)
-        })
-        .register_get("x", |vec: &mut Vec3| vec.x as f64)
-        .register_get("y", |vec: &mut Vec3| vec.y as f64)
-        .register_get("z", |vec: &mut Vec3| vec.z as f64);
-    #[allow(deprecated)]
-    engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
-
-    Ok(())
-}
-
 /// Reloads scripts when they are modified.
 pub(crate) fn reload_scripts<R: Runtime>(
     mut commands: Commands,
