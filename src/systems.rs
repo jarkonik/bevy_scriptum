@@ -77,7 +77,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
 
             let callback = callback.clone();
 
-            scripting_runtime.register_fn(
+            let result = scripting_runtime.register_fn(
                 callback.name,
                 system.arg_types.clone(),
                 move |context, args| {
@@ -93,11 +93,14 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                     let mut calls = callback.calls.lock().unwrap();
                     calls.push(FunctionCallEvent {
                         promise: promise.clone(),
-                        params: args.iter().map(|arg| arg.clone()).collect(),
+                        params: args.to_vec(),
                     });
                     promise
                 },
             );
+            if let Err(e) = result {
+                tracing::error!(?e);
+            }
         }
     }
 

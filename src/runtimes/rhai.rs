@@ -85,7 +85,7 @@ impl Runtime for RhaiScriptingRuntime {
     }
 
     fn register_fn(
-        &self,
+        &mut self,
         name: String,
         arg_types: Vec<std::any::TypeId>,
         f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,

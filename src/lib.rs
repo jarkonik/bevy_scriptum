@@ -249,7 +249,7 @@ pub trait Runtime: Resource + Default + EngineMut {
     ) -> Result<Self::ScriptData, ScriptingError>;
 
     fn register_fn(
-        &self,
+        &mut self,
         name: String,
         arg_types: Vec<TypeId>,
         f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
