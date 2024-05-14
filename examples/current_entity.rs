@@ -1,16 +1,16 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script};
+use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin)
-        .add_script_function(
-            String::from("get_name"),
-            |In((entity,)): In<(Entity,)>, names: Query<&Name>| {
-                names.get(entity).unwrap().to_string()
-            },
-        )
+        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
+        // .add_script_function(
+        //     String::from("get_name"),
+        //     |In((entity,)): In<(Entity,)>, names: Query<&Name>| {
+        //         names.get(entity).unwrap().to_string()
+        //     },
+        // )
         .add_systems(Startup, startup)
         .run();
 }

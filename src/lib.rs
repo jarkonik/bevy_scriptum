@@ -182,10 +182,17 @@ mod components;
 mod promise;
 mod systems;
 
-use std::sync::{Arc, Mutex};
+pub mod runtimes;
 
 pub use crate::components::{Script, ScriptData};
-pub use assets::RhaiScript;
+use assets::GetExtensions;
+
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
 use callback::{Callback, RegisterCallbackFunction};
@@ -194,7 +201,7 @@ use systems::{init_callbacks, init_engine, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
-    assets::RhaiScriptLoader,
+    assets::ScriptLoader,
     systems::{process_new_scripts, reload_scripts},
 };
 
@@ -216,28 +223,55 @@ pub enum ScriptingError {
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 struct Scripting;
 
-#[derive(Default)]
-pub struct ScriptingPlugin;
+pub trait Runtime: Resource {
+    type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
+    type ScriptAsset: Asset + From<String> + GetExtensions;
+}
 
-impl Plugin for ScriptingPlugin {
+#[derive(Default)]
+pub struct ScriptingPlugin<R: Runtime> {
+    _phantom_data: PhantomData<R>,
+}
+
+pub struct ScriptingPluginBuilder<R> {
+    _phantom_data: PhantomData<R>,
+}
+
+impl<R: Runtime> ScriptingPluginBuilder<R> {
+    pub fn new() -> Self {
+        Self {
+            _phantom_data: Default::default(),
+        }
+    }
+
+    pub fn build(self) -> ScriptingPlugin<R> {
+        todo!()
+    }
+}
+
+impl<R: Runtime> Plugin for ScriptingPlugin<R> {
     fn build(&self, app: &mut App) {
         app.world
             .resource_mut::<MainScheduleOrder>()
-            .insert_after(Update, Scripting);
+            .insert_after(Update, R::Schedule::default());
 
-        app.register_asset_loader(RhaiScriptLoader)
-            .init_schedule(Scripting)
-            .init_asset::<RhaiScript>()
+        app.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
+            .init_schedule(R::Schedule::default())
+            .init_asset::<R::ScriptAsset>()
             .init_resource::<Callbacks>()
             .insert_resource(ScriptingRuntime::default())
             .add_systems(Startup, init_engine.pipe(log_errors))
             .add_systems(
                 Scripting,
                 (
-                    reload_scripts,
-                    process_calls.pipe(log_errors).after(process_new_scripts),
+                    reload_scripts::<R>,
+                    process_calls
+                        .pipe(log_errors)
+                        .after(process_new_scripts::<R>),
                     init_callbacks.pipe(log_errors),
-                    process_new_scripts.pipe(log_errors).after(init_callbacks),
+                    process_new_scripts::<R>
+                        .pipe(log_errors)
+                        .after(init_callbacks),
                 ),
             );
     }
@@ -330,8 +364,4 @@ impl AddScriptFunctionAppExt for App {
         });
         self
     }
-}
-
-pub mod prelude {
-    pub use crate::{AddScriptFunctionAppExt, ScriptingPlugin};
 }

@@ -1,10 +1,13 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script, ScriptData, ScriptingRuntime};
+use bevy_scriptum::{
+    runtimes::rhai::RhaiScriptingRuntime, Script, ScriptData, ScriptingPluginBuilder,
+    ScriptingRuntime,
+};
 
 fn build_test_app() -> App {
     let mut app = App::new();
     app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))
-        .add_plugins(ScriptingPlugin);
+        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build());
     app.update();
     app
 }
@@ -53,9 +56,9 @@ fn test_rust_function_gets_called_from_rhai() {
 
     app.world.init_resource::<TimesCalled>();
 
-    app.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
-        res.times_called += 1;
-    });
+    // app.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+    //     res.times_called += 1;
+    // });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load("tests/rust_function_gets_called_from_rhai.rhai");

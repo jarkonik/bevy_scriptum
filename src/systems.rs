@@ -9,10 +9,10 @@ use crate::{
     callback::FunctionCallEvent,
     components::ScriptData,
     promise::{Promise, PromiseInner},
-    Callback, Callbacks, ScriptingError, ENTITY_VAR_NAME,
+    Callback, Callbacks, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
-use super::{assets::RhaiScript, components::Script, ScriptingRuntime};
+use super::{components::Script, ScriptingRuntime};
 
 /// Initialize the scripting engine. Adds built-in types and functions.
 pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
@@ -43,10 +43,10 @@ pub(crate) fn init_engine(world: &mut World) -> Result<(), ScriptingError> {
 }
 
 /// Reloads scripts when they are modified.
-pub(crate) fn reload_scripts(
+pub(crate) fn reload_scripts<R: Runtime>(
     mut commands: Commands,
-    mut ev_asset: EventReader<AssetEvent<RhaiScript>>,
-    mut scripts: Query<(Entity, &mut Script)>,
+    mut ev_asset: EventReader<AssetEvent<R::ScriptAsset>>,
+    mut scripts: Query<(Entity, &mut Script<R::ScriptAsset>)>,
 ) {
     for ev in ev_asset.read() {
         if let AssetEvent::Modified { id } = ev {
@@ -60,11 +60,11 @@ pub(crate) fn reload_scripts(
 }
 
 /// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
-pub(crate) fn process_new_scripts(
+pub(crate) fn process_new_scripts<R: Runtime>(
     mut commands: Commands,
-    mut added_scripted_entities: Query<(Entity, &mut Script), Without<ScriptData>>,
+    mut added_scripted_entities: Query<(Entity, &mut Script<R::ScriptAsset>), Without<ScriptData>>,
     scripting_runtime: ResMut<ScriptingRuntime>,
-    scripts: Res<Assets<RhaiScript>>,
+    scripts: Res<Assets<R::ScriptAsset>>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
         trace!("process_new_scripts: evaulating a new script");

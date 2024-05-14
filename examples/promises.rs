@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script};
+use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
 
 #[derive(Component)]
 struct Player;
@@ -7,11 +7,11 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin)
-        .add_script_function(
-            String::from("get_player_name"),
-            |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
-        )
+        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
+        // .add_script_function(
+        //     String::from("get_player_name"),
+        //     |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
+        // )
         .add_systems(Startup, startup)
         .run();
 }

@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, Script};
+use bevy_scriptum::{runtimes::rhai::RhaiScriptingRuntime, Script, ScriptingPluginBuilder};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPlugin)
-        .add_script_function(String::from("hello_bevy"), hello_bevy_callback_system)
+        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
+        // .add_script_function(String::from("hello_bevy"), hello_bevy_callback_system)
         .add_systems(Startup, startup)
         .run();
 }
