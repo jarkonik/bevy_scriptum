@@ -5,7 +5,7 @@ use bevy::{
     utils::BoxedFuture,
 };
 
-/// A loader for [RhaiScript] assets.
+/// A loader for script assets.
 pub struct ScriptLoader<A: Asset + From<String>> {
     _phantom_data: PhantomData<A>,
 }

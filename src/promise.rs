@@ -47,7 +47,7 @@ impl<C: Send> PromiseInner<C> {
     }
 }
 
-impl<C: Clone + Send> Promise<C> {
+impl<C: Clone + Send + 'static> Promise<C> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve<V>(
         &mut self,

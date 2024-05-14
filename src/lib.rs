@@ -187,7 +187,6 @@ pub mod runtimes;
 pub use crate::components::Script;
 use assets::GetExtensions;
 use promise::Promise;
-use runtimes::rhai::RhaiScriptData;
 
 use std::{
     any::TypeId,
@@ -230,7 +229,13 @@ pub enum ScriptingError {
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 struct Scripting;
 
-pub trait Runtime: Resource + Default {
+pub trait EngineMut {
+    type Engine;
+
+    fn engine_mut(&mut self) -> &mut Engine;
+}
+
+pub trait Runtime: Resource + Default + EngineMut {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
@@ -249,6 +254,14 @@ pub trait Runtime: Resource + Default {
         arg_types: Vec<TypeId>,
         f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
     ) -> Result<Self::ScriptData, ScriptingError>;
+
+    fn call_fn(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl FuncArgs,
+    ) -> Result<(), ScriptingError>;
 }
 
 #[derive(Default)]
@@ -314,21 +327,6 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
 //         entity: Entity,
 //         args: impl FuncArgs,
 //     ) -> Result<(), ScriptingError> {
-//         let ast = script_data.ast.clone();
-//         let scope = &mut script_data.scope;
-//         scope.push(ENTITY_VAR_NAME, entity);
-//         let options = CallFnOptions::new().eval_ast(false);
-//         let result =
-//             self.engine
-//                 .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-//         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-//         if let Err(err) = result {
-//             match *err {
-//                 rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-//                 e => Err(Box::new(e))?,
-//             }
-//         }
-//         Ok(())
 //     }
 // }
 
@@ -392,3 +390,7 @@ impl<C: Send, V> Default for Callbacks<C, V> {
 //         self
 //     }
 // }
+
+pub mod prelude {
+    pub use crate::Runtime;
+}

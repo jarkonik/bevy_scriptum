@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder, ScriptingRuntime,
+    EngineMut as _, Script, ScriptingPluginBuilder,
 };
 
 fn main() {
@@ -22,7 +22,7 @@ struct MyType {
 
 fn startup(
     mut commands: Commands,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
+    mut scripting_runtime: ResMut<RhaiScriptingRuntime>,
     assets_server: Res<AssetServer>,
 ) {
     let engine = scripting_runtime.engine_mut();

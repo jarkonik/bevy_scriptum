@@ -93,7 +93,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                     let mut calls = callback.calls.lock().unwrap();
                     calls.push(FunctionCallEvent {
                         promise: promise.clone(),
-                        params: args.iter_mut().map(|arg| arg.clone()).collect(),
+                        params: args.iter().map(|arg| arg.clone()).collect(),
                     });
                     promise
                 },
@@ -136,7 +136,7 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
                 .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
-            call.promise.resolve(&mut runtime, val)?;
+            call.promise.resolve(runtime.as_mut(), val)?;
         }
     }
     Ok(())

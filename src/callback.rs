@@ -25,7 +25,7 @@ pub(crate) struct Callback<C: Send, V> {
     pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>,
 }
 
-impl<V: Clone> CallbackSystem<V> {
+impl<V: Clone + 'static> CallbackSystem<V> {
     pub(crate) fn call<C: Send>(&mut self, call: &FunctionCallEvent<C, V>, world: &mut World) -> V {
         self.system.run(call.params.clone(), world)
     }

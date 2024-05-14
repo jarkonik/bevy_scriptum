@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
+    prelude::*,
     runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder, ScriptingRuntime,
+    Script, ScriptingPluginBuilder,
 };
 
 fn build_test_app() -> App {
@@ -31,7 +32,7 @@ fn test_rhai_function_gets_called_from_rust() {
 
 fn call_rhai_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>,
-    mut scripting_runtime: ResMut<ScriptingRuntime>,
+    mut scripting_runtime: ResMut<RhaiScriptingRuntime>,
 ) {
     let (entity, mut script_data) = scripted_entities.single_mut();
     scripting_runtime

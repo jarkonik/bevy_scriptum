@@ -10,7 +10,9 @@ use bevy::{
 use rhai::{Engine, Scope};
 use serde::Deserialize;
 
-use crate::{assets::GetExtensions, promise::Promise, Runtime, ScriptingError, ENTITY_VAR_NAME};
+use crate::{
+    assets::GetExtensions, promise::Promise, EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
+};
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -42,6 +44,14 @@ pub struct RhaiSchedule;
 pub struct RhaiScriptData {
     pub scope: rhai::Scope<'static>,
     pub(crate) ast: rhai::AST,
+}
+
+impl EngineMut for RhaiScriptingRuntime {
+    type Engine = rhai::Engine;
+
+    fn engine_mut(&mut self) -> &mut Engine {
+        &mut self.engine
+    }
 }
 
 impl Runtime for RhaiScriptingRuntime {
@@ -81,6 +91,32 @@ impl Runtime for RhaiScriptingRuntime {
         f: impl Fn(Self::CallContext, &[Self::Value]) -> Promise<Self::CallContext>,
     ) -> Result<Self::ScriptData, ScriptingError> {
         todo!()
+    }
+
+    fn call_fn(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl rhai::FuncArgs,
+    ) -> Result<(), ScriptingError> {
+        todo!()
+
+        //         let ast = script_data.ast.clone();
+        //         let scope = &mut script_data.scope;
+        //         scope.push(ENTITY_VAR_NAME, entity);
+        //         let options = CallFnOptions::new().eval_ast(false);
+        //         let result =
+        //             self.engine
+        //                 .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
+        //         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        //         if let Err(err) = result {
+        //             match *err {
+        //                 rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
+        //                 e => Err(Box::new(e))?,
+        //             }
+        //         }
+        //         Ok(())
     }
 }
 
