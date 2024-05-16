@@ -1,10 +1,11 @@
 use bevy::prelude::*;
-use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::rhai::prelude::*;
+use bevy_scriptum::{prelude::*, BuildScriptingRuntime};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_scripting::<RhaiRuntime>(|_| {})
         .add_systems(Startup, startup)
         .run();
 }
