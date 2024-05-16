@@ -8,11 +8,11 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<RhaiRuntime>(|_builder| {
-            // runtime.add_function(
-            //     String::from("get_player_name"),
-            //     |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
-            // );
+        .add_scripting::<RhaiRuntime>(|builder| {
+            builder.add_function(
+                String::from("get_player_name"),
+                |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
+            );
         })
         .add_systems(Startup, startup)
         .run();
