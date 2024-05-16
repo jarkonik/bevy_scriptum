@@ -29,6 +29,7 @@ impl<V: Send + Clone + 'static> CallbackSystem<V> {
     }
 }
 
+// TODO: Move
 pub trait IntoValue<V> {
     fn into_value(self) -> V;
 }
@@ -40,6 +41,7 @@ pub trait CallbackFunction<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<V>;
 }
 
+// TODO: Move
 pub trait CloneCast {
     fn clone_cast<T: Clone + 'static>(&self) -> T;
 }

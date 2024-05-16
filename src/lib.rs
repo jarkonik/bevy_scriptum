@@ -234,7 +234,7 @@ pub enum ScriptingError {
 pub trait EngineMut {
     type Engine;
 
-    fn engine_mut(&mut self) -> &mut Engine;
+    fn engine_mut(&mut self) -> &mut Self::Engine;
 }
 
 pub trait Runtime: Resource + Default + EngineMut {
