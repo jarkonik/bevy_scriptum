@@ -31,6 +31,7 @@ pub(crate) fn reload_scripts<R: Runtime>(
 }
 
 /// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
+#[allow(clippy::type_complexity)]
 pub(crate) fn process_new_scripts<R: Runtime>(
     mut commands: Commands,
     mut added_scripted_entities: Query<

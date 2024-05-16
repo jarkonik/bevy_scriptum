@@ -146,7 +146,7 @@ impl Runtime for RhaiRuntime {
         #[allow(deprecated)]
         let ctx = &context.create_context(&self.engine);
 
-        let result = if args.len() == 1 && args.get(0).unwrap().0.is_unit() {
+        let result = if args.len() == 1 && args.first().unwrap().0.is_unit() {
             f.call_raw(ctx, None, [])?
         } else {
             f.call_raw(
