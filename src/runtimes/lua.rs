@@ -88,7 +88,15 @@ impl Runtime for LuaRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        todo!()
+        let engine = self.engine.lock().unwrap();
+        let func = engine
+            .create_function(|_, ()| {
+                println!("ble");
+                Ok(())
+            })
+            .unwrap();
+        engine.globals().set(name, func).unwrap();
+        Ok(())
     }
 
     fn call_fn(

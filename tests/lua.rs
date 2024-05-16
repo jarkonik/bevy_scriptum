@@ -37,7 +37,7 @@ fn call_lua_on_update_from_rust(
 }
 
 #[test]
-fn test_lua_function_gets_called_from_rhai() {
+fn test_rust_function_gets_called_from_lua() {
     let mut app = build_test_app();
 
     #[derive(Default, Resource)]
@@ -54,8 +54,7 @@ fn test_lua_function_gets_called_from_rhai() {
     });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset =
-        asset_server.load::<LuaScript>("tests/rhai/rust_function_gets_called_from_rhai.rhai");
+    let asset = asset_server.load::<LuaScript>("tests/lua/rust_function_gets_called_from_lua.lua");
 
     app.world.spawn(Script::new(asset));
     app.update(); // let `ScriptData` resources be added to entities
@@ -72,7 +71,7 @@ fn test_lua_function_gets_called_from_rhai() {
 }
 
 #[test]
-fn test_rust_function_with_int_param_gets_called_from_rhai() {
+fn test_rust_function_with_int_param_gets_called_from_lua() {
     let mut app = build_test_app();
 
     #[derive(Default, Resource)]
