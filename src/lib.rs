@@ -275,7 +275,7 @@ pub trait Runtime: Resource + Default + EngineMut {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: impl AsMut<[Self::Value]>,
+        args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError>;
 }
 

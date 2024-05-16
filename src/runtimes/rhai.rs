@@ -6,9 +6,8 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, NativeCallContextStore, Scope, Variant};
+use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, Scope};
 use serde::Deserialize;
-use tracing::Value;
 
 use crate::{
     assets::GetExtensions,
@@ -140,10 +139,19 @@ impl Runtime for RhaiRuntime {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: impl AsMut<[Self::Value]>,
+        args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError> {
         let f = value.clone_cast::<FnPtr>();
-        let result = f.call_raw(&context.create_context(&self.engine), None, [])?;
+
+        #[allow(deprecated)]
+        let ctx = &context.create_context(&self.engine);
+
+        let result = f.call_raw(
+            ctx,
+            None,
+            args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>(),
+        )?;
+
         Ok(RhaiValue(result))
     }
 }

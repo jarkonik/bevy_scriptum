@@ -21,7 +21,7 @@ pub struct Promise<C: Send, V: Send> {
     pub(crate) inner: Arc<Mutex<PromiseInner<C, V>>>,
 }
 
-impl<C: Send, V: Send> PromiseInner<C, V> {
+impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve<R: Runtime>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
     where
@@ -29,7 +29,8 @@ impl<C: Send, V: Send> PromiseInner<C, V> {
     {
         for callback in &self.callbacks {
             // let next_val = if val.is_unit() {
-            let next_val = runtime.call_fn_from_value(&callback.callback, &self.context, [])?;
+            let next_val =
+                runtime.call_fn_from_value(&callback.callback, &self.context, vec![val.clone()])?;
             // } else {
             // f.call_raw(&self.context, None, [val.clone()])?
             // };
@@ -44,7 +45,7 @@ impl<C: Send, V: Send> PromiseInner<C, V> {
     }
 }
 
-impl<C: Clone + Send + 'static, V: Send> Promise<C, V> {
+impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve<R: Runtime>(
         &mut self,
