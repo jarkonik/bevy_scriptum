@@ -58,3 +58,7 @@ path = "examples/rhai/non_closure_system.rs"
 [[example]]
 name = "promises_rhai"
 path = "examples/rhai/promises.rs"
+
+[[example]]
+name = "side_effects_rhai"
+path = "examples/rhai/side_effects.rs"
