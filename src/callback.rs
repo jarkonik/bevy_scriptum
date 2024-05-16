@@ -47,20 +47,18 @@ where
     Out: Into<V>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<V> {
-        todo!();
-
-        // let mut inner_system = IntoSystem::into_system(self);
-        // inner_system.initialize(world);
-        // let system_fn = move |_args: In<Vec<V>>, world: &mut World| {
-        //     let result = inner_system.run((), world);
-        //     inner_system.apply_deferred(world);
-        //     result.into()
-        // };
-        // let system = IntoSystem::into_system(system_fn);
-        // CallbackSystem {
-        //     arg_types: vec![],
-        //     system: Box::new(system),
-        // }
+        let mut inner_system = IntoSystem::into_system(self);
+        inner_system.initialize(world);
+        let system_fn = move |_args: In<Vec<V>>, world: &mut World| {
+            let result = inner_system.run((), world);
+            inner_system.apply_deferred(world);
+            result.into()
+        };
+        let system = IntoSystem::into_system(system_fn);
+        CallbackSystem {
+            arg_types: vec![],
+            system: Box::new(system),
+        }
     }
 }
 

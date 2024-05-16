@@ -193,7 +193,7 @@ use std::{
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
@@ -275,6 +275,54 @@ pub struct ScriptingPluginBuilder<R: Runtime> {
         String,
         Box<dyn System<In = Vec<Box<dyn Any>>, Out = Box<dyn Any>>>,
     )>,
+}
+
+/// An extension trait for [App] that allows to setup a scripting runtime `R`.
+pub trait SetupScriptingRuntime {
+    /// Returns a "builder" type than can be used to setup scripting runtime(
+    /// add scripting functions etc.).
+    fn setup_scripting_runtime<R: Runtime>(&mut self) -> ScriptingRuntimeSetupBuilder<R>;
+}
+
+pub struct ScriptingRuntimeSetupBuilder<'a, R: Runtime> {
+    _phantom_data: PhantomData<R>,
+    world: &'a mut World,
+}
+
+impl<'a, R: Runtime> ScriptingRuntimeSetupBuilder<'a, R> {
+    fn new(world: &'a mut World) -> Self {
+        Self {
+            _phantom_data: PhantomData,
+            world,
+        }
+    }
+
+    pub fn add_script_function<In, Out, Marker>(
+        self,
+        name: String,
+        fun: impl CallbackFunction<R::Value, In, Out, Marker>,
+    ) -> Self {
+        let system = fun.into_callback_system(self.world);
+
+        let mut callbacks_resource = self
+            .world
+            .resource_mut::<Callbacks<R::CallContext, R::Value>>();
+
+        callbacks_resource.uninitialized_callbacks.push(Callback {
+            name,
+            system: Arc::new(Mutex::new(system)),
+            calls: Arc::new(Mutex::new(vec![])),
+        });
+
+        self
+    }
+}
+
+impl SetupScriptingRuntime for App {
+    #[must_use]
+    fn setup_scripting_runtime<R: Runtime>(&mut self) -> ScriptingRuntimeSetupBuilder<R> {
+        ScriptingRuntimeSetupBuilder::new(&mut self.world)
+    }
 }
 
 impl<R: Runtime> ScriptingPluginBuilder<R> {

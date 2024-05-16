@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
     runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime, RhaiValue},
-    Script, ScriptingPluginBuilder,
+    Script, ScriptingPluginBuilder, SetupScriptingRuntime,
 };
 use rhai::Dynamic;
 fn build_test_app() -> App {
@@ -67,6 +67,10 @@ fn test_rust_function_gets_called_from_rhai() {
             })
             .build(),
     );
+    app.setup_scripting_runtime::<RhaiScriptingRuntime>()
+        .add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+            res.times_called += 1;
+        });
     app.update();
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
