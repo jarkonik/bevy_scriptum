@@ -275,8 +275,8 @@ pub trait Runtime: Resource + Default + EngineMut {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: impl FuncArgs,
-    ) -> Result<(), ScriptingError>;
+        args: impl AsMut<[Self::Value]>,
+    ) -> Result<Self::Value, ScriptingError>;
 }
 
 /// An extension trait for [App] that allows to setup a scripting runtime `R`.

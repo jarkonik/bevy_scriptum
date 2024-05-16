@@ -23,30 +23,22 @@ pub struct Promise<C: Send, V: Send> {
 
 impl<C: Send, V: Send> PromiseInner<C, V> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
-    fn resolve(&mut self, runtime: &mut impl Runtime, val: V) -> Result<(), ScriptingError> {
+    fn resolve<R: Runtime>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
+    where
+        R: Runtime<Value = V, CallContext = C>,
+    {
         for callback in &self.callbacks {
-            runtime.call_fn_from_value(callback.callback, self.context, val);
-            // let result = callback.callback.try_call(self.context, val);
-
-            // let f = callback.callback.clone_cast::<FnPtr>();
-            //
-            //
-
             // let next_val = if val.is_unit() {
-            //     f.call_raw(&self.context, None, [()])?
+            let next_val = runtime.call_fn_from_value(&callback.callback, &self.context, [])?;
             // } else {
-            //     f.call_raw(&self.context, None, [val.clone()])?
+            // f.call_raw(&self.context, None, [val.clone()])?
             // };
-            // callback
-            //     .following_promise
-            //     .lock()
-            //     .unwrap()
-            //     .resolve(runtime, next_val)?;
-            // callback
-            //     .following_promise
-            //     .lock()
-            //     .unwrap()
-            //     .resolve(runtime, ())?;
+
+            callback
+                .following_promise
+                .lock()
+                .unwrap()
+                .resolve(runtime, next_val)?;
         }
         Ok(())
     }
@@ -54,11 +46,14 @@ impl<C: Send, V: Send> PromiseInner<C, V> {
 
 impl<C: Clone + Send + 'static, V: Send> Promise<C, V> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
-    pub(crate) fn resolve(
+    pub(crate) fn resolve<R: Runtime>(
         &mut self,
-        runtime: &mut impl Runtime,
-        val: V,
-    ) -> Result<(), ScriptingError> {
+        runtime: &mut R,
+        val: R::Value,
+    ) -> Result<(), ScriptingError>
+    where
+        R: Runtime<Value = V, CallContext = C>,
+    {
         if let Ok(mut inner) = self.inner.lock() {
             inner.resolve(runtime, val)?;
         }

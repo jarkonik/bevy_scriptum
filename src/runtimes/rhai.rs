@@ -8,6 +8,7 @@ use bevy::{
 };
 use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, NativeCallContextStore, Scope, Variant};
 use serde::Deserialize;
+use tracing::Value;
 
 use crate::{
     assets::GetExtensions,
@@ -139,11 +140,11 @@ impl Runtime for RhaiRuntime {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: impl rhai::FuncArgs,
-    ) -> Result<(), ScriptingError> {
+        args: impl AsMut<[Self::Value]>,
+    ) -> Result<Self::Value, ScriptingError> {
         let f = value.clone_cast::<FnPtr>();
-        f.call_raw(&context.create_context(&self.engine), None, []);
-        Ok(())
+        let result = f.call_raw(&context.create_context(&self.engine), None, [])?;
+        Ok(RhaiValue(result))
     }
 }
 
