@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 #[allow(deprecated)]
-use rhai::{Dynamic, NativeCallContextStore};
-use rhai::{EvalAltResult, FnPtr};
+use rhai::{Dynamic};
+use rhai::{EvalAltResult};
 
 use crate::Runtime;
 
@@ -27,7 +27,7 @@ pub struct Promise<C: Send> {
 
 impl<C: Send> PromiseInner<C> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
-    fn resolve<V>(&mut self, runtime: &mut impl Runtime, val: V) -> Result<(), Box<EvalAltResult>> {
+    fn resolve<V>(&mut self, _runtime: &mut impl Runtime, _val: V) -> Result<(), Box<EvalAltResult>> {
         // for callback in &self.callbacks {
         //     let f = callback.callback.clone_cast::<FnPtr>();
         //     #[allow(deprecated)]

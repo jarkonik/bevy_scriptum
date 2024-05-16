@@ -189,20 +189,16 @@ use assets::GetExtensions;
 use promise::Promise;
 
 use std::{
-    any::TypeId,
+    any::{Any, TypeId},
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
-    sync::{Arc, Mutex},
+    sync::Mutex,
 };
 
-use bevy::{
-    app::MainScheduleOrder,
-    ecs::{entity, schedule::ScheduleLabel},
-    prelude::*,
-};
-use callback::{Callback, RegisterCallbackFunction};
-use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
+use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use callback::{Callback, CallbackFunction, CallbackSystem};
+use rhai::{Engine, EvalAltResult, FuncArgs, ParseError};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -273,18 +269,44 @@ pub struct ScriptingPlugin<R: Runtime> {
 }
 
 #[derive(Default)]
-pub struct ScriptingPluginBuilder<R> {
+pub struct ScriptingPluginBuilder<R: Runtime> {
     _phantom_data: PhantomData<R>,
+    systems: Vec<(
+        String,
+        Box<dyn System<In = Vec<Box<dyn Any>>, Out = Box<dyn Any>>>,
+    )>,
 }
 
 impl<R: Runtime> ScriptingPluginBuilder<R> {
     pub fn new() -> Self {
         Self {
             _phantom_data: Default::default(),
+            systems: Vec::new(),
         }
     }
 
+    pub fn add_script_function<In, Out, Marker>(
+        mut self,
+        name: String,
+        fun: impl CallbackFunction<R::Value, In, Out, Marker>,
+    ) -> Self {
+        // let system = IntoSystem::into_system(fun);
+        // self.systems.push((name, Box::new(system)));
+
+        self
+    }
+
     pub fn build(self) -> ScriptingPlugin<R> {
+        // let system: CallbackSystem<R::Value> = system.into_callback_system(&mut self.world);
+        // let mut callbacks_resource = self
+        //     .world
+        //     .resource_mut::<Callbacks<R::CallContext, R::Value>>();
+        // callbacks_resource.uninitialized_callbacks.push(Callback {
+        //     name,
+        //     system: Arc::new(Mutex::new(system)),
+        //     calls: Arc::new(Mutex::new(vec![])),
+        // });
+
         ScriptingPlugin::default()
     }
 }
@@ -316,24 +338,6 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
     }
 }
 
-/// An extension trait for [App] that allows to register a script function.
-pub trait AddScriptFunctionAppExt {
-    fn add_script_function<
-        Out,
-        Marker,
-        A: 'static,
-        const N: usize,
-        const X: bool,
-        R: 'static,
-        const F: bool,
-        Args,
-    >(
-        &mut self,
-        name: String,
-        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
-    ) -> &mut Self;
-}
-
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
 #[derive(Resource)]
 struct Callbacks<C: Send, V> {
@@ -349,33 +353,6 @@ impl<C: Send, V> Default for Callbacks<C, V> {
         }
     }
 }
-
-// impl AddScriptFunctionAppExt for App {
-//     fn add_script_function<
-//         Out,
-//         Marker,
-//         A: 'static,
-//         const N: usize,
-//         const X: bool,
-//         R: 'static,
-//         const F: bool,
-//         Args,
-//     >(
-//         &mut self,
-//         name: String,
-//         system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
-//     ) -> &mut Self {
-//         let system = system.into_callback_system(&mut self.world);
-//         let mut callbacks_resource = self.world.resource_mut::<Callbacks>();
-//
-//         callbacks_resource.uninitialized_callbacks.push(Callback {
-//             name,
-//             system: Arc::new(Mutex::new(system)),
-//             calls: Arc::new(Mutex::new(vec![])),
-//         });
-//         self
-//     }
-// }
 
 pub mod prelude {
     pub use crate::Runtime;

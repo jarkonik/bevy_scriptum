@@ -2,8 +2,6 @@ use bevy::prelude::*;
 use core::any::TypeId;
 use std::sync::{Arc, Mutex};
 
-use rhai::{Dynamic, Variant};
-
 use crate::promise::Promise;
 
 /// A system that can be used to call a script function.
@@ -32,62 +30,60 @@ impl<V: Clone + 'static> CallbackSystem<V> {
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait RegisterCallbackFunction<
-    Out,
-    Marker,
-    A: 'static,
-    const N: usize,
-    const X: bool,
-    R: 'static,
-    const F: bool,
-    Args,
->: IntoSystem<Args, Out, Marker>
-{
+pub trait CallbackFunction<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     /// Convert this function into a [CallbackSystem].
     #[must_use]
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<V>;
 }
 
-impl<Out, FN, Marker> RegisterCallbackFunction<Out, Marker, (), 1, false, Dynamic, false, ()> for FN
+trait CloneCast {
+    fn clone_cast<T>(&self) -> T;
+}
+
+impl<V, Out, FN, Marker> CallbackFunction<V, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: Sync + Variant + Clone,
+    V: Sync + Clone + 'static,
+    Out: Into<V>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<Dynamic> {
-        let mut inner_system = IntoSystem::into_system(self);
-        inner_system.initialize(world);
-        let system_fn = move |_args: In<Vec<Dynamic>>, world: &mut World| {
-            let result = inner_system.run((), world);
-            inner_system.apply_deferred(world);
-            Dynamic::from(result)
-        };
-        let system = IntoSystem::into_system(system_fn);
-        CallbackSystem {
-            arg_types: vec![],
-            system: Box::new(system),
-        }
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<V> {
+        todo!();
+
+        // let mut inner_system = IntoSystem::into_system(self);
+        // inner_system.initialize(world);
+        // let system_fn = move |_args: In<Vec<V>>, world: &mut World| {
+        //     let result = inner_system.run((), world);
+        //     inner_system.apply_deferred(world);
+        //     result.into()
+        // };
+        // let system = IntoSystem::into_system(system_fn);
+        // CallbackSystem {
+        //     arg_types: vec![],
+        //     system: Box::new(system),
+        // }
     }
 }
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<$($t,)+ Out, FN, Marker> RegisterCallbackFunction<Out, Marker, ($($t,)+), 1, false, Dynamic, false, ($($t,)+)>
+        impl<$($t,)+ Val, Out, FN, Marker> CallbackFunction<Val, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: Sync + Variant + Clone,
+            Val: Sync +  Clone + CloneCast + 'static,
+            Out: Into<Val>,
             $($t: 'static + Clone,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem<Dynamic> {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<Val> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
-                let system_fn = move |args: In<Vec<Dynamic>>, world: &mut World| {
+                let system_fn = move |args: In<Vec<Val>>, world: &mut World| {
                     let args = (
                         $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    Dynamic::from(result)
+                    result.into()
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

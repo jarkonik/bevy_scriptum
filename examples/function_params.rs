@@ -3,7 +3,7 @@ use bevy_scriptum::{
     runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
     Script, ScriptingPluginBuilder,
 };
-use rhai::ImmutableString;
+
 
 fn main() {
     App::new()

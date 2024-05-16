@@ -1,20 +1,22 @@
 use bevy::prelude::*;
 use bevy_scriptum::{
     prelude::*,
-    runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime},
+    runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime, RhaiValue},
     Script, ScriptingPluginBuilder,
 };
+use rhai::Dynamic;
 fn build_test_app() -> App {
     let mut app = App::new();
-    app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()))
-        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build());
-    app.update();
+    app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()));
     app
 }
 
 #[test]
 fn test_rhai_function_gets_called_from_rust() {
     let mut app = build_test_app();
+
+    app.add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build());
+    app.update();
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load::<RhaiScript>("tests/rhai_function_gets_called_from_rust.rhai");
@@ -23,7 +25,9 @@ fn test_rhai_function_gets_called_from_rust() {
     run_scripting_with(&mut app, |app| {
         app.add_systems(Update, call_rhai_on_update_from_rust);
     });
-
+    /// let entity = world.run_system_once(|mut commands: Commands| {
+    ///     commands.spawn_empty().id()
+    /// });
     let script_data = app.world.get::<RhaiScriptData>(entity_id).unwrap();
     let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
     assert_eq!(state["times_called"].clone_cast::<i64>(), 1);
@@ -56,9 +60,14 @@ fn test_rust_function_gets_called_from_rhai() {
 
     app.world.init_resource::<TimesCalled>();
 
-    // app.add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
-    //     res.times_called += 1;
-    // });
+    app.add_plugins(
+        ScriptingPluginBuilder::<RhaiScriptingRuntime>::new()
+            .add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+                res.times_called += 1;
+            })
+            .build(),
+    );
+    app.update();
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load::<RhaiScript>("tests/rust_function_gets_called_from_rhai.rhai");

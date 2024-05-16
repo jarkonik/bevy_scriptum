@@ -1,22 +1,14 @@
-use std::sync::{Arc, Mutex};
-
 use bevy::{
     asset::Asset,
-    ecs::{
-        component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource,
-        world::World,
-    },
+    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{CallFnOptions, Dynamic, Engine, Scope, Shared};
+use rhai::{CallFnOptions, Dynamic, Engine, Scope, Variant};
 use serde::Deserialize;
 
 use crate::{
-    assets::GetExtensions,
-    callback::FunctionCallEvent,
-    promise::{Promise, PromiseInner},
-    EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    assets::GetExtensions, promise::Promise, EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 /// A script that can be loaded by the [crate::ScriptingPlugin].
@@ -59,12 +51,15 @@ impl EngineMut for RhaiScriptingRuntime {
     }
 }
 
+#[derive(Clone)]
+pub struct RhaiValue(rhai::Dynamic);
+
 impl Runtime for RhaiScriptingRuntime {
     type Schedule = RhaiSchedule;
     type ScriptAsset = RhaiScript;
     type ScriptData = RhaiScriptData;
     type CallContext = rhai::NativeCallContextStore;
-    type Value = rhai::Dynamic;
+    type Value = RhaiValue;
 
     fn create_script_data(
         &self,
@@ -103,7 +98,7 @@ impl Runtime for RhaiScriptingRuntime {
     ) -> Result<(), ScriptingError> {
         self.engine
             .register_raw_fn(name, arg_types, move |context, args| {
-                let args = args.iter_mut().map(|arg| arg.clone()).collect();
+                let args = args.iter_mut().map(|arg| RhaiValue(arg.clone())).collect();
                 let promise = f(context.store_data(), args).unwrap();
                 Ok(promise)
             });
@@ -157,5 +152,18 @@ impl Default for RhaiScriptingRuntime {
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
         RhaiScriptingRuntime { engine }
+    }
+}
+
+trait Sealed {}
+impl<T: Variant + Sealed + Clone> From<T> for RhaiValue {
+    fn from(value: T) -> Self {
+        RhaiValue(Dynamic::from(value))
+    }
+}
+
+impl From<()> for RhaiValue {
+    fn from(value: ()) -> Self {
+        RhaiValue(Dynamic::from(value))
     }
 }
