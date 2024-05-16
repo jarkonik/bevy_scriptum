@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::Lua;
+use mlua::{Function, Lua, Value::Nil};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -66,12 +66,15 @@ impl Runtime for LuaRuntime {
 
     type Value = LuaValue;
 
+    // TODO: Should be renamed or even split as it also evals
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        todo!()
+        let engine = self.engine.lock().unwrap();
+        engine.load(&script.0).exec().unwrap();
+        Ok(LuaScriptData)
     }
 
     fn register_fn(
@@ -90,8 +93,8 @@ impl Runtime for LuaRuntime {
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine
-            .create_function(|_, ()| {
-                println!("ble");
+            .create_function(move |_, ()| {
+                f((), vec![]).unwrap();
                 Ok(())
             })
             .unwrap();
@@ -106,7 +109,10 @@ impl Runtime for LuaRuntime {
         entity: bevy::prelude::Entity,
         args: impl rhai::FuncArgs, // TODO: Remove rhai
     ) -> Result<(), crate::ScriptingError> {
-        todo!()
+        let engine = self.engine.lock().unwrap();
+        let func = engine.globals().get::<_, Function>(name).unwrap();
+        let a: () = func.call(5).unwrap();
+        Ok(())
     }
 
     fn call_fn_from_value(
