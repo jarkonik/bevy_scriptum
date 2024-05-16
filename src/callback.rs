@@ -10,23 +10,27 @@ pub struct CallbackSystem<V> {
     pub(crate) arg_types: Vec<TypeId>,
 }
 
-pub(crate) struct FunctionCallEvent<C: Send, V> {
+pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
     pub(crate) params: Vec<V>,
-    pub(crate) promise: Promise<C>,
+    pub(crate) promise: Promise<C, V>,
 }
 
 /// A struct representing a Bevy system that can be called from a script.
 #[derive(Clone)]
-pub(crate) struct Callback<C: Send, V> {
+pub(crate) struct Callback<C: Send, V: Send> {
     pub(crate) name: String,
     pub(crate) system: Arc<Mutex<CallbackSystem<V>>>,
     pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>,
 }
 
-impl<V: Clone + 'static> CallbackSystem<V> {
+impl<V: Send + Clone + 'static> CallbackSystem<V> {
     pub(crate) fn call<C: Send>(&mut self, call: &FunctionCallEvent<C, V>, world: &mut World) -> V {
         self.system.run(call.params.clone(), world)
     }
+}
+
+pub trait IntoValue<V> {
+    fn into_value(self) -> V;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -36,15 +40,15 @@ pub trait CallbackFunction<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<V>;
 }
 
-trait CloneCast {
-    fn clone_cast<T>(&self) -> T;
+pub trait CloneCast {
+    fn clone_cast<T: Clone + 'static>(&self) -> T;
 }
 
 impl<V, Out, FN, Marker> CallbackFunction<V, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
     V: Sync + Clone + 'static,
-    Out: Into<V>,
+    Out: IntoValue<V>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<V> {
         let mut inner_system = IntoSystem::into_system(self);
@@ -52,7 +56,7 @@ where
         let system_fn = move |_args: In<Vec<V>>, world: &mut World| {
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
-            result.into()
+            result.into_value()
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -68,8 +72,8 @@ macro_rules! impl_tuple {
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Val: Sync +  Clone + CloneCast + 'static,
-            Out: Into<Val>,
+            Val: Sync + Clone + CloneCast + 'static,
+            Out: IntoValue<Val>,
             $($t: 'static + Clone,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<Val> {
@@ -81,7 +85,7 @@ macro_rules! impl_tuple {
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    result.into()
+                    result.into_value()
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

@@ -1,21 +1,20 @@
 use bevy::prelude::*;
-use bevy_scriptum::{
-    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder,
-};
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
-        // .add_script_function(String::from("hello_bevy"), hello_bevy_callback_system)
+        .add_scripting::<RhaiRuntime>(|runtime| {
+            runtime.add_function(String::from("hello_bevy"), hello_bevy_callback_system);
+        })
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn(Script::<RhaiScript>::new(
-        assets_server.load("examples/hello_world.rhai"),
+        assets_server.load("examples/rhai/hello_world.rhai"),
     ));
 }
 

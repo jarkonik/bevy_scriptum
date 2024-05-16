@@ -1,9 +1,6 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
-use bevy_scriptum::{
-    prelude::*,
-    runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder,
-};
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 fn main() {
     App::new()
@@ -25,24 +22,31 @@ fn main() {
             }
         })
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
         .add_systems(Startup, startup)
         .add_systems(Update, call_rhai_on_update_from_rust)
-        // .add_script_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
-        //     exit.send(AppExit);
-        // })
+        .add_scripting::<RhaiRuntime>(|runtime| {
+            runtime.add_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
+                exit.send(AppExit);
+            });
+        })
         .run();
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn(Script::<RhaiScript>::new(
-        assets_server.load("examples/call_function_from_rust.rhai"),
+        assets_server.load("examples/rhai/call_function_from_rust.rhai"),
     ));
 }
 
 fn call_rhai_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>,
-    scripting_runtime: ResMut<RhaiScriptingRuntime>,
+    mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>, // TODO: this is ugly, more
+    // intuitively users would
+    // probably prefer to have what
+    // theyve added here, could be
+    // generic but Script not some
+    // RhaiScriptData they've never
+    // added themselves
+    scripting_runtime: ResMut<RhaiRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
         scripting_runtime

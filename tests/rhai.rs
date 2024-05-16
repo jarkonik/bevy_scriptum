@@ -1,10 +1,7 @@
-use bevy::prelude::*;
-use bevy_scriptum::{
-    prelude::*,
-    runtimes::rhai::{RhaiScript, RhaiScriptData, RhaiScriptingRuntime, RhaiValue},
-    Script, ScriptingPluginBuilder, SetupScriptingRuntime,
-};
-use rhai::Dynamic;
+use bevy::{ecs::system::RunSystemOnce as _, prelude::*};
+use bevy_scriptum::runtimes::rhai::prelude::*;
+use bevy_scriptum::{prelude::*, BuildScriptingRuntime};
+
 fn build_test_app() -> App {
     let mut app = App::new();
     app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()));
@@ -15,19 +12,16 @@ fn build_test_app() -> App {
 fn test_rhai_function_gets_called_from_rust() {
     let mut app = build_test_app();
 
-    app.add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build());
-    app.update();
+    app.add_scripting::<RhaiRuntime>(|_| {});
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset = asset_server.load::<RhaiScript>("tests/rhai_function_gets_called_from_rust.rhai");
-    let entity_id = app.world.spawn(Script::new(asset)).id();
+    let asset =
+        asset_server.load::<RhaiScript>("tests/rhai/rhai_function_gets_called_from_rust.rhai");
 
-    run_scripting_with(&mut app, |app| {
-        app.add_systems(Update, call_rhai_on_update_from_rust);
-    });
-    /// let entity = world.run_system_once(|mut commands: Commands| {
-    ///     commands.spawn_empty().id()
-    /// });
+    let entity_id = app.world.spawn(Script::new(asset)).id();
+    app.update(); // let `ScriptData` resources be added to entities
+    app.world.run_system_once(call_rhai_on_update_from_rust);
+
     let script_data = app.world.get::<RhaiScriptData>(entity_id).unwrap();
     let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
     assert_eq!(state["times_called"].clone_cast::<i64>(), 1);
@@ -35,18 +29,12 @@ fn test_rhai_function_gets_called_from_rust() {
 
 fn call_rhai_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>,
-    mut scripting_runtime: ResMut<RhaiScriptingRuntime>,
+    scripting_runtime: ResMut<RhaiRuntime>,
 ) {
     let (entity, mut script_data) = scripted_entities.single_mut();
     scripting_runtime
         .call_fn("test_func", &mut script_data, entity, ())
         .unwrap();
-}
-
-fn run_scripting_with(app: &mut App, f: impl FnOnce(&mut App)) {
-    app.update(); // Execute plugin internal systems
-    f(app);
-    app.update(); // Execute systems added by callback
 }
 
 #[test]
@@ -60,26 +48,20 @@ fn test_rust_function_gets_called_from_rhai() {
 
     app.world.init_resource::<TimesCalled>();
 
-    app.add_plugins(
-        ScriptingPluginBuilder::<RhaiScriptingRuntime>::new()
-            .add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
-                res.times_called += 1;
-            })
-            .build(),
-    );
-    app.setup_scripting_runtime::<RhaiScriptingRuntime>()
-        .add_script_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
+    app.add_scripting::<RhaiRuntime>(|runtime| {
+        runtime.add_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
             res.times_called += 1;
         });
-    app.update();
+    });
 
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
-    let asset = asset_server.load::<RhaiScript>("tests/rust_function_gets_called_from_rhai.rhai");
-    app.world.spawn(Script::new(asset));
+    let asset =
+        asset_server.load::<RhaiScript>("tests/rhai/rust_function_gets_called_from_rhai.rhai");
 
-    run_scripting_with(&mut app, |app| {
-        app.add_systems(Update, call_rhai_on_update_from_rust);
-    });
+    app.world.spawn(Script::new(asset));
+    app.update(); // let `ScriptData` resources be added to entities
+    app.world.run_system_once(call_rhai_on_update_from_rust);
+    app.update(); // let callbacks be executed
 
     assert_eq!(
         app.world
@@ -88,4 +70,36 @@ fn test_rust_function_gets_called_from_rhai() {
             .times_called,
         1
     );
+}
+
+#[test]
+fn test_rust_function_with_int_param_gets_called_from_rhai() {
+    let mut app = build_test_app();
+
+    #[derive(Default, Resource)]
+    struct IntResource {
+        my_int: i64,
+    }
+
+    app.world.init_resource::<IntResource>();
+
+    app.add_scripting::<RhaiRuntime>(|runtime| {
+        runtime.add_function(
+            String::from("rust_func"),
+            |In((x,)): In<(i64,)>, mut res: ResMut<IntResource>| {
+                res.my_int = x;
+            },
+        );
+    });
+
+    let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
+    let asset = asset_server
+        .load::<RhaiScript>("tests/rhai/rust_function_gets_called_from_rhai_with_param.rhai");
+
+    app.world.spawn(Script::new(asset));
+    app.update(); // let `ScriptData` resources be added to entities
+    app.world.run_system_once(call_rhai_on_update_from_rust);
+    app.update(); // let callbacks be executed
+
+    assert_eq!(app.world.get_resource::<IntResource>().unwrap().my_int, 5);
 }

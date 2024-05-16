@@ -1,17 +1,21 @@
+use std::any::Any;
+
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{CallFnOptions, Dynamic, Engine, Scope, Variant};
+use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, NativeCallContextStore, Scope, Variant};
 use serde::Deserialize;
 
 use crate::{
-    assets::GetExtensions, promise::Promise, EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    assets::GetExtensions,
+    callback::{CloneCast, IntoValue},
+    promise::Promise,
+    EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
-/// A script that can be loaded by the [crate::ScriptingPlugin].
 #[derive(Asset, Debug, Deserialize, TypePath)]
 pub struct RhaiScript(pub String);
 
@@ -28,7 +32,7 @@ impl From<String> for RhaiScript {
 }
 
 #[derive(Resource)]
-pub struct RhaiScriptingRuntime {
+pub struct RhaiRuntime {
     engine: rhai::Engine,
 }
 
@@ -43,7 +47,7 @@ pub struct RhaiScriptData {
     pub(crate) ast: rhai::AST,
 }
 
-impl EngineMut for RhaiScriptingRuntime {
+impl EngineMut for RhaiRuntime {
     type Engine = rhai::Engine;
 
     fn engine_mut(&mut self) -> &mut Engine {
@@ -54,10 +58,11 @@ impl EngineMut for RhaiScriptingRuntime {
 #[derive(Clone)]
 pub struct RhaiValue(rhai::Dynamic);
 
-impl Runtime for RhaiScriptingRuntime {
+impl Runtime for RhaiRuntime {
     type Schedule = RhaiSchedule;
     type ScriptAsset = RhaiScript;
     type ScriptData = RhaiScriptData;
+    #[allow(deprecated)]
     type CallContext = rhai::NativeCallContextStore;
     type Value = RhaiValue;
 
@@ -91,7 +96,7 @@ impl Runtime for RhaiScriptingRuntime {
         f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
-            ) -> Result<Promise<Self::CallContext>, ScriptingError>
+            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
             + Send
             + Sync
             + 'static,
@@ -99,6 +104,7 @@ impl Runtime for RhaiScriptingRuntime {
         self.engine
             .register_raw_fn(name, arg_types, move |context, args| {
                 let args = args.iter_mut().map(|arg| RhaiValue(arg.clone())).collect();
+                #[allow(deprecated)]
                 let promise = f(context.store_data(), args).unwrap();
                 Ok(promise)
             });
@@ -128,18 +134,43 @@ impl Runtime for RhaiScriptingRuntime {
         }
         Ok(())
     }
+
+    fn call_fn_from_value(
+        &self,
+        value: &Self::Value,
+        context: &Self::CallContext,
+        args: impl rhai::FuncArgs,
+    ) -> Result<(), ScriptingError> {
+        let f = value.clone_cast::<FnPtr>();
+        f.call_raw(&context.create_context(&self.engine), None, []);
+        Ok(())
+    }
 }
 
-impl Default for RhaiScriptingRuntime {
+impl Default for RhaiRuntime {
     fn default() -> Self {
         let mut engine = Engine::new();
 
         engine
             .register_type_with_name::<Entity>("Entity")
             .register_fn("index", |entity: &mut Entity| entity.index());
+        #[allow(deprecated)]
+        // engine
+        //     .register_type_with_name::<Promise<rhai::NativeCallContextStore, RhaiValue>>("Promise")
+        //     .register_fn(
+        //         "then",
+        //         Promise::<rhai::NativeCallContextStore, RhaiValue>::then,
+        //     );
         engine
-            .register_type_with_name::<Promise<rhai::NativeCallContextStore>>("Promise")
-            .register_fn("then", Promise::<rhai::NativeCallContextStore>::then);
+            .register_type_with_name::<Promise<rhai::NativeCallContextStore, RhaiValue>>("Promise")
+            .register_fn(
+                "then",
+                |promise: &mut Promise<rhai::NativeCallContextStore, RhaiValue>,
+                 callback: rhai::Dynamic| {
+                    Promise::then(promise, RhaiValue(callback));
+                },
+            );
+
         engine
             .register_type_with_name::<Vec3>("Vec3")
             .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
@@ -151,14 +182,13 @@ impl Default for RhaiScriptingRuntime {
         #[allow(deprecated)]
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
-        RhaiScriptingRuntime { engine }
+        RhaiRuntime { engine }
     }
 }
 
-trait Sealed {}
-impl<T: Variant + Sealed + Clone> From<T> for RhaiValue {
-    fn from(value: T) -> Self {
-        RhaiValue(Dynamic::from(value))
+impl<T: Any + Clone + Send + Sync> IntoValue<RhaiValue> for T {
+    fn into_value(self) -> RhaiValue {
+        RhaiValue(Dynamic::from(self))
     }
 }
 
@@ -166,4 +196,14 @@ impl From<()> for RhaiValue {
     fn from(value: ()) -> Self {
         RhaiValue(Dynamic::from(value))
     }
+}
+
+impl CloneCast for RhaiValue {
+    fn clone_cast<T: Clone + 'static>(&self) -> T {
+        self.0.clone_cast::<T>()
+    }
+}
+
+pub mod prelude {
+    pub use super::{RhaiRuntime, RhaiScript, RhaiScriptData};
 }

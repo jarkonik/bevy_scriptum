@@ -1,19 +1,16 @@
 use bevy::prelude::*;
-use bevy_scriptum::{
-    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder,
-};
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
         .add_systems(Startup, startup)
         .run();
 }
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn(Script::<RhaiScript>::new(
-        assets_server.load("examples/entity_variable.rhai"),
+        assets_server.load("examples/rhai/entity_variable.rhai"),
     ));
 }

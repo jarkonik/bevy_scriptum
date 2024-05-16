@@ -1,8 +1,6 @@
 use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
-use bevy_scriptum::{
-    runtimes::rhai::{RhaiScript, RhaiScriptingRuntime},
-    Script, ScriptingPluginBuilder,
-};
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 #[derive(Component)]
 struct Comp;
@@ -27,10 +25,11 @@ fn main() {
             }
         })
         .add_plugins(DefaultPlugins)
-        .add_plugins(ScriptingPluginBuilder::<RhaiScriptingRuntime>::new().build())
         .add_systems(Startup, startup)
         .add_systems(Update, print_entity_names_and_quit)
-        // .add_script_function(String::from("spawn_entity"), spawn_entity)
+        .add_scripting::<RhaiRuntime>(|runtime| {
+            runtime.add_function(String::from("spawn_entity"), spawn_entity);
+        })
         .run();
 }
 
@@ -40,7 +39,7 @@ fn spawn_entity(mut commands: Commands) {
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn((Script::<RhaiScript>::new(
-        assets_server.load("examples/side_effects.rhai"),
+        assets_server.load("examples/rhai/side_effects.rhai"),
     ),));
 }
 

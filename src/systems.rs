@@ -39,6 +39,7 @@ pub(crate) fn process_new_scripts<R: Runtime>(
     >,
     scripting_runtime: ResMut<R>,
     scripts: Res<Assets<R::ScriptAsset>>,
+    asset_server: Res<AssetServer>,
 ) -> Result<(), ScriptingError> {
     for (entity, script_component) in &mut added_scripted_entities {
         tracing::trace!("evaulating a new script");
@@ -48,7 +49,10 @@ pub(crate) fn process_new_scripts<R: Runtime>(
                     commands.entity(entity).insert(script_data);
                 }
                 Err(e) => {
-                    tracing::error!(?e);
+                    let path = asset_server
+                        .get_path(&script_component.script)
+                        .unwrap_or_default();
+                    tracing::error!("error running script {} {:?}", path, e);
                 }
             }
         }
@@ -75,7 +79,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
-            trace!("init_callbacks: registering callback: '{}'", callback.name);
+            tracing::trace!("init_callbacks: registering callback: '{}'", callback.name);
 
             let callback = callback.clone();
 
@@ -100,7 +104,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 },
             );
             if let Err(e) = result {
-                tracing::error!(?e);
+                tracing::error!("error registering function: {:?}", e);
             }
         }
     }
@@ -133,14 +137,20 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
             .drain(..)
             .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value>>>();
         for mut call in calls {
-            trace!("process_calls: calling '{}'", callback.name);
+            tracing::trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback.system.lock().unwrap();
             let val = system.call(&call, world);
             let mut runtime = world
                 .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;
 
-            call.promise.resolve(runtime.as_mut(), val)?;
+            let result = call.promise.resolve(runtime.as_mut(), val);
+            match result {
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("error resolving call: {} {:?}", callback.name, e);
+                }
+            }
         }
     }
     Ok(())

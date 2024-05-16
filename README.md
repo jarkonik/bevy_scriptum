@@ -16,12 +16,14 @@ All you need to do is register callbacks on your Bevy app like this:
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(ScriptingPlugin::default())
-    .add_script_function(String::from("hello_bevy"), || {
-      println!("hello bevy, called from script");
+    .add_scripting::<RhaiRuntime>(|runtime| {
+         runtime.add_function(String::from("hello_bevy"), || {
+           println!("hello bevy, called from script");
+         });
     });
 ```
 And you can call them in your scripts like this:
@@ -34,38 +36,42 @@ Every callback function that you expose to the scripting language is also a Bevy
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 #[derive(Component)]
 struct Player;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(ScriptingPlugin::default())
-    .add_script_function(
-        String::from("print_player_names"),
-        |players: Query<&Name, With<Player>>| {
-            for player in &players {
-                println!("player name: {}", player);
-            }
-        },
-    );
+    .add_scripting::<RhaiRuntime>(|runtime| {
+        runtime.add_function(
+            String::from("print_player_names"),
+            |players: Query<&Name, With<Player>>| {
+                for player in &players {
+                    println!("player name: {}", player);
+                }
+            },
+        );
+    });
 ```
 
 You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 use rhai::ImmutableString;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(ScriptingPlugin::default())
-    .add_script_function(
-        String::from("fun_with_string_param"),
-        |In((x,)): In<(ImmutableString,)>| {
-            println!("called with string: '{}'", x);
-        },
-    );
+    .add_scripting::<RhaiRuntime>(|runtime| {
+        runtime.add_function(
+            String::from("fun_with_string_param"),
+            |In((x,)): In<(ImmutableString,)>| {
+                println!("called with string: '{}'", x);
+            },
+        );
+    });
 ```
 which you can then call in your script like this:
 ```rhai
@@ -88,10 +94,10 @@ Add the following to your `main.rs`:
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(ScriptingPlugin::default())
     .run();
 ```
 
@@ -101,16 +107,18 @@ You can now start exposing functions to the scripting language. For example, you
 use rhai::ImmutableString;
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(ScriptingPlugin::default())
-    .add_script_function(
-        String::from("my_print"),
-        |In((x,)): In<(ImmutableString,)>| {
-            println!("my_print: '{}'", x);
-        },
-    );
+    .add_scripting::<RhaiRuntime>(|runtime| {
+       runtime.add_function(
+           String::from("my_print"),
+           |In((x,)): In<(ImmutableString,)>| {
+               println!("my_print: '{}'", x);
+           },
+       );
+    });
 ```
 
 Then you can create a script file in `assets` directory called `script.rhai` that calls this function:
@@ -124,10 +132,11 @@ And spawn a `Script` component with a handle to a script source file`:
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::Script;
+use bevy_scriptum::runtimes::rhai::prelude::*;
 
 App::new()
     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
-        commands.spawn(Script::new(asset_server.load("script.rhai")));
+        commands.spawn(Script::<RhaiScript>::new(asset_server.load("script.rhai")));
     });
 ```
 

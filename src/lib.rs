@@ -14,12 +14,14 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(String::from("hello_bevy"), || {
-//!       println!("hello bevy, called from script");
+//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!          runtime.add_function(String::from("hello_bevy"), || {
+//!            println!("hello bevy, called from script");
+//!          });
 //!     });
 //! ```
 //! And you can call them in your scripts like this:
@@ -32,38 +34,42 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //!
 //! #[derive(Component)]
 //! struct Player;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("print_player_names"),
-//!         |players: Query<&Name, With<Player>>| {
-//!             for player in &players {
-//!                 println!("player name: {}", player);
-//!             }
-//!         },
-//!     );
+//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!         runtime.add_function(
+//!             String::from("print_player_names"),
+//!             |players: Query<&Name, With<Player>>| {
+//!                 for player in &players {
+//!                     println!("player name: {}", player);
+//!                 }
+//!             },
+//!         );
+//!     });
 //! ```
 //!
 //! You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //! use rhai::ImmutableString;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("fun_with_string_param"),
-//!         |In((x,)): In<(ImmutableString,)>| {
-//!             println!("called with string: '{}'", x);
-//!         },
-//!     );
+//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!         runtime.add_function(
+//!             String::from("fun_with_string_param"),
+//!             |In((x,)): In<(ImmutableString,)>| {
+//!                 println!("called with string: '{}'", x);
+//!             },
+//!         );
+//!     });
 //! ```
 //! which you can then call in your script like this:
 //! ```rhai
@@ -86,10 +92,10 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
 //!     .run();
 //! ```
 //!
@@ -99,16 +105,18 @@
 //! use rhai::ImmutableString;
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("my_print"),
-//!         |In((x,)): In<(ImmutableString,)>| {
-//!             println!("my_print: '{}'", x);
-//!         },
-//!     );
+//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!        runtime.add_function(
+//!            String::from("my_print"),
+//!            |In((x,)): In<(ImmutableString,)>| {
+//!                println!("my_print: '{}'", x);
+//!            },
+//!        );
+//!     });
 //! ```
 //!
 //! Then you can create a script file in `assets` directory called `script.rhai` that calls this function:
@@ -122,10 +130,11 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::Script;
+//! use bevy_scriptum::runtimes::rhai::prelude::*;
 //!
 //! App::new()
 //!     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
-//!         commands.spawn(Script::new(asset_server.load("script.rhai")));
+//!         commands.spawn(Script::<RhaiScript>::new(asset_server.load("script.rhai")));
 //!     });
 //! ```
 //!
@@ -189,7 +198,7 @@ use assets::GetExtensions;
 use promise::Promise;
 
 use std::{
-    any::{Any, TypeId},
+    any::TypeId,
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
@@ -197,8 +206,8 @@ use std::{
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
-use callback::{Callback, CallbackFunction, CallbackSystem};
-use rhai::{Engine, EvalAltResult, FuncArgs, ParseError};
+use callback::{Callback, CallbackFunction};
+use rhai::{Engine, EvalAltResult, FuncArgs, ParseError}; // TODO: should not depend on rhai
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -248,7 +257,7 @@ pub trait Runtime: Resource + Default + EngineMut {
         f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
-            ) -> Result<Promise<Self::CallContext>, ScriptingError>
+            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
             + Send
             + Sync
             + 'static,
@@ -261,35 +270,28 @@ pub trait Runtime: Resource + Default + EngineMut {
         entity: Entity,
         args: impl FuncArgs,
     ) -> Result<(), ScriptingError>;
-}
 
-#[derive(Default)]
-pub struct ScriptingPlugin<R: Runtime> {
-    _phantom_data: PhantomData<R>,
-}
-
-#[derive(Default)]
-pub struct ScriptingPluginBuilder<R: Runtime> {
-    _phantom_data: PhantomData<R>,
-    systems: Vec<(
-        String,
-        Box<dyn System<In = Vec<Box<dyn Any>>, Out = Box<dyn Any>>>,
-    )>,
+    fn call_fn_from_value(
+        &self,
+        value: &Self::Value,
+        context: &Self::CallContext,
+        args: impl FuncArgs,
+    ) -> Result<(), ScriptingError>;
 }
 
 /// An extension trait for [App] that allows to setup a scripting runtime `R`.
-pub trait SetupScriptingRuntime {
-    /// Returns a "builder" type than can be used to setup scripting runtime(
+pub trait BuildScriptingRuntime {
+    /// Returns a "runtime" type than can be used to setup scripting runtime(
     /// add scripting functions etc.).
-    fn setup_scripting_runtime<R: Runtime>(&mut self) -> ScriptingRuntimeSetupBuilder<R>;
+    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
 }
 
-pub struct ScriptingRuntimeSetupBuilder<'a, R: Runtime> {
+pub struct ScriptingRuntimeBuilder<'a, R: Runtime> {
     _phantom_data: PhantomData<R>,
     world: &'a mut World,
 }
 
-impl<'a, R: Runtime> ScriptingRuntimeSetupBuilder<'a, R> {
+impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     fn new(world: &'a mut World) -> Self {
         Self {
             _phantom_data: PhantomData,
@@ -297,7 +299,7 @@ impl<'a, R: Runtime> ScriptingRuntimeSetupBuilder<'a, R> {
         }
     }
 
-    pub fn add_script_function<In, Out, Marker>(
+    pub fn add_function<In, Out, Marker>(
         self,
         name: String,
         fun: impl CallbackFunction<R::Value, In, Out, Marker>,
@@ -318,54 +320,13 @@ impl<'a, R: Runtime> ScriptingRuntimeSetupBuilder<'a, R> {
     }
 }
 
-impl SetupScriptingRuntime for App {
-    #[must_use]
-    fn setup_scripting_runtime<R: Runtime>(&mut self) -> ScriptingRuntimeSetupBuilder<R> {
-        ScriptingRuntimeSetupBuilder::new(&mut self.world)
-    }
-}
-
-impl<R: Runtime> ScriptingPluginBuilder<R> {
-    pub fn new() -> Self {
-        Self {
-            _phantom_data: Default::default(),
-            systems: Vec::new(),
-        }
-    }
-
-    pub fn add_script_function<In, Out, Marker>(
-        mut self,
-        name: String,
-        fun: impl CallbackFunction<R::Value, In, Out, Marker>,
-    ) -> Self {
-        // let system = IntoSystem::into_system(fun);
-        // self.systems.push((name, Box::new(system)));
-
-        self
-    }
-
-    pub fn build(self) -> ScriptingPlugin<R> {
-        // let system: CallbackSystem<R::Value> = system.into_callback_system(&mut self.world);
-        // let mut callbacks_resource = self
-        //     .world
-        //     .resource_mut::<Callbacks<R::CallContext, R::Value>>();
-        // callbacks_resource.uninitialized_callbacks.push(Callback {
-        //     name,
-        //     system: Arc::new(Mutex::new(system)),
-        //     calls: Arc::new(Mutex::new(vec![])),
-        // });
-
-        ScriptingPlugin::default()
-    }
-}
-
-impl<R: Runtime> Plugin for ScriptingPlugin<R> {
-    fn build(&self, app: &mut App) {
-        app.world
+impl BuildScriptingRuntime for App {
+    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
+        self.world
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
 
-        app.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
+        self.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
             .init_schedule(R::Schedule::default())
             .init_asset::<R::ScriptAsset>()
             .init_resource::<Callbacks<R::CallContext, R::Value>>()
@@ -383,17 +344,23 @@ impl<R: Runtime> Plugin for ScriptingPlugin<R> {
                         .after(init_callbacks::<R>),
                 ),
             );
+
+        let runtime = ScriptingRuntimeBuilder::<R>::new(&mut self.world);
+
+        f(runtime);
+
+        self
     }
 }
 
-/// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
+/// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_function].
 #[derive(Resource)]
-struct Callbacks<C: Send, V> {
+struct Callbacks<C: Send, V: Send> {
     uninitialized_callbacks: Vec<Callback<C, V>>,
     callbacks: Mutex<Vec<Callback<C, V>>>,
 }
 
-impl<C: Send, V> Default for Callbacks<C, V> {
+impl<C: Send, V: Send> Default for Callbacks<C, V> {
     fn default() -> Self {
         Self {
             uninitialized_callbacks: Default::default(),
@@ -403,5 +370,5 @@ impl<C: Send, V> Default for Callbacks<C, V> {
 }
 
 pub mod prelude {
-    pub use crate::Runtime;
+    pub use crate::{BuildScriptingRuntime as _, Runtime as _, Script};
 }
