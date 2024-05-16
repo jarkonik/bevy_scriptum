@@ -139,18 +139,22 @@ impl Runtime for RhaiRuntime {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: Vec<Self::Value>,
+        args: Vec<Self::Value>, // TODO: Can this be a reference
     ) -> Result<Self::Value, ScriptingError> {
         let f = value.clone_cast::<FnPtr>();
 
         #[allow(deprecated)]
         let ctx = &context.create_context(&self.engine);
 
-        let result = f.call_raw(
-            ctx,
-            None,
-            args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>(),
-        )?;
+        let result = if args.len() == 1 && args.get(0).unwrap().0.is_unit() {
+            f.call_raw(ctx, None, [])?
+        } else {
+            f.call_raw(
+                ctx,
+                None,
+                args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>(),
+            )?
+        };
 
         Ok(RhaiValue(result))
     }
