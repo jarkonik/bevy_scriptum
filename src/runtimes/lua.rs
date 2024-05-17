@@ -119,7 +119,7 @@ impl Runtime for LuaRuntime {
             engine
             .create_function::<(mlua::Value), crate::promise::Promise<Self::CallContext, Self::Value>, _>(move |_, mut args| {
                 // let args = args.into_iter().map(|arg| LuaValue::new(mlua::Value::Number(5.0))).collect();
-                let promise = f((), vec![LuaValue::new(mlua::Value::Number(5.0))]).unwrap();
+                let promise = f((), vec![LuaValue::new(mlua::Value::Integer(5))]).unwrap();
                 Ok(promise)
             })
             .unwrap()
@@ -191,16 +191,14 @@ impl CloneCast for LuaValue {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
         let val = self.0.lock().unwrap();
 
-        match TypeId::of::<T>() {
-            i64 => {
-                if let mlua::Value::Number(n) = *val {
-                    let i = val.as_number().unwrap() as i64;
-                    unsafe { std::mem::transmute_copy::<_, T>(&i) }
-                } else {
-                    panic!();
-                }
+        if TypeId::of::<T>() == TypeId::of::<i64>() {
+            if let mlua::Value::Integer(n) = *val {
+                unsafe { std::mem::transmute_copy::<_, T>(&n) }
+            } else {
+                panic!();
             }
-            _ => todo!("{:?}", TypeId::of::<T>()),
+        } else {
+            panic!();
         }
     }
 }
