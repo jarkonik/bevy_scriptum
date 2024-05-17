@@ -3,23 +3,37 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, IntoLua, Lua};
+use mlua::{FromLua, Function, IntoLua, Lua, UserData};
 use serde::Deserialize;
 use std::{
-    any::Any,
+    any::{Any, TypeId},
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
 use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
-    EngineMut, EngineRef, FuncArgs, Runtime,
+    promise::Promise,
+    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
 
-#[derive(Clone)]
-pub struct LuaValue(());
+#[derive(Clone, Debug)]
+pub struct LuaValue(Arc<Mutex<mlua::Value<'static>>>);
+
+impl LuaValue {
+    fn new(value: mlua::Value<'static>) -> Self {
+        Self(Arc::new(Mutex::new(value)))
+    }
+}
+
+/// # Safety: This is safe because we ensure thread safety using Arc and Mutex
+unsafe impl Send for LuaValue {}
+
+/// # Safety: This is safe because we ensure thread safety using Arc and Mutex
+unsafe impl Sync for LuaValue {}
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
@@ -63,6 +77,8 @@ impl EngineRef for LuaRuntime {
     }
 }
 
+impl<C: Send, V: Send> UserData for Promise<C, V> {}
+
 impl Runtime for LuaRuntime {
     type Schedule = LuaSchedule;
 
@@ -92,25 +108,36 @@ impl Runtime for LuaRuntime {
         f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
-            ) -> Result<
-                crate::promise::Promise<Self::CallContext, Self::Value>,
-                crate::ScriptingError,
-            > + Send
+            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+            + Send
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
-        let func = engine
-            .create_function(move |_, ()| {
-                f((), vec![]).unwrap();
-                Ok(())
+
+        let func = if !arg_types.is_empty() {
+            engine
+            .create_function::<(mlua::Value), crate::promise::Promise<Self::CallContext, Self::Value>, _>(move |_, mut args| {
+                // let args = args.into_iter().map(|arg| LuaValue::new(mlua::Value::Number(5.0))).collect();
+                let promise = f((), vec![LuaValue::new(mlua::Value::Number(5.0))]).unwrap();
+                Ok(promise)
             })
-            .unwrap();
+            .unwrap()
+        } else {
+            engine
+                .create_function::<(), crate::promise::Promise<Self::CallContext, Self::Value>, _>(
+                    move |_, _| {
+                        let promise = f((), vec![]).unwrap();
+                        Ok(promise)
+                    },
+                )
+                .unwrap()
+        };
         engine.globals().set(name, func).unwrap();
         Ok(())
     }
 
-    fn call_fn(
+    fn call_fn<'v>(
         &self,
         name: &str,
         script_data: &mut Self::ScriptData,
@@ -136,13 +163,13 @@ impl Runtime for LuaRuntime {
 
 impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
     fn into_value(self) -> LuaValue {
-        LuaValue(())
+        LuaValue::new(mlua::Value::Nil)
     }
 }
 
 impl From<()> for LuaValue {
     fn from(value: ()) -> Self {
-        LuaValue(())
+        LuaValue::new(mlua::Value::Nil)
     }
 }
 
@@ -154,13 +181,27 @@ impl FuncArgs<LuaValue> for () {
 
 impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
     fn parse(self) -> Vec<LuaValue> {
-        self.into_iter().map(|_| LuaValue(())).collect()
+        self.into_iter()
+            .map(|_| LuaValue::new(mlua::Value::Nil))
+            .collect()
     }
 }
 
 impl CloneCast for LuaValue {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
-        todo!();
+        let val = self.0.lock().unwrap();
+
+        match TypeId::of::<T>() {
+            i64 => {
+                if let mlua::Value::Number(n) = *val {
+                    let i = val.as_number().unwrap() as i64;
+                    unsafe { std::mem::transmute_copy::<_, T>(&i) }
+                } else {
+                    panic!();
+                }
+            }
+            _ => todo!("{:?}", TypeId::of::<T>()),
+        }
     }
 }
 
