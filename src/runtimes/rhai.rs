@@ -13,7 +13,7 @@ use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
     promise::Promise,
-    EngineMut, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -55,6 +55,14 @@ impl EngineMut for RhaiRuntime {
     }
 }
 
+impl EngineRef for RhaiRuntime {
+    type Engine = rhai::Engine;
+
+    fn engine_ref(&self) -> &Self::Engine {
+        &self.engine
+    }
+}
+
 #[derive(Clone)]
 pub struct RhaiValue(rhai::Dynamic);
 
@@ -78,11 +86,11 @@ impl Runtime for RhaiRuntime {
 
         let ast = engine
             .compile_with_scope(&scope, script.0.as_str())
-            .map_err(ScriptingError::CompileError)?;
+            .map_err(|e| ScriptingError::CompileError(Box::new(e)))?;
 
         engine
             .run_ast_with_scope(&mut scope, &ast)
-            .map_err(ScriptingError::RuntimeError)?;
+            .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
 
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
 
@@ -116,12 +124,13 @@ impl Runtime for RhaiRuntime {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl rhai::FuncArgs,
+        args: impl FuncArgs<Self::Value>,
     ) -> Result<(), ScriptingError> {
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;
         scope.push(ENTITY_VAR_NAME, entity);
         let options = CallFnOptions::new().eval_ast(false);
+        let args = args.parse();
         let result = self
             .engine
             .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
@@ -129,7 +138,7 @@ impl Runtime for RhaiRuntime {
         if let Err(err) = result {
             match *err {
                 rhai::EvalAltResult::ErrorFunctionNotFound(n, _) if n == name => {}
-                e => Err(Box::new(e))?,
+                e => Err(ScriptingError::RuntimeError(Box::new(e)))?,
             }
         }
         Ok(())
@@ -139,7 +148,7 @@ impl Runtime for RhaiRuntime {
         &self,
         value: &Self::Value,
         context: &Self::CallContext,
-        args: Vec<Self::Value>, // TODO: Can this be a reference
+        args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError> {
         let f = value.clone_cast::<FnPtr>();
 
@@ -147,13 +156,12 @@ impl Runtime for RhaiRuntime {
         let ctx = &context.create_context(&self.engine);
 
         let result = if args.len() == 1 && args.first().unwrap().0.is_unit() {
-            f.call_raw(ctx, None, [])?
+            f.call_raw(ctx, None, [])
+                .map_err(|e| ScriptingError::RuntimeError(e))?
         } else {
-            f.call_raw(
-                ctx,
-                None,
-                args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>(),
-            )?
+            let args = args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>();
+            f.call_raw(ctx, None, args)
+                .map_err(|e| ScriptingError::RuntimeError(e))?
         };
 
         Ok(RhaiValue(result))
@@ -196,6 +204,20 @@ impl Default for RhaiRuntime {
 impl<T: Any + Clone + Send + Sync> IntoValue<RhaiValue> for T {
     fn into_value(self) -> RhaiValue {
         RhaiValue(Dynamic::from(self))
+    }
+}
+
+impl FuncArgs<RhaiValue> for () {
+    fn parse(self) -> Vec<RhaiValue> {
+        Vec::new()
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> FuncArgs<RhaiValue> for Vec<T> {
+    fn parse(self) -> Vec<RhaiValue> {
+        self.into_iter()
+            .map(|v| RhaiValue(Dynamic::from(v)))
+            .collect()
     }
 }
 

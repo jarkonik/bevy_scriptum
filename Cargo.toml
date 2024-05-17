@@ -10,18 +10,20 @@ description = "Plugin for Bevy engine that allows you to write some of your game
 repository = "https://github.com/jarkonik/bevy_scriptum"
 keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+luajit = ["mlua/luajit"]
+rhai = ["dep:rhai"]
 
 [dependencies]
 bevy = { default-features = false, version = "0.13.0", features = [
     "bevy_asset",
 ] }
 serde = "1.0.162"
-rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"] }
+rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"], optional = true }
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 tracing = "0.1.40"
-mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
+mlua = { version = "0.9.8", features = ["vendored", "send"], optional = true }
 
 [[example]]
 name = "call_function_from_rust_rhai"
@@ -62,3 +64,11 @@ path = "examples/rhai/promises.rs"
 [[example]]
 name = "side_effects_rhai"
 path = "examples/rhai/side_effects.rs"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.18"
+mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
+rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"] }
+
+
+

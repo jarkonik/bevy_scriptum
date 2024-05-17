@@ -35,7 +35,7 @@ pub trait IntoValue<V> {
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait CallbackFunction<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
+pub trait IntoCallbackSystem<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     /// Convert this function into a [CallbackSystem].
     #[must_use]
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<V>;
@@ -46,7 +46,7 @@ pub trait CloneCast {
     fn clone_cast<T: Clone + 'static>(&self) -> T;
 }
 
-impl<V, Out, FN, Marker> CallbackFunction<V, (), Out, Marker> for FN
+impl<V, Out, FN, Marker> IntoCallbackSystem<V, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
     V: Sync + Clone + 'static,
@@ -70,7 +70,7 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<$($t,)+ Val, Out, FN, Marker> CallbackFunction<Val, ($($t,)+), Out, Marker>
+        impl<$($t,)+ Val, Out, FN, Marker> IntoCallbackSystem<Val, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,

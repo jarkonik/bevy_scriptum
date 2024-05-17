@@ -206,8 +206,7 @@ use std::{
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
-use callback::{Callback, CallbackFunction};
-use rhai::{Engine, EvalAltResult, FuncArgs, ParseError}; // TODO: should not depend on rhai
+use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -222,9 +221,9 @@ const ENTITY_VAR_NAME: &str = "entity";
 #[derive(Error, Debug)]
 pub enum ScriptingError {
     #[error("script runtime error: {0}")]
-    RuntimeError(#[from] Box<EvalAltResult>),
+    RuntimeError(Box<dyn std::error::Error>),
     #[error("script compilation error: {0}")]
-    CompileError(#[from] ParseError),
+    CompileError(Box<dyn std::error::Error>),
     #[error("no runtime resource present")]
     NoRuntimeResource,
     #[error("no settings resource present")]
@@ -237,7 +236,13 @@ pub trait EngineMut {
     fn engine_mut(&mut self) -> &mut Self::Engine;
 }
 
-pub trait Runtime: Resource + Default + EngineMut {
+pub trait EngineRef {
+    type Engine;
+
+    fn engine_ref(&self) -> &Self::Engine;
+}
+
+pub trait Runtime: Resource + Default + EngineMut + EngineRef {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
@@ -268,7 +273,7 @@ pub trait Runtime: Resource + Default + EngineMut {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl FuncArgs,
+        args: impl FuncArgs<Self::Value>,
     ) -> Result<(), ScriptingError>;
 
     fn call_fn_from_value(
@@ -277,6 +282,10 @@ pub trait Runtime: Resource + Default + EngineMut {
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError>;
+}
+
+pub trait FuncArgs<V> {
+    fn parse(self) -> Vec<V>;
 }
 
 /// An extension trait for [App] that allows to setup a scripting runtime `R`.
@@ -302,7 +311,7 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     pub fn add_function<In, Out, Marker>(
         self,
         name: String,
-        fun: impl CallbackFunction<R::Value, In, Out, Marker>,
+        fun: impl IntoCallbackSystem<R::Value, In, Out, Marker>,
     ) -> Self {
         let system = fun.into_callback_system(self.world);
 

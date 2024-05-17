@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, Lua, Value::Nil};
+use mlua::{Function, IntoLua, Lua};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -13,7 +13,7 @@ use std::{
 use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
-    EngineMut, Runtime,
+    EngineMut, EngineRef, FuncArgs, Runtime,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
@@ -52,6 +52,14 @@ impl EngineMut for LuaRuntime {
 
     fn engine_mut(&mut self) -> &mut Self::Engine {
         &mut self.engine
+    }
+}
+
+impl EngineRef for LuaRuntime {
+    type Engine = LuaEngine;
+
+    fn engine_ref(&self) -> &Self::Engine {
+        &self.engine
     }
 }
 
@@ -107,11 +115,12 @@ impl Runtime for LuaRuntime {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: bevy::prelude::Entity,
-        args: impl rhai::FuncArgs, // TODO: Remove rhai
+        args: impl FuncArgs<Self::Value>,
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let a: () = func.call(5).unwrap();
+        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| mlua::Value::Nil).collect();
+        let _ = func.call::<_, ()>(args);
         Ok(())
     }
 
@@ -134,6 +143,18 @@ impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
 impl From<()> for LuaValue {
     fn from(value: ()) -> Self {
         LuaValue(())
+    }
+}
+
+impl FuncArgs<LuaValue> for () {
+    fn parse(self) -> Vec<LuaValue> {
+        Vec::new()
+    }
+}
+
+impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
+    fn parse(self) -> Vec<LuaValue> {
+        self.into_iter().map(|_| LuaValue(())).collect()
     }
 }
 

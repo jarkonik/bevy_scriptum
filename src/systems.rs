@@ -7,7 +7,6 @@ use std::{
 use crate::{
     callback::FunctionCallEvent,
     promise::{Promise, PromiseInner},
-    runtimes::rhai::RhaiScriptData,
     Callback, Callbacks, Runtime, ScriptingError,
 };
 
@@ -23,7 +22,7 @@ pub(crate) fn reload_scripts<R: Runtime>(
         if let AssetEvent::Modified { id } = ev {
             for (entity, script) in &mut scripts {
                 if script.script.id() == *id {
-                    commands.entity(entity).remove::<RhaiScriptData>();
+                    commands.entity(entity).remove::<R::ScriptData>();
                 }
             }
         }
