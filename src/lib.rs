@@ -185,6 +185,9 @@
 //! bevy_scriptum is licensed under either of the following, at your option:
 //! Apache License, Version 2.0, (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0) or MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
 
+#[cfg(not(any(feature = "luajit", feature = "rhai")))]
+compile_error!("enable at least one runtime support feature out of: \"luajit\", \"rhai\"");
+
 mod assets;
 mod callback;
 mod components;
