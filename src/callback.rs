@@ -83,7 +83,7 @@ macro_rules! impl_tuple {
                 inner_system.initialize(world);
                 let system_fn = move |args: In<Vec<Val>>, world: &mut World| {
                     let args = (
-                        $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
+                        $(args.0.get($idx).expect(format!("Failed to get argument with index {}", $idx).as_str()).clone_cast::<$t>(), )+
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
