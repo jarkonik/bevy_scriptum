@@ -120,8 +120,7 @@ impl Runtime for LuaRuntime {
                 .create_function(move |_, args: mlua::Variadic<mlua::Value>| {
                     let args: Vec<LuaValue> =
                         args.into_iter().map(|arg| LuaValue::new(arg)).collect();
-                    // let promise = f((), args).unwrap();
-                    let promise = f((), vec![]).unwrap();
+                    let promise = f((), args).unwrap();
 
                     Ok(promise)
                 })
