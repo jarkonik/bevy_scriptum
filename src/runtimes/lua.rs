@@ -8,6 +8,7 @@ use serde::Deserialize;
 use std::{
     any::{Any, TypeId},
     marker::PhantomData,
+    mem::{transmute, transmute_copy},
     sync::{Arc, Mutex},
 };
 
@@ -21,19 +22,12 @@ use crate::{
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone, Debug)]
-pub struct LuaValue<'a>(Arc<Mutex<mlua::Value<'a>>>);
-
-impl<'a> LuaValue<'a> {
-    fn new(value: mlua::Value<'a>) -> Self {
-        Self(Arc::new(Mutex::new(value)))
-    }
+pub enum LuaValue {
+    Nil,
+    Integer(i64),
+    Number(f64),
+    String(String),
 }
-
-/// # Safety: This is safe because we ensure thread safety using Arc and Mutex
-unsafe impl Send for LuaValue<'_> {}
-
-/// # Safety: This is safe because we ensure thread safety using Arc and Mutex
-unsafe impl Sync for LuaValue<'_> {}
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
@@ -88,7 +82,7 @@ impl Runtime for LuaRuntime {
 
     type CallContext = ();
 
-    type Value = LuaValue<'static>;
+    type Value = LuaValue;
 
     // TODO: Should be renamed or even split as it also evals
     fn create_script_data(
@@ -118,8 +112,24 @@ impl Runtime for LuaRuntime {
         let func = if !arg_types.is_empty() {
             engine
                 .create_function(move |_, args: mlua::Variadic<mlua::Value>| {
-                    let args: Vec<LuaValue> =
-                        args.into_iter().map(|arg| LuaValue::new(arg)).collect();
+                    let args: Vec<LuaValue> = args
+                        .into_iter()
+                        .map(|arg| match arg {
+                            mlua::Value::Nil => LuaValue::Nil,
+                            mlua::Value::Boolean(_) => todo!(),
+                            mlua::Value::LightUserData(_) => todo!(),
+                            mlua::Value::Integer(n) => LuaValue::Integer(n),
+                            mlua::Value::Number(n) => LuaValue::Number(n),
+                            mlua::Value::String(s) => {
+                                LuaValue::String(s.to_string_lossy().to_string())
+                            }
+                            mlua::Value::Table(_) => todo!(),
+                            mlua::Value::Function(_) => todo!(),
+                            mlua::Value::Thread(_) => todo!(),
+                            mlua::Value::UserData(_) => todo!(),
+                            mlua::Value::Error(_) => todo!(),
+                        })
+                        .collect();
                     let promise = f((), args).unwrap();
 
                     Ok(promise)
@@ -163,44 +173,50 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl<'a, T: Any + Clone + Send + Sync> IntoValue<LuaValue<'a>> for T {
-    fn into_value(self) -> LuaValue<'a> {
-        LuaValue::new(mlua::Value::Nil)
+impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
+    fn into_value(self) -> LuaValue {
+        LuaValue::Nil
     }
 }
 
-impl From<()> for LuaValue<'_> {
-    fn from(value: ()) -> Self {
-        LuaValue::new(mlua::Value::Nil)
+impl From<()> for LuaValue {
+    fn from(_value: ()) -> Self {
+        LuaValue::Nil
     }
 }
 
-impl<'a> FuncArgs<LuaValue<'a>> for () {
-    fn parse(self) -> Vec<LuaValue<'a>> {
+impl FuncArgs<LuaValue> for () {
+    fn parse(self) -> Vec<LuaValue> {
         Vec::new()
     }
 }
 
-impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
-    fn parse(self) -> Vec<LuaValue<'a>> {
-        self.into_iter()
-            .map(|_| LuaValue::new(mlua::Value::Nil))
-            .collect()
+impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
+    fn parse(self) -> Vec<LuaValue> {
+        self.into_iter().map(|_| LuaValue::Nil).collect()
     }
 }
 
-impl CloneCast for LuaValue<'_> {
-    fn clone_cast<T: Clone + 'static>(&self) -> T {
-        let val = self.0.lock().unwrap();
-
-        if TypeId::of::<T>() == TypeId::of::<i64>() {
-            if let mlua::Value::Integer(n) = *val {
-                unsafe { std::mem::transmute_copy::<_, T>(&n) }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
+impl CloneCast for LuaValue {
+    fn clone_cast<T: Any + Clone + 'static>(&self) -> T {
+        match self {
+            LuaValue::Nil if TypeId::of::<T>() == TypeId::of::<()>() => unsafe {
+                transmute_copy(&())
+            },
+            LuaValue::Integer(n) if TypeId::of::<T>() == TypeId::of::<i64>() => unsafe {
+                transmute_copy(n)
+            },
+            LuaValue::Number(n) if TypeId::of::<T>() == TypeId::of::<i64>() => unsafe {
+                transmute_copy(n)
+            },
+            LuaValue::String(s) if TypeId::of::<T>() == TypeId::of::<String>() => unsafe {
+                transmute_copy(s)
+            },
+            _ => panic!(
+                "Failed conversion of {:?} into {:?}",
+                self,
+                std::any::type_name::<T>()
+            ),
         }
     }
 }
