@@ -1,12 +1,13 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
+    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, IntoLua, Lua, UserData};
+use mlua::{Function, IntoLua, Lua, OwnedFunction, UserData, UserDataFields, UserDataMethods};
 use serde::Deserialize;
 use std::{
     any::{Any, TypeId},
+    fmt::Debug,
     mem::transmute_copy,
     sync::{Arc, Mutex},
 };
@@ -15,10 +16,12 @@ use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
     promise::Promise,
-    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError,
+    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
-type LuaEngine = Arc<Mutex<Lua>>;
+pub struct LuaEngine(Arc<Mutex<Lua>>);
+unsafe impl Send for LuaEngine {}
+unsafe impl Sync for LuaEngine {}
 
 #[derive(Clone, Debug)]
 pub enum LuaValue {
@@ -27,11 +30,76 @@ pub enum LuaValue {
     Number(f64),
     String(String),
     Boolean(bool),
+    Function(LuaFunction),
 }
 
-#[derive(Default, Resource)]
+#[derive(Clone, Debug)]
+struct LuaFunction(Arc<Mutex<OwnedFunction>>);
+unsafe impl Send for LuaFunction {}
+unsafe impl Sync for LuaFunction {}
+
+impl LuaFunction {
+    fn new(f: OwnedFunction) -> Self {
+        Self(Arc::new(Mutex::new(f)))
+    }
+}
+
+#[derive(Resource)]
 pub struct LuaRuntime {
     engine: LuaEngine,
+}
+
+impl Default for LuaRuntime {
+    fn default() -> Self {
+        let engine = Lua::new();
+
+        engine
+            .register_userdata_type::<Entity>(|t| {
+                t.add_method("index", |_, entity, ()| {
+                    let index = entity.index();
+
+                    Ok(index)
+                });
+            })
+            .unwrap();
+
+        engine
+            .register_userdata_type::<Promise<(), LuaValue>>(|t| {
+                t.add_method_mut("and_then", |_, promise, (callback): mlua::Function| {
+                    let promise = Promise::then(
+                        promise,
+                        LuaValue::Function(LuaFunction::new(callback.into_owned())),
+                    );
+                    Ok(promise)
+                });
+            })
+            .unwrap();
+
+        // #[allow(deprecated)]
+        // engine
+        //     .register_fn(
+        //         "then",
+        //         |promise: &mut Promise<rhai::NativeCallContextStore, RhaiValue>,
+        //          callback: rhai::Dynamic| {
+        //             Promise::then(promise, RhaiValue(callback));
+        //         },
+        //     );
+        //
+        // engine
+        //     .register_type_with_name::<Vec3>("Vec3")
+        //     .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
+        //         Vec3::new(x as f32, y as f32, z as f32)
+        //     })
+        //     .register_get("x", |vec: &mut Vec3| vec.x as f64)
+        //     .register_get("y", |vec: &mut Vec3| vec.y as f64)
+        //     .register_get("z", |vec: &mut Vec3| vec.z as f64);
+        // #[allow(deprecated)]
+        // engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+
+        LuaRuntime {
+            engine: LuaEngine(Arc::new(Mutex::new(engine))),
+        }
+    }
 }
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
@@ -73,6 +141,10 @@ impl EngineRef for LuaRuntime {
 
 impl<C: Send, V: Send> UserData for Promise<C, V> {}
 
+struct BevyEntity(Entity);
+
+impl UserData for BevyEntity {}
+
 // TODO: Remove all unwraps, panics and todos
 impl Runtime for LuaRuntime {
     type Schedule = LuaSchedule;
@@ -89,9 +161,10 @@ impl Runtime for LuaRuntime {
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
-        _entity: bevy::prelude::Entity,
+        entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
+        let engine = self.engine.0.lock().unwrap();
+        engine.globals().set(ENTITY_VAR_NAME, BevyEntity(entity));
         engine.load(&script.0).exec().unwrap();
         Ok(LuaScriptData)
     }
@@ -108,7 +181,7 @@ impl Runtime for LuaRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
+        let engine = self.engine.0.lock().unwrap();
 
         let func = if !arg_types.is_empty() {
             engine
@@ -127,7 +200,7 @@ impl Runtime for LuaRuntime {
                             mlua::Value::Table(_) => todo!(),
                             mlua::Value::Function(_) => todo!(),
                             mlua::Value::Thread(_) => todo!(),
-                            mlua::Value::UserData(_) => todo!(),
+                            mlua::Value::UserData(d) => todo!(),
                             mlua::Value::Error(_) => todo!(),
                         })
                         .collect();
@@ -157,7 +230,7 @@ impl Runtime for LuaRuntime {
         _entity: bevy::prelude::Entity,
         args: impl FuncArgs<Self::Value>,
     ) -> Result<(), crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
+        let engine = self.engine.0.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
         let args: Vec<mlua::Value> = args
             .parse()
@@ -193,12 +266,6 @@ impl From<()> for LuaValue {
 impl FuncArgs<LuaValue> for () {
     fn parse(self) -> Vec<LuaValue> {
         Vec::new()
-    }
-}
-
-impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
-    fn parse(self) -> Vec<LuaValue> {
-        self.into_iter().map(|_| LuaValue::Nil).collect()
     }
 }
 

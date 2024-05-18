@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::rhai::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<RhaiRuntime>(|runtime| {
+        .add_scripting::<LuaRuntime>(|runtime| {
             runtime.add_function(
                 String::from("get_name"),
                 |In((entity,)): In<(Entity,)>, names: Query<&Name>| {
@@ -20,6 +20,6 @@ fn main() {
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn((
         Name::from("MyEntityName"),
-        Script::<RhaiScript>::new(assets_server.load("examples/rhai/current_entity.rhai")),
+        Script::<LuaScript>::new(assets_server.load("examples/lua/current_entity.lua")),
     ));
 }
