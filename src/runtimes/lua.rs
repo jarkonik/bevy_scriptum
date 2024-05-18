@@ -21,19 +21,19 @@ use crate::{
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone, Debug)]
-pub struct LuaValue(Arc<Mutex<mlua::Value<'static>>>);
+pub struct LuaValue<'a>(Arc<Mutex<mlua::Value<'a>>>);
 
-impl LuaValue {
-    fn new(value: mlua::Value<'static>) -> Self {
+impl<'a> LuaValue<'a> {
+    fn new(value: mlua::Value<'a>) -> Self {
         Self(Arc::new(Mutex::new(value)))
     }
 }
 
 /// # Safety: This is safe because we ensure thread safety using Arc and Mutex
-unsafe impl Send for LuaValue {}
+unsafe impl Send for LuaValue<'_> {}
 
 /// # Safety: This is safe because we ensure thread safety using Arc and Mutex
-unsafe impl Sync for LuaValue {}
+unsafe impl Sync for LuaValue<'_> {}
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
@@ -88,7 +88,7 @@ impl Runtime for LuaRuntime {
 
     type CallContext = ();
 
-    type Value = LuaValue;
+    type Value = LuaValue<'static>;
 
     // TODO: Should be renamed or even split as it also evals
     fn create_script_data(
@@ -120,7 +120,9 @@ impl Runtime for LuaRuntime {
                 .create_function(move |_, args: mlua::Variadic<mlua::Value>| {
                     let args: Vec<LuaValue> =
                         args.into_iter().map(|arg| LuaValue::new(arg)).collect();
-                    let promise = f((), args).unwrap();
+                    // let promise = f((), args).unwrap();
+                    let promise = f((), vec![]).unwrap();
+
                     Ok(promise)
                 })
                 .unwrap()
@@ -162,33 +164,33 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
-    fn into_value(self) -> LuaValue {
+impl<'a, T: Any + Clone + Send + Sync> IntoValue<LuaValue<'a>> for T {
+    fn into_value(self) -> LuaValue<'a> {
         LuaValue::new(mlua::Value::Nil)
     }
 }
 
-impl From<()> for LuaValue {
+impl From<()> for LuaValue<'_> {
     fn from(value: ()) -> Self {
         LuaValue::new(mlua::Value::Nil)
     }
 }
 
-impl FuncArgs<LuaValue> for () {
-    fn parse(self) -> Vec<LuaValue> {
+impl<'a> FuncArgs<LuaValue<'a>> for () {
+    fn parse(self) -> Vec<LuaValue<'a>> {
         Vec::new()
     }
 }
 
-impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
-    fn parse(self) -> Vec<LuaValue> {
+impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
+    fn parse(self) -> Vec<LuaValue<'a>> {
         self.into_iter()
             .map(|_| LuaValue::new(mlua::Value::Nil))
             .collect()
     }
 }
 
-impl CloneCast for LuaValue {
+impl CloneCast for LuaValue<'_> {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
         let val = self.0.lock().unwrap();
 
