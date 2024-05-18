@@ -164,7 +164,7 @@ impl Runtime for LuaRuntime {
             .into_iter()
             .map(|_a| mlua::Value::Nil)
             .collect();
-        let _ = func.call::<_, ()>(args);
+        func.call::<_, ()>(args).unwrap();
         Ok(())
     }
 
