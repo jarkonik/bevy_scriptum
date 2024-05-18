@@ -3,12 +3,11 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, Lua, UserData};
+use mlua::{Function, IntoLua, Lua, UserData};
 use serde::Deserialize;
 use std::{
     any::{Any, TypeId},
-    marker::PhantomData,
-    mem::{transmute, transmute_copy},
+    mem::{transmute_copy},
     sync::{Arc, Mutex},
 };
 
@@ -88,7 +87,7 @@ impl Runtime for LuaRuntime {
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
-        entity: bevy::prelude::Entity,
+        _entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         engine.load(&script.0).exec().unwrap();
@@ -152,22 +151,22 @@ impl Runtime for LuaRuntime {
     fn call_fn<'v>(
         &self,
         name: &str,
-        script_data: &mut Self::ScriptData,
-        entity: bevy::prelude::Entity,
+        _script_data: &mut Self::ScriptData,
+        _entity: bevy::prelude::Entity,
         args: impl FuncArgs<Self::Value>,
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| mlua::Value::Nil).collect();
+        let args: Vec<mlua::Value> = args.parse().into_iter().map(|_a| mlua::Value::Nil).collect();
         let _ = func.call::<_, ()>(args);
         Ok(())
     }
 
     fn call_fn_from_value(
         &self,
-        value: &Self::Value,
-        context: &Self::CallContext,
-        args: Vec<Self::Value>,
+        _value: &Self::Value,
+        _context: &Self::CallContext,
+        _args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         todo!()
     }

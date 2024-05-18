@@ -6,7 +6,7 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use mlua::FromLua;
+
 use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, Scope};
 use serde::Deserialize;
 
