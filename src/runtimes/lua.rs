@@ -7,7 +7,7 @@ use mlua::{Function, IntoLua, Lua, UserData};
 use serde::Deserialize;
 use std::{
     any::{Any, TypeId},
-    mem::{transmute_copy},
+    mem::transmute_copy,
     sync::{Arc, Mutex},
 };
 
@@ -26,6 +26,7 @@ pub enum LuaValue {
     Integer(i64),
     Number(f64),
     String(String),
+    Boolean(bool),
 }
 
 #[derive(Default, Resource)]
@@ -72,6 +73,7 @@ impl EngineRef for LuaRuntime {
 
 impl<C: Send, V: Send> UserData for Promise<C, V> {}
 
+// TODO: Remove all unwraps, panics and todos
 impl Runtime for LuaRuntime {
     type Schedule = LuaSchedule;
 
@@ -115,7 +117,7 @@ impl Runtime for LuaRuntime {
                         .into_iter()
                         .map(|arg| match arg {
                             mlua::Value::Nil => LuaValue::Nil,
-                            mlua::Value::Boolean(_) => todo!(),
+                            mlua::Value::Boolean(b) => LuaValue::Boolean(b),
                             mlua::Value::LightUserData(_) => todo!(),
                             mlua::Value::Integer(n) => LuaValue::Integer(n),
                             mlua::Value::Number(n) => LuaValue::Number(n),
@@ -157,7 +159,11 @@ impl Runtime for LuaRuntime {
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args.parse().into_iter().map(|_a| mlua::Value::Nil).collect();
+        let args: Vec<mlua::Value> = args
+            .parse()
+            .into_iter()
+            .map(|_a| mlua::Value::Nil)
+            .collect();
         let _ = func.call::<_, ()>(args);
         Ok(())
     }
@@ -197,19 +203,23 @@ impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
 }
 
 impl CloneCast for LuaValue {
+    // TODO: This probably should not panic, or maybe add TryCloneCast trait?
     fn clone_cast<T: Any + Clone + 'static>(&self) -> T {
         match self {
             LuaValue::Nil if TypeId::of::<T>() == TypeId::of::<()>() => unsafe {
                 transmute_copy(&())
             },
-            LuaValue::Integer(n) if TypeId::of::<T>() == TypeId::of::<i64>() => unsafe {
+            LuaValue::Integer(n) if TypeId::of::<T>() == Any::type_id(n) => unsafe {
                 transmute_copy(n)
             },
-            LuaValue::Number(n) if TypeId::of::<T>() == TypeId::of::<i64>() => unsafe {
+            LuaValue::Number(n) if TypeId::of::<T>() == Any::type_id(n) => unsafe {
                 transmute_copy(n)
             },
-            LuaValue::String(s) if TypeId::of::<T>() == TypeId::of::<String>() => unsafe {
-                transmute_copy(s)
+            LuaValue::String(s) if TypeId::of::<T>() == Any::type_id(s) => unsafe {
+                transmute_copy(&std::mem::ManuallyDrop::new(s.to_string()))
+            },
+            LuaValue::Boolean(b) if TypeId::of::<T>() == Any::type_id(b) => unsafe {
+                transmute_copy(b)
             },
             _ => panic!(
                 "Failed conversion of {:?} into {:?}",

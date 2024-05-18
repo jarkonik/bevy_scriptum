@@ -18,7 +18,7 @@ fn build_test_app() -> App {
     app
 }
 
-fn run_script<R: Runtime, Out, Marker>(
+fn run_callback<R: Runtime, Out, Marker>(
     app: &mut App,
     path: String,
     system: impl IntoSystem<(), Out, Marker>,
@@ -30,6 +30,19 @@ fn run_script<R: Runtime, Out, Marker>(
     app.update(); // let `ScriptData` resources be added to entities
     app.world.run_system_once(system);
     app.update(); // let callbacks be executed
+
+    entity_id
+}
+
+fn run_script_from_string<R: Runtime>(app: &mut App, script: String) -> Entity {
+    let mut scripts = app
+        .world
+        .get_resource_mut::<Assets<R::ScriptAsset>>()
+        .unwrap();
+    let asset = scripts.add(R::ScriptAsset::from(script));
+
+    let entity_id = app.world.spawn(Script::new(asset)).id();
+    app.update(); // let `ScriptData` resources be added to entities
 
     entity_id
 }
@@ -61,7 +74,7 @@ macro_rules! scripting_tests {
 
             app.add_scripting::<$runtime>(|_| {});
 
-            run_script::<$runtime, _, _>(
+            run_callback::<$runtime, _, _>(
                 &mut app,
                 format!(
                     "tests/{}/call_script_function_with_params.{}",
@@ -98,7 +111,7 @@ macro_rules! scripting_tests {
                 );
             });
 
-            run_script::<$runtime, _, _>(
+            run_callback::<$runtime, _, _>(
                 &mut app,
                 format!(
                     "tests/{}/rust_function_gets_called_from_script_with_param.{}",
@@ -117,7 +130,7 @@ macro_rules! scripting_tests {
 
             app.add_scripting::<$runtime>(|_| {});
 
-            let entity_id = run_script::<$runtime, _, _>(
+            let entity_id = run_callback::<$runtime, _, _>(
                 &mut app,
                 format!(
                     "tests/{}/script_function_gets_called_from_rust.{}",
@@ -147,7 +160,7 @@ macro_rules! scripting_tests {
                 });
             });
 
-            run_script::<$runtime, _, _>(
+            run_callback::<$runtime, _, _>(
                 &mut app,
                 format!(
                     "tests/{}/rust_function_gets_called_from_script.{}",
@@ -164,6 +177,29 @@ macro_rules! scripting_tests {
                     .times_called,
                 1
             );
+        }
+    };
+}
+
+macro_rules! type_conversion {
+    ($runtime:ty, $mod: ident, $type:ty, $expected:expr, $value: literal) => {
+        mod $mod {
+            use super::{build_test_app, run_script_from_string};
+            use bevy::prelude::*;
+            use bevy_scriptum::prelude::*;
+            use bevy_scriptum::runtimes::lua::prelude::*;
+
+            #[test]
+            fn type_conversions() {
+                let mut app = build_test_app();
+                app.add_scripting::<$runtime>(|runtime| {
+                    runtime.add_function(String::from("rust_func"), |In((x,)): In<($type,)>| {
+                        assert_eq!(x, $expected);
+                    });
+                });
+                let script = format!("rust_func({})", $value);
+                run_script_from_string::<LuaRuntime>(&mut app, script);
+            }
         }
     };
 }
@@ -188,8 +224,8 @@ mod rhai_tests {
 
 #[cfg(feature = "luajit")]
 mod lua_tests {
-    use bevy::prelude::*;
-    use bevy_scriptum::runtimes::lua::prelude::*;
+    use bevy::{prelude::*, utils::HashMap};
+    use bevy_scriptum::runtimes::lua::{prelude::*, LuaValue};
 
     impl AssertStateKeyValue for LuaRuntime {
         type ScriptData = LuaScriptData;
@@ -202,6 +238,19 @@ mod lua_tests {
             assert_eq!(state.get::<_, i64>(key).unwrap(), value);
         }
     }
+
+    type_conversion!(LuaRuntime, nil, (), (), "nil");
+    type_conversion!(LuaRuntime, boolean, bool, true, "true");
+    // mlua::Value::LightUserData(_) => todo!(),
+    type_conversion!(LuaRuntime, integer, i64, 5, "5");
+    type_conversion!(LuaRuntime, number, f64, 5.1, "5.1");
+    type_conversion!(LuaRuntime, string, String, "test", "\"test\"");
+    // mlua::Value::Function(_) => todo!(),
+    // mlua::Value::Thread(_) => todo!(),
+    // mlua::Value::UserData(_) => todo!(),
+    // mlua::Value::Error(_) => todo!(),
+
+    // type_conversion!(LuaRuntime, table, std::collections::HashMap<String, LuaValue>, std::collections::HashMap::new(), "\"test\"");
 
     scripting_tests!(LuaRuntime, "lua", "lua");
 }
