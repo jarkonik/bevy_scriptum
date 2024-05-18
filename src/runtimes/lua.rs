@@ -117,12 +117,13 @@ impl Runtime for LuaRuntime {
 
         let func = if !arg_types.is_empty() {
             engine
-            .create_function::<(mlua::Value), crate::promise::Promise<Self::CallContext, Self::Value>, _>(move |_, mut args| {
-                // let args = args.into_iter().map(|arg| LuaValue::new(mlua::Value::Number(5.0))).collect();
-                let promise = f((), vec![LuaValue::new(mlua::Value::Integer(5))]).unwrap();
-                Ok(promise)
-            })
-            .unwrap()
+                .create_function(move |_, args: mlua::Variadic<mlua::Value>| {
+                    let args: Vec<LuaValue> =
+                        args.into_iter().map(|arg| LuaValue::new(arg)).collect();
+                    let promise = f((), args).unwrap();
+                    Ok(promise)
+                })
+                .unwrap()
         } else {
             engine
                 .create_function::<(), crate::promise::Promise<Self::CallContext, Self::Value>, _>(
