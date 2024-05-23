@@ -185,9 +185,6 @@
 //! bevy_scriptum is licensed under either of the following, at your option:
 //! Apache License, Version 2.0, (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0) or MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
 
-#[cfg(not(any(feature = "luajit", feature = "rhai")))]
-compile_error!("enable at least one runtime support feature out of: \"luajit\", \"rhai\"");
-
 mod assets;
 mod callback;
 mod components;
@@ -233,19 +230,13 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
-pub trait EngineMut {
+pub trait WithEngine {
     type Engine;
 
-    fn engine_mut(&mut self) -> &mut Self::Engine;
+    fn with_engine<T>(&mut self, f: impl FnOnce(&mut Self::Engine) -> T) -> T;
 }
 
-pub trait EngineRef {
-    type Engine;
-
-    fn engine_ref(&self) -> &Self::Engine;
-}
-
-pub trait Runtime: Resource + Default + EngineMut + EngineRef {
+pub trait Runtime: Resource + Default + WithEngine {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
@@ -272,23 +263,23 @@ pub trait Runtime: Resource + Default + EngineMut + EngineRef {
     ) -> Result<(), ScriptingError>;
 
     fn call_fn(
-        &self,
+        &mut self,
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl FuncArgs<Self::Value>,
+        args: impl FuncArgs<Self::Value, Self>,
     ) -> Result<(), ScriptingError>;
 
     fn call_fn_from_value(
-        &self,
+        &mut self,
         value: &Self::Value,
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError>;
 }
 
-pub trait FuncArgs<V> {
-    fn parse(self) -> Vec<V>;
+pub trait FuncArgs<V, E> {
+    fn parse(self, engine: &mut E) -> Vec<V>;
 }
 
 /// An extension trait for [App] that allows to setup a scripting runtime `R`.
@@ -314,13 +305,13 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     pub fn add_function<In, Out, Marker>(
         self,
         name: String,
-        fun: impl IntoCallbackSystem<R::Value, In, Out, Marker>,
+        fun: impl IntoCallbackSystem<R::Value, In, Out, Marker, R>,
     ) -> Self {
         let system = fun.into_callback_system(self.world);
 
         let mut callbacks_resource = self
             .world
-            .resource_mut::<Callbacks<R::CallContext, R::Value>>();
+            .resource_mut::<Callbacks<R::CallContext, R::Value, R>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
@@ -341,7 +332,7 @@ impl BuildScriptingRuntime for App {
         self.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
             .init_schedule(R::Schedule::default())
             .init_asset::<R::ScriptAsset>()
-            .init_resource::<Callbacks<R::CallContext, R::Value>>()
+            .init_resource::<Callbacks<R::CallContext, R::Value, R>>()
             .insert_resource(R::default())
             .add_systems(
                 R::Schedule::default(),
@@ -367,12 +358,12 @@ impl BuildScriptingRuntime for App {
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_function].
 #[derive(Resource)]
-struct Callbacks<C: Send, V: Send> {
-    uninitialized_callbacks: Vec<Callback<C, V>>,
-    callbacks: Mutex<Vec<Callback<C, V>>>,
+struct Callbacks<C: Send, V: Send, E> {
+    uninitialized_callbacks: Vec<Callback<C, V, E>>,
+    callbacks: Mutex<Vec<Callback<C, V, E>>>,
 }
 
-impl<C: Send, V: Send> Default for Callbacks<C, V> {
+impl<C: Send, V: Send, R: Runtime> Default for Callbacks<C, V, R> {
     fn default() -> Self {
         Self {
             uninitialized_callbacks: Default::default(),

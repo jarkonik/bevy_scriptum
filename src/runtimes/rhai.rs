@@ -14,7 +14,7 @@ use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
     promise::Promise,
-    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    FuncArgs, Runtime, ScriptingError, WithEngine, ENTITY_VAR_NAME,
 };
 
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -48,19 +48,11 @@ pub struct RhaiScriptData {
     pub(crate) ast: rhai::AST,
 }
 
-impl EngineMut for RhaiRuntime {
+impl WithEngine for RhaiRuntime {
     type Engine = rhai::Engine;
 
-    fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
-    }
-}
-
-impl EngineRef for RhaiRuntime {
-    type Engine = rhai::Engine;
-
-    fn engine_ref(&self) -> &Self::Engine {
-        &self.engine
+    fn with_engine<T>(&mut self, f: impl FnOnce(&mut Self::Engine) -> T) -> T {
+        todo!()
     }
 }
 
@@ -121,11 +113,11 @@ impl Runtime for RhaiRuntime {
     }
 
     fn call_fn(
-        &self,
+        &mut self,
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl FuncArgs<Self::Value>,
+        args: impl FuncArgs<Self::Value, Self::Engine>,
     ) -> Result<(), ScriptingError> {
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;

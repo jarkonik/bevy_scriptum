@@ -224,15 +224,15 @@ mod rhai_tests {
 
 #[cfg(feature = "luajit")]
 mod lua_tests {
-    use bevy::{prelude::*, utils::HashMap};
-    use bevy_scriptum::runtimes::lua::{prelude::*, LuaValue};
+    use bevy::prelude::*;
+    use bevy_scriptum::runtimes::lua::prelude::*;
 
     impl AssertStateKeyValue for LuaRuntime {
         type ScriptData = LuaScriptData;
 
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
             let runtime = world.get_resource::<LuaRuntime>().unwrap();
-            let engine = runtime.engine_ref();
+            let engine = &runtime.engine_ref().0;
             let engine = engine.lock().unwrap();
             let state = engine.globals().get::<_, Table>("State").unwrap();
             assert_eq!(state.get::<_, i64>(key).unwrap(), value);

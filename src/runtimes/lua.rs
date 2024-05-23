@@ -3,11 +3,13 @@ use bevy::{
     ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use core::panic;
-use mlua::{Function, IntoLua, Lua, OwnedFunction, UserData, UserDataFields, UserDataMethods};
+use mlua::{
+    Function, IntoLua, Lua, OwnedFunction, OwnedString, UserData, UserDataFields, UserDataMethods,
+};
 use serde::Deserialize;
 use std::{
     any::{Any, TypeId},
+    borrow::Borrow,
     fmt::Debug,
     mem::transmute_copy,
     sync::{Arc, Mutex},
@@ -17,19 +19,17 @@ use crate::{
     assets::GetExtensions,
     callback::{CloneCast, IntoValue},
     promise::Promise,
-    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    FuncArgs, Runtime, ScriptingError, WithEngine, ENTITY_VAR_NAME,
 };
 
-pub struct LuaEngine(Arc<Mutex<Lua>>);
-unsafe impl Send for LuaEngine {}
-unsafe impl Sync for LuaEngine {}
+pub struct LuaEngine(Lua);
 
 #[derive(Clone, Debug)]
 pub enum LuaValue {
     Nil,
     Integer(i64),
     Number(f64),
-    String(String),
+    String(LuaString),
     Boolean(bool),
     Function(LuaFunction),
     Entity(BevyEntity),
@@ -40,15 +40,24 @@ struct LuaFunction(Arc<Mutex<OwnedFunction>>);
 unsafe impl Send for LuaFunction {}
 unsafe impl Sync for LuaFunction {}
 
+#[derive(Clone, Debug)]
+struct LuaString(Arc<Mutex<OwnedString>>);
+unsafe impl Send for LuaString {}
+unsafe impl Sync for LuaString {}
+
 impl LuaFunction {
     fn new(f: OwnedFunction) -> Self {
         Self(Arc::new(Mutex::new(f)))
     }
 }
 
+struct SharedLuaEngine(Arc<Mutex<LuaEngine>>);
+unsafe impl Send for SharedLuaEngine {}
+unsafe impl Sync for SharedLuaEngine {}
+
 #[derive(Resource)]
 pub struct LuaRuntime {
-    engine: LuaEngine,
+    engine: SharedLuaEngine,
 }
 
 impl Default for LuaRuntime {
@@ -99,7 +108,7 @@ impl Default for LuaRuntime {
         // engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
         LuaRuntime {
-            engine: LuaEngine(Arc::new(Mutex::new(engine))),
+            engine: SharedLuaEngine(Arc::new(Mutex::new(LuaEngine(engine)))),
         }
     }
 }
@@ -125,19 +134,12 @@ impl From<String> for LuaScript {
 #[derive(Component)]
 pub struct LuaScriptData;
 
-impl EngineMut for LuaRuntime {
+impl WithEngine for LuaRuntime {
     type Engine = LuaEngine;
 
-    fn engine_mut(&mut self) -> &mut Self::Engine {
-        &mut self.engine
-    }
-}
-
-impl EngineRef for LuaRuntime {
-    type Engine = LuaEngine;
-
-    fn engine_ref(&self) -> &Self::Engine {
-        &self.engine
+    fn with_engine<T>(&mut self, f: impl FnOnce(&mut Self::Engine) -> T) -> T {
+        let mut engine = self.engine.0.lock().unwrap();
+        f(&mut engine)
     }
 }
 
@@ -168,10 +170,11 @@ impl Runtime for LuaRuntime {
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let engine = self.engine.0.lock().unwrap();
         engine
+            .0
             .globals()
             .set(ENTITY_VAR_NAME, BevyEntity(entity))
             .unwrap();
-        engine.load(&script.0).exec().unwrap();
+        engine.0.load(&script.0).exec().unwrap();
         Ok(LuaScriptData)
     }
 
@@ -191,6 +194,7 @@ impl Runtime for LuaRuntime {
 
         let func = if !arg_types.is_empty() {
             engine
+                .0
                 .create_function(move |_, args: mlua::Variadic<mlua::Value>| {
                     let args: Vec<LuaValue> = args
                         .into_iter()
@@ -201,7 +205,8 @@ impl Runtime for LuaRuntime {
                             mlua::Value::Integer(n) => LuaValue::Integer(n),
                             mlua::Value::Number(n) => LuaValue::Number(n),
                             mlua::Value::String(s) => {
-                                LuaValue::String(s.to_string_lossy().to_string())
+                                todo!();
+                                // LuaValue::String(s.to_string_lossy().to_string())
                             }
                             mlua::Value::Table(_) => todo!(),
                             mlua::Value::Function(_) => todo!(),
@@ -220,6 +225,7 @@ impl Runtime for LuaRuntime {
                 .unwrap()
         } else {
             engine
+                .0
                 .create_function::<(), crate::promise::Promise<Self::CallContext, Self::Value>, _>(
                     move |_, _| {
                         let promise = f((), vec![]).unwrap();
@@ -228,34 +234,39 @@ impl Runtime for LuaRuntime {
                 )
                 .unwrap()
         };
-        engine.globals().set(name, func).unwrap();
+        engine.0.globals().set(name, func).unwrap();
         Ok(())
     }
 
     fn call_fn(
-        &self,
+        &mut self,
         name: &str,
         _script_data: &mut Self::ScriptData,
         _entity: bevy::prelude::Entity,
-        args: impl FuncArgs<Self::Value>,
+        args: impl FuncArgs<Self::Value, LuaRuntime>,
     ) -> Result<(), crate::ScriptingError> {
+        todo!();
         // TODO: Should this return () ?
-        let engine = self.engine.0.lock().unwrap();
-        let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| a.into()).collect();
-        let r = func.call::<_, ()>(args).unwrap();
-        Ok(())
+        // let engine = self.engine.0.lock().unwrap();
+        // let func = engine.0.globals().get::<_, Function>(name).unwrap();
+        // let args: Vec<mlua::Value> = args
+        //     .parse(self)
+        //     .into_iter()
+        //     .map(|a| a.into_lua(self))
+        //     .collect();
+        // let r = func.call::<_, ()>(args).unwrap();
+        // Ok(())
     }
 
     fn call_fn_from_value(
-        &self,
+        &mut self,
         value: &Self::Value,
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         if let LuaValue::Function(f) = value {
             let f = f.0.lock().unwrap();
-            let args: Vec<mlua::Value> = args.into_iter().map(|a| a.into()).collect();
+            let args: Vec<mlua::Value> = args.into_iter().map(|a| a.into_value(self)).collect();
             let r = f.call::<_, mlua::Value>(args).unwrap();
             let r = match r {
                 mlua::Value::Nil => LuaValue::Nil,
@@ -277,43 +288,92 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl IntoValue<LuaValue> for String {
-    fn into_value(self) -> LuaValue {
-        LuaValue::String(self)
+impl<'a, T: Any + Clone + Send + Sync + IntoLua<'a>> IntoValue<'a, LuaValue, mlua::Lua> for T {
+    // TODO: Does this need to take mut
+    fn into_value(self, engine: &'a mut Lua) -> LuaValue {
+        // RhaiValue(Dynamic::from(self))
+        self.into_lua(engine);
+        todo!();
     }
 }
 
-// impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
+// impl IntoValue<LuaValue> for String {
+//     fn into_value(self) -> LuaValue {
+//         todo!();
+//         // LuaValue::String(self)
+//     }
+// }
+//
+// impl IntoValue<LuaValue> for () {
 //     fn into_value(self) -> LuaValue {
 //         LuaValue::Nil
 //     }
 // }
 //
+// impl IntoValue<LuaValue> for i64 {
+//     fn into_value(self) -> LuaValue {
+//         LuaValue::Integer(self)
+//     }
+// }
+//
+// impl IntoValue<LuaValue> for f64 {
+//     fn into_value(self) -> LuaValue {
+//         LuaValue::Number(self)
+//     }
+// }
+//
+// impl<T: IntoValue<LuaValue>> IntoValue<LuaValue> for Vec<T> {
+//     fn into_value(self) -> LuaValue {
+//         todo!()
+//     }
+// }
+//
+// impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
+//     fn into_value(self) -> LuaValue {
+//         LuaValue::Nil
+//     }
+// }
+
 impl From<()> for LuaValue {
     fn from(_value: ()) -> Self {
         LuaValue::Nil
     }
 }
 
-impl FuncArgs<LuaValue> for () {
-    fn parse(self) -> Vec<LuaValue> {
+impl FuncArgs<LuaValue, LuaRuntime> for () {
+    fn parse(self, runtime: &mut LuaRuntime) -> Vec<LuaValue> {
         Vec::new()
     }
 }
 
-impl From<LuaValue> for mlua::Value<'_> {
-    fn from(value: LuaValue) -> Self {
-        match value {
-            LuaValue::Nil => mlua::Value::Nil,
-            LuaValue::Integer(_) => todo!(),
-            LuaValue::Number(_) => todo!(),
-            LuaValue::String(s) => panic!("{:?}", s),
-            LuaValue::Boolean(_) => todo!(),
-            LuaValue::Function(_) => todo!(),
-            LuaValue::Entity(_) => todo!(),
-        }
+impl<'a, T: Clone + Send + Sync + IntoValue<'a, LuaValue, LuaRuntime> + 'static>
+    FuncArgs<LuaValue, LuaRuntime> for Vec<T>
+{
+    fn parse(self, runtime: &mut LuaRuntime) -> Vec<LuaValue> {
+        self.into_iter().map(|v| v.into_value(runtime)).collect()
     }
 }
+
+// impl FromValue<LuaValue, LuaRuntime> for mlua::Value<'_> {
+//     fn from_value(self, runtime: &mut LuaRuntime) -> Self {
+//         todo!();
+// match self {
+//     LuaValue::Nil => mlua::Value::Nil,
+//     LuaValue::Integer(n) => mlua::Value::Integer(n),
+//     LuaValue::Number(n) => mlua::Value::Number(n),
+//     LuaValue::String(ref s) => {
+//         let s = s.0.lock().unwrap();
+//         s.into_lua(lua);
+//
+//         // mlua::Value::String(s.to_ref())
+//         todo!();
+//     }
+//     LuaValue::Boolean(_) => todo!(),
+//     LuaValue::Function(_) => todo!(),
+//     LuaValue::Entity(_) => todo!(),
+// }
+//     }
+// }
 
 impl CloneCast for LuaValue {
     // TODO: This probably should not panic, or maybe add TryCloneCast trait?
@@ -329,7 +389,8 @@ impl CloneCast for LuaValue {
                 transmute_copy(n)
             },
             LuaValue::String(s) if TypeId::of::<T>() == Any::type_id(s) => unsafe {
-                transmute_copy(&std::mem::ManuallyDrop::new(s.to_string()))
+                todo!();
+                // transmute_copy(&std::mem::ManuallyDrop::new(s.to_string()))
             },
             LuaValue::Boolean(b) if TypeId::of::<T>() == Any::type_id(b) => unsafe {
                 transmute_copy(b)
