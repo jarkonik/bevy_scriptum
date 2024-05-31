@@ -63,13 +63,13 @@ pub(crate) fn process_new_scripts<R: Runtime>(
 /// Initializes callbacks. Registers them in the scripting engine.
 pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
     let mut callbacks_resource = world
-        .get_resource_mut::<Callbacks<R::CallContext, R::Value>>()
+        .get_resource_mut::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let mut callbacks = callbacks_resource
         .uninitialized_callbacks
         .drain(..)
-        .collect::<Vec<Callback<R::CallContext, R::Value>>>();
+        .collect::<Vec<Callback<R>>>();
 
     for callback in callbacks.iter_mut() {
         if let Ok(mut system) = callback.system.lock() {
@@ -110,7 +110,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
     }
 
     let callbacks_resource = world
-        .get_resource_mut::<Callbacks<R::CallContext, R::Value>>()
+        .get_resource_mut::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
     callbacks_resource
         .callbacks
@@ -124,7 +124,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
 /// Processes calls. Calls the user-defined callback systems
 pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
     let callbacks_resource = world
-        .get_resource::<Callbacks<R::CallContext, R::Value>>()
+        .get_resource::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
     let callbacks = callbacks_resource.callbacks.lock().unwrap().clone();

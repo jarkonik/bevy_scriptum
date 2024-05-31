@@ -311,13 +311,11 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     pub fn add_function<In, Out, Marker>(
         self,
         name: String,
-        fun: impl IntoCallbackSystem<R::Value, In, Out, Marker>,
+        fun: impl IntoCallbackSystem<R, In, Out, Marker>,
     ) -> Self {
         let system = fun.into_callback_system(self.world);
 
-        let mut callbacks_resource = self
-            .world
-            .resource_mut::<Callbacks<R::CallContext, R::Value>>();
+        let mut callbacks_resource = self.world.resource_mut::<Callbacks<R>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
@@ -338,7 +336,7 @@ impl BuildScriptingRuntime for App {
         self.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
             .init_schedule(R::Schedule::default())
             .init_asset::<R::ScriptAsset>()
-            .init_resource::<Callbacks<R::CallContext, R::Value>>()
+            .init_resource::<Callbacks<R>>()
             .insert_resource(R::default())
             .add_systems(
                 R::Schedule::default(),
@@ -364,12 +362,12 @@ impl BuildScriptingRuntime for App {
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_function].
 #[derive(Resource)]
-struct Callbacks<C: Send, V: Send> {
-    uninitialized_callbacks: Vec<Callback<C, V>>,
-    callbacks: Mutex<Vec<Callback<C, V>>>,
+struct Callbacks<R: Runtime> {
+    uninitialized_callbacks: Vec<Callback<R>>,
+    callbacks: Mutex<Vec<Callback<R>>>,
 }
 
-impl<C: Send, V: Send> Default for Callbacks<C, V> {
+impl<R: Runtime> Default for Callbacks<R> {
     fn default() -> Self {
         Self {
             uninitialized_callbacks: Default::default(),

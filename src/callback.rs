@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 use crate::{promise::Promise, Runtime};
 
 /// A system that can be used to call a script function.
-pub struct CallbackSystem<V> {
-    pub(crate) system: Box<dyn System<In = Vec<V>, Out = V>>,
+pub struct CallbackSystem<R: Runtime> {
+    pub(crate) system: Box<dyn System<In = Vec<R::Value>, Out = R::Value>>,
     pub(crate) arg_types: Vec<TypeId>,
 }
 
@@ -16,15 +16,24 @@ pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
 }
 
 /// A struct representing a Bevy system that can be called from a script.
-#[derive(Clone)]
-pub(crate) struct Callback<C: Send, V: Send> {
+pub(crate) struct Callback<R: Runtime> {
     pub(crate) name: String,
-    pub(crate) system: Arc<Mutex<CallbackSystem<V>>>,
-    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>,
+    pub(crate) system: Arc<Mutex<CallbackSystem<R>>>,
+    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<R::CallContext, R::Value>>>>,
 }
 
-impl<V: Send + Clone + 'static> CallbackSystem<V> {
-    pub(crate) fn call<C: Send>(&mut self, call: &FunctionCallEvent<C, V>, world: &mut World) -> V {
+impl<R: Runtime> Clone for Callback<R> {
+    fn clone(&self) -> Self {
+        todo!();
+    }
+}
+
+impl<R: Runtime> CallbackSystem<R> {
+    pub(crate) fn call(
+        &mut self,
+        call: &FunctionCallEvent<R::CallContext, R::Value>,
+        world: &mut World,
+    ) -> R::Value {
         self.system.run(call.params.clone(), world)
     }
 }
@@ -35,10 +44,10 @@ pub trait IntoValue<R: Runtime> {
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait IntoCallbackSystem<V, In, Out, Marker>: IntoSystem<In, Out, Marker> {
+pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     /// Convert this function into a [CallbackSystem].
     #[must_use]
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<V>;
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
 }
 
 // TODO: Move
@@ -46,12 +55,12 @@ pub trait CloneCast {
     fn clone_cast<T: Clone + 'static>(&self) -> T;
 }
 
-impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R::Value, (), Out, Marker> for FN
+impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
     Out: IntoValue<R>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R::Value> {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
@@ -70,14 +79,14 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN::Value, ($($t,)+), Out, Marker>
+        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
             Out: IntoValue<RN>,
             $($t: 'static + Clone,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN::Value> {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
                 let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
