@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use core::any::TypeId;
 use std::sync::{Arc, Mutex};
 
-use crate::promise::Promise;
+use crate::{promise::Promise, Runtime};
 
 /// A system that can be used to call a script function.
 pub struct CallbackSystem<V> {
@@ -30,8 +30,8 @@ impl<V: Send + Clone + 'static> CallbackSystem<V> {
 }
 
 // TODO: Move
-pub trait IntoValue<V> {
-    fn into_value(self) -> V;
+pub trait IntoValue<R: Runtime> {
+    fn into_value(self, runtime: &mut R) -> R::Value;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -46,19 +46,19 @@ pub trait CloneCast {
     fn clone_cast<T: Clone + 'static>(&self) -> T;
 }
 
-impl<V, Out, FN, Marker> IntoCallbackSystem<V, (), Out, Marker> for FN
+impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R::Value, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    V: Sync + Clone + 'static,
-    Out: IntoValue<V>,
+    Out: IntoValue<R>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<V> {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R::Value> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
-        let system_fn = move |_args: In<Vec<V>>, world: &mut World| {
+        let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
-            result.into_value()
+            todo!();
+            // result.into_value()
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -70,24 +70,24 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<$($t,)+ Val, Out, FN, Marker> IntoCallbackSystem<Val, ($($t,)+), Out, Marker>
+        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN::Value, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Val: Sync + Clone + CloneCast + 'static,
-            Out: IntoValue<Val>,
+            Out: IntoValue<RN>,
             $($t: 'static + Clone,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem<Val> {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN::Value> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
-                let system_fn = move |args: In<Vec<Val>>, world: &mut World| {
+                let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
                     let args = (
                         $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    result.into_value()
+                    todo!();
+                    // result.into_value()
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

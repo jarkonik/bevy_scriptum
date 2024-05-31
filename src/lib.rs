@@ -206,7 +206,7 @@ use std::{
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
-use callback::{Callback, IntoCallbackSystem};
+use callback::{Callback, CloneCast, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -247,7 +247,7 @@ pub trait Runtime: Resource + Default + EngineMut + EngineRef {
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
     type CallContext: Send + Clone;
-    type Value: Send + Clone;
+    type Value: Send + Clone + CloneCast;
 
     fn create_script_data(
         &self,

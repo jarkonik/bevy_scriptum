@@ -201,8 +201,8 @@ impl Default for RhaiRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> IntoValue<RhaiValue> for T {
-    fn into_value(self) -> RhaiValue {
+impl<T: Any + Clone + Send + Sync> IntoValue<RhaiRuntime> for T {
+    fn into_value(self, runtime: &mut RhaiRuntime) -> RhaiValue {
         RhaiValue(Dynamic::from(self))
     }
 }

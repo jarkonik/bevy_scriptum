@@ -134,8 +134,8 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> IntoValue<LuaValue> for T {
-    fn into_value(self) -> LuaValue {
+impl<T: Any + Clone + Send + Sync> IntoValue<LuaRuntime> for T {
+    fn into_value(self, runtime: &mut LuaRuntime) -> LuaValue {
         LuaValue(())
     }
 }
