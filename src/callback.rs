@@ -66,8 +66,8 @@ where
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
-            todo!();
-            // result.into_value()
+            let mut runtime = world.get_resource_mut::<R>().unwrap();
+            result.into_value(&mut runtime)
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -95,8 +95,8 @@ macro_rules! impl_tuple {
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    todo!();
-                    // result.into_value()
+                    let mut runtime = world.get_resource_mut::<RN>().unwrap();
+                    result.into_value(&mut runtime)
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {
