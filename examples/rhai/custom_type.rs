@@ -1,6 +1,6 @@
 use bevy::prelude::*;
+use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::rhai::prelude::*;
-use bevy_scriptum::{prelude::*, EngineMut as _};
 
 fn main() {
     App::new()

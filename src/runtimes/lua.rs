@@ -12,14 +12,18 @@ use std::{
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromWithRuntime},
-    EngineMut, EngineRef, FuncArgs, Runtime,
+    callback::{CloneCast, FromWithEngine},
+    FuncArgs, Runtime,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone)]
-pub struct LuaValue(());
+pub struct LuaValue<'a>(mlua::Value<'a>);
+
+// FIXME: Need to be wrapper in mutex
+unsafe impl Send for LuaValue<'_> {}
+unsafe impl Sync for LuaValue<'_> {}
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
@@ -47,22 +51,6 @@ impl From<String> for LuaScript {
 #[derive(Component)]
 pub struct LuaScriptData;
 
-impl EngineMut for LuaRuntime {
-    type Engine = LuaEngine;
-
-    fn engine_mut(&mut self) -> &mut Self::Engine {
-        &mut self.engine
-    }
-}
-
-impl EngineRef for LuaRuntime {
-    type Engine = LuaEngine;
-
-    fn engine_ref(&self) -> &Self::Engine {
-        &self.engine
-    }
-}
-
 impl Runtime for LuaRuntime {
     type Schedule = LuaSchedule;
 
@@ -72,7 +60,9 @@ impl Runtime for LuaRuntime {
 
     type CallContext = ();
 
-    type Value = LuaValue;
+    type Value = LuaValue<'static>;
+
+    type RawEngine = Lua;
 
     // TODO: Should be renamed or even split as it also evals
     fn create_script_data(
@@ -132,39 +122,56 @@ impl Runtime for LuaRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         todo!()
     }
-}
 
-impl<T: Any + Clone + Send + Sync + IntoLua<'static>> FromWithRuntime<T, LuaRuntime> for T {
-    fn from_with_runtime(value: T, runtime: &mut LuaRuntime) -> LuaValue {
-        LuaValue(())
+    fn engine_mut(&mut self) -> &mut Self::RawEngine {
+        todo!()
     }
-}
 
-impl FromWithRuntime<(), LuaRuntime> for LuaValue {
-    fn from_with_runtime(value: (), runtime: &mut LuaRuntime) -> <LuaRuntime as Runtime>::Value {
+    fn engine_ref(&self) -> &Self::RawEngine {
         todo!()
     }
 }
 
-impl From<()> for LuaValue {
-    fn from(value: ()) -> Self {
-        LuaValue(())
+impl FromWithEngine<(), LuaRuntime> for () {
+    fn from_with_runtime(value: (), runtime: &mut Lua) -> <LuaRuntime as Runtime>::Value {
+        LuaValue(mlua::Value::Nil)
     }
 }
 
-impl FuncArgs<LuaValue> for () {
-    fn parse(self) -> Vec<LuaValue> {
+impl<'a, T: IntoLua<'a>> FromWithEngine<T, LuaRuntime> for LuaValue<'_> {
+    fn from_with_runtime(value: T, engine: &mut Lua) -> <LuaRuntime as Runtime>::Value {
+        // LuaValue(value.into_lua(&engine).unwrap());
+        LuaValue(mlua::Value::Nil)
+    }
+}
+
+// impl<T: Clone + Send + Sync + IntoLua<'static>> FromWithRuntime<T, LuaRuntime> for T {
+//     fn from_with_runtime(value: T, runtime: &mut LuaRuntime) -> LuaValue {
+//         LuaValue(())
+//     }
+// }
+//
+impl From<()> for LuaValue<'_> {
+    fn from(value: ()) -> Self {
+        LuaValue(mlua::Value::Nil)
+    }
+}
+
+impl<'a> FuncArgs<LuaValue<'a>> for () {
+    fn parse(self) -> Vec<LuaValue<'a>> {
         Vec::new()
     }
 }
 
-impl<T: IntoLua<'static>> FuncArgs<LuaValue> for Vec<T> {
-    fn parse(self) -> Vec<LuaValue> {
-        self.into_iter().map(|_| LuaValue(())).collect()
+impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
+    fn parse(self) -> Vec<LuaValue<'a>> {
+        self.into_iter()
+            .map(|_| LuaValue(mlua::Value::Nil))
+            .collect()
     }
 }
 
-impl CloneCast for LuaValue {
+impl<'a> CloneCast for LuaValue<'a> {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
         todo!();
     }

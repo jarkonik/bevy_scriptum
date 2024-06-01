@@ -206,7 +206,7 @@ use std::{
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
-use callback::{Callback, CloneCast, FromWithRuntime, IntoCallbackSystem};
+use callback::{Callback, CloneCast, FromWithEngine, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
@@ -230,24 +230,17 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
-pub trait EngineMut {
-    type Engine;
-
-    fn engine_mut(&mut self) -> &mut Self::Engine;
-}
-
-pub trait EngineRef {
-    type Engine;
-
-    fn engine_ref(&self) -> &Self::Engine;
-}
-
-pub trait Runtime: Resource + Default + EngineMut + EngineRef {
+pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
     type CallContext: Send + Clone;
     type Value: Send + Clone + CloneCast;
+    type RawEngine;
+
+    fn engine_mut(&mut self) -> &mut Self::RawEngine;
+
+    fn engine_ref(&self) -> &Self::RawEngine;
 
     fn create_script_data(
         &self,

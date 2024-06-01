@@ -24,7 +24,11 @@ pub(crate) struct Callback<R: Runtime> {
 
 impl<R: Runtime> Clone for Callback<R> {
     fn clone(&self) -> Self {
-        todo!();
+        Callback {
+            name: self.name.clone(),
+            system: self.system.clone(),
+            calls: self.calls.clone(),
+        }
     }
 }
 
@@ -38,8 +42,8 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-pub trait FromWithRuntime<V, R: Runtime> {
-    fn from_with_runtime(value: V, runtime: &mut R) -> R::Value;
+pub trait FromWithEngine<V, R: Runtime> {
+    fn from_with_runtime(value: V, engine: &mut R::RawEngine) -> R::Value;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -57,7 +61,7 @@ pub trait CloneCast {
 impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: FromWithRuntime<Out, R>,
+    Out: FromWithEngine<Out, R>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
@@ -66,7 +70,8 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().unwrap();
-            Out::from_with_runtime(result, &mut runtime)
+            let engine = runtime.engine_mut();
+            Out::from_with_runtime(result, engine)
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -82,7 +87,7 @@ macro_rules! impl_tuple {
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: FromWithRuntime<Out, RN>,
+            Out: FromWithEngine<Out, RN>,
             $($t: 'static + Clone,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
@@ -95,7 +100,8 @@ macro_rules! impl_tuple {
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().unwrap();
-                    Out::from_with_runtime(result, &mut runtime)
+                    let engine = runtime.engine_mut();
+                    Out::from_with_runtime(result, engine)
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

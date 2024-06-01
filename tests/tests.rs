@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use bevy::ecs::system::RunSystemOnce as _;
 use bevy::prelude::*;
-use bevy_scriptum::{prelude::*, EngineRef as _, FuncArgs, Runtime};
+use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
 use mlua::Table;
 
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
@@ -197,7 +197,6 @@ mod lua_tests {
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
             let runtime = world.get_resource::<LuaRuntime>().unwrap();
             let engine = runtime.engine_ref();
-            let engine = engine.lock().unwrap();
             let state = engine.globals().get::<_, Table>("State").unwrap();
             assert_eq!(state.get::<_, i64>(key).unwrap(), value);
         }

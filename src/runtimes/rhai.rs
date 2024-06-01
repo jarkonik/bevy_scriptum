@@ -11,9 +11,9 @@ use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromWithRuntime},
+    callback::{CloneCast, FromWithEngine},
     promise::Promise,
-    EngineMut, EngineRef, FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
+    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -47,22 +47,6 @@ pub struct RhaiScriptData {
     pub(crate) ast: rhai::AST,
 }
 
-impl EngineMut for RhaiRuntime {
-    type Engine = rhai::Engine;
-
-    fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
-    }
-}
-
-impl EngineRef for RhaiRuntime {
-    type Engine = rhai::Engine;
-
-    fn engine_ref(&self) -> &Self::Engine {
-        &self.engine
-    }
-}
-
 #[derive(Clone)]
 pub struct RhaiValue(rhai::Dynamic);
 
@@ -73,6 +57,15 @@ impl Runtime for RhaiRuntime {
     #[allow(deprecated)]
     type CallContext = rhai::NativeCallContextStore;
     type Value = RhaiValue;
+    type RawEngine = rhai::Engine;
+
+    fn engine_mut(&mut self) -> &mut Self::RawEngine {
+        &mut self.engine
+    }
+
+    fn engine_ref(&self) -> &Self::RawEngine {
+        &self.engine
+    }
 
     fn create_script_data(
         &self,
@@ -201,8 +194,8 @@ impl Default for RhaiRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> FromWithRuntime<T, RhaiRuntime> for T {
-    fn from_with_runtime(value: T, runtime: &mut RhaiRuntime) -> RhaiValue {
+impl<T: Any + Clone + Send + Sync> FromWithEngine<T, RhaiRuntime> for T {
+    fn from_with_runtime(value: T, runtime: &mut rhai::Engine) -> RhaiValue {
         RhaiValue(Dynamic::from(value))
     }
 }
