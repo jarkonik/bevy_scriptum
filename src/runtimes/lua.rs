@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, IntoLua, Lua, UserData};
+use mlua::{Function, IntoLua, Lua, UserData, Variadic};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -93,7 +93,7 @@ impl Runtime for LuaRuntime {
         let engine_closure = self.engine.clone();
         let engine = self.engine.lock().unwrap();
         let func = engine
-            .create_function(move |_, args: Vec<mlua::Value>| {
+            .create_function(move |_, args: Variadic<mlua::Value>| {
                 let mut engine = engine_closure.lock().unwrap();
                 let args = args
                     .into_iter()
@@ -116,7 +116,7 @@ impl Runtime for LuaRuntime {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
         let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| mlua::Value::Nil).collect();
-        let _ = func.call::<_, ()>(args);
+        func.call::<_, ()>(args).unwrap();
         Ok(())
     }
 
