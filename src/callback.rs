@@ -69,7 +69,7 @@ where
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
-            let mut runtime = world.get_resource_mut::<R>().unwrap();
+            let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
             runtime.with_engine_mut(move |engine| Out::from_with_runtime(result, engine))
         };
         let system = IntoSystem::into_system(system_fn);
@@ -94,11 +94,11 @@ macro_rules! impl_tuple {
                 inner_system.initialize(world);
                 let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
                     let args = (
-                        $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
+                        $(args.0.get($idx).expect("Failed to get function argument").clone_cast::<$t>(), )+
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    let mut runtime = world.get_resource_mut::<RN>().unwrap();
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resouce");
                     runtime.with_engine_mut(move |engine| {
                         Out::from_with_runtime(result, engine)
                     })
