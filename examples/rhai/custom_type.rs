@@ -24,16 +24,16 @@ fn startup(
     mut scripting_runtime: ResMut<RhaiRuntime>,
     assets_server: Res<AssetServer>,
 ) {
-    let engine = scripting_runtime.engine_mut();
-
-    engine
-        .register_type_with_name::<MyType>("MyType")
-        // Register a method on MyType
-        .register_fn("my_method", |my_type_instance: &mut MyType| {
-            my_type_instance.my_field
-        })
-        // Register a "constructor" for MyType
-        .register_fn("new_my_type", || MyType { my_field: 42 });
+    scripting_runtime.with_engine_mut(|engine| {
+        engine
+            .register_type_with_name::<MyType>("MyType")
+            // Register a method on MyType
+            .register_fn("my_method", |my_type_instance: &mut MyType| {
+                my_type_instance.my_field
+            })
+            // Register a "constructor" for MyType
+            .register_fn("new_my_type", || MyType { my_field: 42 });
+    });
 
     commands.spawn(Script::<RhaiScript>::new(
         assets_server.load("examples/rhai/custom_type.rhai"),

@@ -123,12 +123,14 @@ impl Runtime for LuaRuntime {
         todo!()
     }
 
-    fn engine_mut(&mut self) -> &mut Self::RawEngine {
-        todo!()
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
+        let mut engine = self.engine.lock().unwrap();
+        f(&mut engine)
     }
 
-    fn engine_ref(&self) -> &Self::RawEngine {
-        todo!()
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
+        let engine = self.engine.lock().unwrap();
+        f(&engine)
     }
 }
 

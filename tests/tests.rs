@@ -196,9 +196,10 @@ mod lua_tests {
 
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
             let runtime = world.get_resource::<LuaRuntime>().unwrap();
-            let engine = runtime.engine_ref();
-            let state = engine.globals().get::<_, Table>("State").unwrap();
-            assert_eq!(state.get::<_, i64>(key).unwrap(), value);
+            runtime.with_engine(|engine| {
+                let state = engine.globals().get::<_, Table>("State").unwrap();
+                assert_eq!(state.get::<_, i64>(key).unwrap(), value);
+            });
         }
     }
 

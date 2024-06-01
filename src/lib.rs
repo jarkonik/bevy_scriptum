@@ -238,9 +238,9 @@ pub trait Runtime: Resource + Default {
     type Value: Send + Clone + CloneCast;
     type RawEngine;
 
-    fn engine_mut(&mut self) -> &mut Self::RawEngine;
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
-    fn engine_ref(&self) -> &Self::RawEngine;
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn create_script_data(
         &self,

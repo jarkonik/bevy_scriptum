@@ -70,8 +70,7 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().unwrap();
-            let engine = runtime.engine_mut();
-            Out::from_with_runtime(result, engine)
+            runtime.with_engine_mut(move |engine| Out::from_with_runtime(result, engine))
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -100,8 +99,9 @@ macro_rules! impl_tuple {
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().unwrap();
-                    let engine = runtime.engine_mut();
-                    Out::from_with_runtime(result, engine)
+                    runtime.with_engine_mut(move |engine| {
+                        Out::from_with_runtime(result, engine)
+                    })
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

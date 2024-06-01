@@ -59,14 +59,6 @@ impl Runtime for RhaiRuntime {
     type Value = RhaiValue;
     type RawEngine = rhai::Engine;
 
-    fn engine_mut(&mut self) -> &mut Self::RawEngine {
-        &mut self.engine
-    }
-
-    fn engine_ref(&self) -> &Self::RawEngine {
-        &self.engine
-    }
-
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
@@ -158,6 +150,14 @@ impl Runtime for RhaiRuntime {
         };
 
         Ok(RhaiValue(result))
+    }
+
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
+        f(&mut self.engine)
+    }
+
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
+        f(&self.engine)
     }
 }
 
