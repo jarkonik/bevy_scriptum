@@ -23,6 +23,7 @@ type LuaEngine = Arc<Mutex<Lua>>;
 pub struct LuaValue<'a>(mlua::Value<'a>);
 
 // FIXME: Need to be wrapper in mutex
+// TODO: https://github.com/mlua-rs/mlua/issues/120
 unsafe impl Send for LuaValue<'_> {}
 unsafe impl Sync for LuaValue<'_> {}
 
