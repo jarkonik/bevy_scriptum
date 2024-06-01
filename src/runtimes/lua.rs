@@ -89,10 +89,16 @@ impl Runtime for LuaRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
+        let engine_closure = self.engine.clone();
         let engine = self.engine.lock().unwrap();
         let func = engine
-            .create_function(move |_, ()| {
-                f((), vec![]).unwrap();
+            .create_function(move |_, args: Vec<mlua::Value>| {
+                let mut engine = engine_closure.lock().unwrap();
+                let args = args
+                    .into_iter()
+                    .map(|x| LuaValue::from_with_runtime(x, &mut engine))
+                    .collect();
+                f((), args).unwrap();
                 Ok(())
             })
             .unwrap();
@@ -147,14 +153,8 @@ impl<'a, T: IntoLua<'a>> FromWithEngine<T, LuaRuntime> for LuaValue<'_> {
     }
 }
 
-// impl<T: Clone + Send + Sync + IntoLua<'static>> FromWithRuntime<T, LuaRuntime> for T {
-//     fn from_with_runtime(value: T, runtime: &mut LuaRuntime) -> LuaValue {
-//         LuaValue(())
-//     }
-// }
-//
 impl From<()> for LuaValue<'_> {
-    fn from(value: ()) -> Self {
+    fn from(_value: ()) -> Self {
         LuaValue(mlua::Value::Nil)
     }
 }
