@@ -94,11 +94,12 @@ impl Runtime for LuaRuntime {
         let engine = self.engine.lock().unwrap();
         let func = engine
             .create_function(move |_, args: Variadic<mlua::Value>| {
-                let mut engine = engine_closure.lock().unwrap();
-                let args = args
-                    .into_iter()
-                    .map(|x| LuaValue::from_with_runtime(x, &mut engine))
-                    .collect();
+                let args = {
+                    let mut engine = engine_closure.lock().unwrap();
+                    args.into_iter()
+                        .map(|x| LuaValue::from_with_runtime(x, &mut engine))
+                        .collect()
+                };
                 Ok(f((), args).unwrap())
             })
             .unwrap();
