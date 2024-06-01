@@ -13,6 +13,7 @@ use std::{
 use crate::{
     assets::GetExtensions,
     callback::{CloneCast, FromWithEngine},
+    promise::Promise,
     FuncArgs, Runtime,
 };
 
@@ -98,8 +99,7 @@ impl Runtime for LuaRuntime {
                     .into_iter()
                     .map(|x| LuaValue::from_with_runtime(x, &mut engine))
                     .collect();
-                f((), args).unwrap();
-                Ok(())
+                Ok(f((), args).unwrap())
             })
             .unwrap();
         engine.globals().set(name, func).unwrap();
@@ -178,6 +178,8 @@ impl<'a> CloneCast for LuaValue<'a> {
         todo!();
     }
 }
+
+impl UserData for Promise<(), LuaValue<'static>> {}
 
 pub mod prelude {
     pub use super::{LuaRuntime, LuaScript, LuaScriptData};
