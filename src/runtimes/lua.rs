@@ -93,11 +93,10 @@ impl Runtime for LuaRuntime {
         let engine_closure = self.engine.clone();
         let engine = self.engine.lock().unwrap();
         let func = engine
-            .create_function(move |_, args: Variadic<mlua::Value>| {
+            .create_function(move |engine, args: Variadic<mlua::Value>| {
                 let args = {
-                    let mut engine = engine_closure.lock().unwrap();
                     args.into_iter()
-                        .map(|x| LuaValue::from_with_runtime(x, &mut engine))
+                        .map(|x| LuaValue::from_with_runtime(x, engine))
                         .collect()
                 };
                 Ok(f((), args).unwrap())
@@ -142,13 +141,13 @@ impl Runtime for LuaRuntime {
 }
 
 impl FromWithEngine<(), LuaRuntime> for () {
-    fn from_with_runtime(value: (), runtime: &mut Lua) -> <LuaRuntime as Runtime>::Value {
+    fn from_with_runtime(value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
         LuaValue(mlua::Value::Nil)
     }
 }
 
 impl<'a, T: IntoLua<'a>> FromWithEngine<T, LuaRuntime> for LuaValue<'_> {
-    fn from_with_runtime(value: T, engine: &mut Lua) -> <LuaRuntime as Runtime>::Value {
+    fn from_with_runtime(value: T, engine: &Lua) -> <LuaRuntime as Runtime>::Value {
         // LuaValue(value.into_lua(&engine).unwrap());
         LuaValue(mlua::Value::Nil)
     }

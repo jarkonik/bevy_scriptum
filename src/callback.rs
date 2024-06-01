@@ -43,7 +43,7 @@ impl<R: Runtime> CallbackSystem<R> {
 }
 
 pub trait FromWithEngine<V, R: Runtime> {
-    fn from_with_runtime(value: V, engine: &mut R::RawEngine) -> R::Value;
+    fn from_with_runtime(value: V, engine: &R::RawEngine) -> R::Value;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
