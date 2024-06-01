@@ -38,9 +38,8 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-// TODO: Move
-pub trait IntoValue<R: Runtime> {
-    fn into_value(self, runtime: &mut R) -> R::Value;
+pub trait FromWithRuntime<V, R: Runtime> {
+    fn from_with_runtime(value: V, runtime: &mut R) -> R::Value;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -58,7 +57,7 @@ pub trait CloneCast {
 impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: IntoValue<R>,
+    Out: FromWithRuntime<Out, R>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
@@ -67,7 +66,7 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().unwrap();
-            result.into_value(&mut runtime)
+            Out::from_with_runtime(result, &mut runtime)
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -83,7 +82,7 @@ macro_rules! impl_tuple {
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: IntoValue<RN>,
+            Out: FromWithRuntime<Out, RN>,
             $($t: 'static + Clone,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
@@ -96,7 +95,7 @@ macro_rules! impl_tuple {
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().unwrap();
-                    result.into_value(&mut runtime)
+                    Out::from_with_runtime(result, &mut runtime)
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

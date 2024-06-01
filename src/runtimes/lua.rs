@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, IntoLua, Lua};
+use mlua::{Function, IntoLua, Lua, UserData};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, IntoValue},
+    callback::{CloneCast, FromWithRuntime},
     EngineMut, EngineRef, FuncArgs, Runtime,
 };
 
@@ -134,9 +134,15 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> IntoValue<LuaRuntime> for T {
-    fn into_value(self, runtime: &mut LuaRuntime) -> LuaValue {
+impl<T: Any + Clone + Send + Sync + IntoLua<'static>> FromWithRuntime<T, LuaRuntime> for T {
+    fn from_with_runtime(value: T, runtime: &mut LuaRuntime) -> LuaValue {
         LuaValue(())
+    }
+}
+
+impl FromWithRuntime<(), LuaRuntime> for LuaValue {
+    fn from_with_runtime(value: (), runtime: &mut LuaRuntime) -> <LuaRuntime as Runtime>::Value {
+        todo!()
     }
 }
 
