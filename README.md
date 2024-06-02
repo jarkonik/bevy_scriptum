@@ -84,7 +84,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = "0.2"
+bevy_scriptum = "0.4"
 ```
 
 or execute `cargo add bevy_scriptum` from your project directory.
