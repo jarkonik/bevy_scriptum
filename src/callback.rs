@@ -87,14 +87,15 @@ macro_rules! impl_tuple {
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
             Out: FromWithEngine<Out, RN>,
-            $($t: 'static + Clone,)+
+            $($t: 'static + Clone + From<RN::Value>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
-                let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
+                let system_fn = move |mut args: In<Vec<RN::Value>>, world: &mut World| {
+                    let mut args = args.0.drain(..);
                     let args = (
-                        $(args.0.get($idx).expect("Failed to get function argument").clone_cast::<$t>(), )+
+                        $(args.nth($idx).expect("Failed to get function argument").into(), )+
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);

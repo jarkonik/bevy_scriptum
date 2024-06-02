@@ -174,6 +174,12 @@ impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
     }
 }
 
+impl<'a> From<LuaValue<'a>> for i64 {
+    fn from(value: LuaValue<'a>) -> Self {
+        todo!()
+    }
+}
+
 impl<'a> CloneCast for LuaValue<'a> {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
         todo!();

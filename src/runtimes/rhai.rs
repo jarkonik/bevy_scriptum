@@ -220,6 +220,12 @@ impl From<()> for RhaiValue {
     }
 }
 
+impl<'a> From<RhaiValue> for i64 {
+    fn from(value: RhaiValue) -> Self {
+        todo!()
+    }
+}
+
 impl CloneCast for RhaiValue {
     fn clone_cast<T: Clone + 'static>(&self) -> T {
         self.0.clone_cast::<T>()
