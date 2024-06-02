@@ -116,7 +116,7 @@ impl Runtime for LuaRuntime {
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| mlua::Value::Nil).collect();
+        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| a.0).collect();
         func.call::<_, ()>(args).unwrap();
         Ok(())
     }
