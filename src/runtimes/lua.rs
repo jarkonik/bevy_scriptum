@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{Function, IntoLua, Lua, UserData, Variadic};
+use mlua::{FromLua, Function, IntoLua, Lua, UserData, Variadic};
 use serde::Deserialize;
 use std::{
     any::Any,

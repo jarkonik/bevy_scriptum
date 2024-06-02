@@ -98,7 +98,7 @@ macro_rules! impl_tuple {
                     );
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resouce");
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
                     runtime.with_engine_mut(move |engine| {
                         Out::from_with_runtime(result, engine)
                     })
