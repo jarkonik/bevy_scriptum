@@ -206,7 +206,7 @@ use std::{
 };
 
 use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
-use callback::{Callback, CloneCast, FromWithEngine, IntoCallbackSystem};
+use callback::{Callback, CloneCast, IntoCallbackSystem, IntoRuntimeValueWithEngine};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 

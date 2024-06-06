@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromWithEngine},
+    callback::{CloneCast, IntoRuntimeValueWithEngine},
     promise::Promise,
     FuncArgs, Runtime,
 };
@@ -97,7 +97,7 @@ impl Runtime for LuaRuntime {
             .create_function(move |engine, args: Variadic<mlua::Value>| {
                 let args = {
                     args.into_iter()
-                        .map(|x| LuaValue::from_with_runtime(x, engine))
+                        .map(|x| LuaValue::into_runtime_value_with_engine(x, engine))
                         .collect()
                 };
                 Ok(f((), args).unwrap())
@@ -141,14 +141,14 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl FromWithEngine<(), LuaRuntime> for () {
-    fn from_with_runtime(value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
+impl IntoRuntimeValueWithEngine<(), LuaRuntime> for () {
+    fn into_runtime_value_with_engine(value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
         LuaValue(mlua::Value::Nil)
     }
 }
 
-impl<'a, T: IntoLua<'a>> FromWithEngine<T, LuaRuntime> for LuaValue<'_> {
-    fn from_with_runtime(value: T, engine: &Lua) -> <LuaRuntime as Runtime>::Value {
+impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<T, LuaRuntime> for LuaValue<'_> {
+    fn into_runtime_value_with_engine(value: T, engine: &Lua) -> <LuaRuntime as Runtime>::Value {
         // LuaValue(value.into_lua(&engine).unwrap());
         LuaValue(mlua::Value::Nil)
     }

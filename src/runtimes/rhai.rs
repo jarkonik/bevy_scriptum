@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromWithEngine},
+    callback::{CloneCast, IntoRuntimeValueWithEngine},
     promise::Promise,
     FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
@@ -194,8 +194,8 @@ impl Default for RhaiRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> FromWithEngine<T, RhaiRuntime> for T {
-    fn from_with_runtime(value: T, runtime: &rhai::Engine) -> RhaiValue {
+impl<T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<T, RhaiRuntime> for T {
+    fn into_runtime_value_with_engine(value: T, runtime: &rhai::Engine) -> RhaiValue {
         RhaiValue(Dynamic::from(value))
     }
 }

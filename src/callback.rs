@@ -42,8 +42,8 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-pub trait FromWithEngine<V, R: Runtime> {
-    fn from_with_runtime(value: V, engine: &R::RawEngine) -> R::Value;
+pub trait IntoRuntimeValueWithEngine<V, R: Runtime> {
+    fn into_runtime_value_with_engine(value: V, engine: &R::RawEngine) -> R::Value;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -61,7 +61,7 @@ pub trait CloneCast {
 impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: FromWithEngine<Out, R>,
+    Out: IntoRuntimeValueWithEngine<Out, R>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
@@ -70,7 +70,8 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
-            runtime.with_engine_mut(move |engine| Out::from_with_runtime(result, engine))
+            runtime
+                .with_engine_mut(move |engine| Out::into_runtime_value_with_engine(result, engine))
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
