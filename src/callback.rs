@@ -46,6 +46,10 @@ pub trait IntoRuntimeValueWithEngine<V, R: Runtime> {
     fn into_runtime_value_with_engine(value: V, engine: &R::RawEngine) -> R::Value;
 }
 
+pub trait FromRuntimeValueWithEngine<R: Runtime> {
+    fn from_runtime_value_with_engine(value: R::Value, engine: &R::RawEngine) -> Self;
+}
+
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
 pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker> {
     /// Convert this function into a [CallbackSystem].
@@ -87,8 +91,8 @@ macro_rules! impl_tuple {
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: FromWithEngine<Out, RN>,
-            $($t: 'static + Clone + From<RN::Value>,)+
+            Out: IntoRuntimeValueWithEngine<Out, RN>,
+            $($t: 'static + Clone + FromRuntimeValueWithEngine<RN>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
@@ -96,14 +100,15 @@ macro_rules! impl_tuple {
                 let system_fn = move |mut args: In<Vec<RN::Value>>, world: &mut World| {
                     let mut args = args.0.drain(..);
                     let args = (
-                        $(args.nth($idx).expect("Failed to get function argument").into(), )+
+                        $($t::from_runtime_value_with_engine(args.nth($idx).expect("Failed to get function argument"), todo!()), )+
                     );
-                    let result = inner_system.run(args, world);
-                    inner_system.apply_deferred(world);
-                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
-                    runtime.with_engine_mut(move |engine| {
-                        Out::from_with_runtime(result, engine)
-                    })
+                    todo!();
+                    // let result = inner_system.run(args, world);
+                    // inner_system.apply_deferred(world);
+                    // let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
+                    // runtime.with_engine_mut(move |engine| {
+                    //     Out::into_runtime_value_with_engine(result, engine)
+                    // })
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

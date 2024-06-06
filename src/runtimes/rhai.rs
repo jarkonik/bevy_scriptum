@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, IntoRuntimeValueWithEngine},
+    callback::{CloneCast, FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
     FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
@@ -217,6 +217,12 @@ impl<T: Clone + Send + Sync + 'static> FuncArgs<RhaiValue> for Vec<T> {
 impl From<()> for RhaiValue {
     fn from(value: ()) -> Self {
         RhaiValue(Dynamic::from(value))
+    }
+}
+
+impl<T> FromRuntimeValueWithEngine<RhaiRuntime> for T {
+    fn from_runtime_value_with_engine(value: RhaiValue, engine: &rhai::Engine) -> Self {
+        todo!()
     }
 }
 
