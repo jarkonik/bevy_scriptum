@@ -99,16 +99,18 @@ macro_rules! impl_tuple {
                 inner_system.initialize(world);
                 let system_fn = move |mut args: In<Vec<RN::Value>>, world: &mut World| {
                     let mut args = args.0.drain(..);
-                    let args = (
-                        $($t::from_runtime_value_with_engine(args.nth($idx).expect("Failed to get function argument"), todo!()), )+
-                    );
-                    todo!();
-                    // let result = inner_system.run(args, world);
-                    // inner_system.apply_deferred(world);
-                    // let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
-                    // runtime.with_engine_mut(move |engine| {
-                    //     Out::into_runtime_value_with_engine(result, engine)
-                    // })
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
+                    let args  = runtime.with_engine_mut(move |engine| {
+                        (
+                            $($t::from_runtime_value_with_engine(args.nth($idx).expect("Failed to get function argument"), engine), )+
+                        )
+                    });
+                    let result = inner_system.run(args, world);
+                    inner_system.apply_deferred(world);
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
+                    runtime.with_engine_mut(move |engine| {
+                        Out::into_runtime_value_with_engine(result, engine)
+                    })
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

@@ -220,9 +220,9 @@ impl From<()> for RhaiValue {
     }
 }
 
-impl<T> FromRuntimeValueWithEngine<RhaiRuntime> for T {
+impl<T: Clone + 'static> FromRuntimeValueWithEngine<RhaiRuntime> for T {
     fn from_runtime_value_with_engine(value: RhaiValue, engine: &rhai::Engine) -> Self {
-        todo!()
+        value.0.clone_cast()
     }
 }
 
