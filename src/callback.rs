@@ -46,8 +46,8 @@ pub trait IntoRuntimeValueWithEngine<V, R: Runtime> {
     fn into_runtime_value_with_engine(value: V, engine: &R::RawEngine) -> R::Value;
 }
 
-pub trait FromRuntimeValueWithEngine<R: Runtime> {
-    fn from_runtime_value_with_engine(value: R::Value, engine: &R::RawEngine) -> Self;
+pub trait FromRuntimeValueWithEngine<'a, R: Runtime> {
+    fn from_runtime_value_with_engine(value: R::Value, engine: &'a R::RawEngine) -> Self;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
@@ -92,7 +92,7 @@ macro_rules! impl_tuple {
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
             Out: IntoRuntimeValueWithEngine<Out, RN>,
-            $($t: 'static + Clone + FromRuntimeValueWithEngine<RN>,)+
+            $($t: 'static + Clone + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
