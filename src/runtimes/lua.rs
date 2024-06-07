@@ -149,7 +149,7 @@ impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
 
 impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue<'a> {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue<'static> {
-        LuaValue(value.into_lua(&engine).unwrap())
+        unsafe { std::mem::transmute(LuaValue(value.into_lua(engine).unwrap())) }
     }
 }
 
