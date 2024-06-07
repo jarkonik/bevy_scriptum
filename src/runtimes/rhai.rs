@@ -194,8 +194,8 @@ impl Default for RhaiRuntime {
     }
 }
 
-impl<T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<T, RhaiRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, runtime: &rhai::Engine) -> RhaiValue {
+impl<'a, T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<'a, T, RhaiRuntime> for T {
+    fn into_runtime_value_with_engine(value: T, runtime: &'a rhai::Engine) -> RhaiValue {
         RhaiValue(Dynamic::from(value))
     }
 }

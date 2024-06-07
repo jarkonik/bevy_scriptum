@@ -42,8 +42,8 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-pub trait IntoRuntimeValueWithEngine<V, R: Runtime> {
-    fn into_runtime_value_with_engine(value: V, engine: &R::RawEngine) -> R::Value;
+pub trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
+    fn into_runtime_value_with_engine(value: V, engine: &'a R::RawEngine) -> R::Value;
 }
 
 pub trait FromRuntimeValueWithEngine<'a, R: Runtime> {
@@ -65,7 +65,7 @@ pub trait CloneCast {
 impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: IntoRuntimeValueWithEngine<Out, R>,
+    Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, R>,
 {
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
@@ -91,7 +91,7 @@ macro_rules! impl_tuple {
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: IntoRuntimeValueWithEngine<Out, RN>,
+            Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
             $($t: 'static + Clone + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {

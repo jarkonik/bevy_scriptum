@@ -141,16 +141,15 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl IntoRuntimeValueWithEngine<(), LuaRuntime> for () {
+impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
     fn into_runtime_value_with_engine(value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
         LuaValue(mlua::Value::Nil)
     }
 }
 
-impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<T, LuaRuntime> for LuaValue<'_> {
-    fn into_runtime_value_with_engine(value: T, engine: &Lua) -> <LuaRuntime as Runtime>::Value {
-        // LuaValue(value.into_lua(&engine).unwrap());
-        LuaValue(mlua::Value::Nil)
+impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue<'a> {
+    fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue<'static> {
+        LuaValue(value.into_lua(&engine).unwrap())
     }
 }
 
