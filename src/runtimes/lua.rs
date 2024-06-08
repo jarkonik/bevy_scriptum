@@ -41,7 +41,7 @@ impl Default for LuaRuntime {
 
             engine
                 .register_userdata_type::<Promise<(), LuaValue>>(|typ| {
-                    typ.add_method_mut("then", |engine, promise, callback: Function| {
+                    typ.add_method_mut("and_then", |engine, promise, callback: Function| {
                         let val = engine.create_registry_value(callback).unwrap();
                         Ok(Promise::then(promise, LuaValue(Arc::new(val))))
                     });
