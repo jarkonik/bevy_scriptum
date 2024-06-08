@@ -57,11 +57,6 @@ pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, M
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
 }
 
-// TODO: Move
-pub trait CloneCast {
-    fn clone_cast<T: Clone + 'static>(&self) -> T;
-}
-
 impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,

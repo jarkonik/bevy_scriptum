@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
+    callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
     FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
@@ -135,7 +135,7 @@ impl Runtime for RhaiRuntime {
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError> {
-        let f = value.clone_cast::<FnPtr>();
+        let f = value.0.clone_cast::<FnPtr>();
 
         #[allow(deprecated)]
         let ctx = &context.create_context(&self.engine);
@@ -229,12 +229,6 @@ impl<T: Clone + 'static> FromRuntimeValueWithEngine<'_, RhaiRuntime> for T {
 impl<'a> From<RhaiValue> for i64 {
     fn from(value: RhaiValue) -> Self {
         todo!()
-    }
-}
-
-impl CloneCast for RhaiValue {
-    fn clone_cast<T: Clone + 'static>(&self) -> T {
-        self.0.clone_cast::<T>()
     }
 }
 

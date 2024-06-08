@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     assets::GetExtensions,
-    callback::{CloneCast, FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
+    callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
     FuncArgs, Runtime,
 };
@@ -142,7 +142,10 @@ impl Runtime for LuaRuntime {
 }
 
 impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
-    fn into_runtime_value_with_engine(value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
+    fn into_runtime_value_with_engine(
+        _value: (),
+        _runtime: &Lua,
+    ) -> <LuaRuntime as Runtime>::Value {
         LuaValue(mlua::Value::Nil)
     }
 }
@@ -176,18 +179,6 @@ impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
         self.into_iter()
             .map(|_| LuaValue(mlua::Value::Nil))
             .collect()
-    }
-}
-
-impl<'a> From<LuaValue<'a>> for i64 {
-    fn from(value: LuaValue<'a>) -> Self {
-        todo!()
-    }
-}
-
-impl<'a> CloneCast for LuaValue<'a> {
-    fn clone_cast<T: Clone + 'static>(&self) -> T {
-        todo!();
     }
 }
 
