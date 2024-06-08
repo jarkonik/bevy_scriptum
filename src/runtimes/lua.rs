@@ -5,9 +5,7 @@ use bevy::{
 };
 use mlua::{FromLua, Function, IntoLua, Lua, RegistryKey, UserData, Variadic};
 use serde::Deserialize;
-use std::{
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use crate::{
     assets::GetExtensions,
@@ -20,9 +18,6 @@ type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone)]
 pub struct LuaValue(Arc<RegistryKey>);
-
-// FIXME: Need to be wrapper in mutex
-// TODO: https://github.com/mlua-rs/mlua/issues/120
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
