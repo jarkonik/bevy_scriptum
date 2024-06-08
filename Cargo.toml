@@ -65,6 +65,46 @@ path = "examples/rhai/promises.rs"
 name = "side_effects_rhai"
 path = "examples/rhai/side_effects.rs"
 
+[[example]]
+name = "call_function_from_rust_lua"
+path = "examples/lua/call_function_from_rust.rs"
+
+[[example]]
+name = "current_entity_lua"
+path = "examples/lua/current_entity.rs"
+
+[[example]]
+name = "custom_type_lua"
+path = "examples/lua/custom_type.rs"
+
+[[example]]
+name = "ecs_lua"
+path = "examples/lua/ecs.rs"
+
+[[example]]
+name = "entity_variable_lua"
+path = "examples/lua/entity_variable.rs"
+
+[[example]]
+name = "function_params_lua"
+path = "examples/lua/function_params.rs"
+
+[[example]]
+name = "hello_world_lua"
+path = "examples/lua/hello_world.rs"
+
+[[example]]
+name = "non_closure_system_lua"
+path = "examples/lua/non_closure_system.rs"
+
+[[example]]
+name = "promises_lua"
+path = "examples/lua/promises.rs"
+
+[[example]]
+name = "side_effects_lua"
+path = "examples/lua/side_effects.rs"
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
