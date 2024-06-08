@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, Lua, UserData, Variadic};
+use mlua::{FromLua, Function, IntoLua, IntoLuaMulti, Lua, UserData, Variadic};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -152,7 +152,12 @@ impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
 
 impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue<'a> {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue<'static> {
-        unsafe { std::mem::transmute(LuaValue(value.into_lua(engine).unwrap())) }
+        let e = value.into_lua(engine).unwrap();
+        match e {
+            mlua::Value::Number(n) => LuaValue(mlua::Value::Number(n)),
+            mlua::Value::Integer(n) => LuaValue(mlua::Value::Integer(n)),
+            _ => todo!(),
+        }
     }
 }
 

@@ -23,7 +23,7 @@ rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"], opti
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 tracing = "0.1.40"
-mlua = { version = "0.9.8", features = ["vendored", "send", "unstable"], optional = true }
+mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"], optional = true }
 
 [[example]]
 name = "call_function_from_rust_rhai"
