@@ -3,10 +3,9 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, Variadic};
+use mlua::{FromLua, Function, IntoLua, Lua, RegistryKey, UserData, Variadic};
 use serde::Deserialize;
 use std::{
-    any::Any,
     sync::{Arc, Mutex},
 };
 
@@ -117,7 +116,7 @@ impl Runtime for LuaRuntime {
         let args: Vec<mlua::Value> = args
             .parse(&engine)
             .into_iter()
-            .map(|a| engine.registry_value(&*a.0).unwrap())
+            .map(|a| engine.registry_value(&a.0).unwrap())
             .collect();
         func.call::<_, ()>(args).unwrap();
         Ok(())
