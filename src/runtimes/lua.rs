@@ -1,11 +1,14 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
+    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, Lua, RegistryKey, UserData, Variadic};
+use mlua::{FromLua, Function, IntoLua, Lua, RegistryKey, UserData, UserDataMethods, Variadic};
 use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use std::{
+    borrow::BorrowMut,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     assets::GetExtensions,
@@ -19,9 +22,48 @@ type LuaEngine = Arc<Mutex<Lua>>;
 #[derive(Clone)]
 pub struct LuaValue(Arc<RegistryKey>);
 
-#[derive(Default, Resource)]
+#[derive(Resource)]
 pub struct LuaRuntime {
     engine: LuaEngine,
+}
+
+impl Default for LuaRuntime {
+    fn default() -> Self {
+        let engine = LuaEngine::default();
+
+        {
+            let engine = engine.lock().unwrap();
+            engine
+                .register_userdata_type::<Entity>(|typ| {
+                    typ.add_method("index", |_, entity, ()| Ok(entity.index()));
+                })
+                .unwrap();
+
+            engine
+                .register_userdata_type::<Promise<(), LuaValue>>(|typ| {
+                    typ.add_method_mut("then", |engine, promise, callback: Function| {
+                        let val = engine.create_registry_value(callback).unwrap();
+                        Ok(Promise::then(promise, LuaValue(Arc::new(val))))
+                    });
+                })
+                .unwrap();
+        }
+
+        // engine
+        //     .register_type_with_name::<Vec3>("Vec3")
+        //     .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
+        //         Vec3::new(x as f32, y as f32, z as f32)
+        //     })
+        //     .register_get("x", |vec: &mut Vec3| vec.x as f64)
+        //     .register_get("y", |vec: &mut Vec3| vec.y as f64)
+        //     .register_get("z", |vec: &mut Vec3| vec.z as f64);
+        // #[allow(deprecated)]
+        // engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
+        //
+        // RhaiRuntime { engine }
+
+        Self { engine }
+    }
 }
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
