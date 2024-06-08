@@ -38,7 +38,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
     mut scripted_entities: Query<(Entity, &mut R::ScriptData)>,
     scripting_runtime: ResMut<R>,
 ) where
-    (): FuncArgs<R::Value>,
+    (): FuncArgs<R::Value, R>,
 {
     let (entity, mut script_data) = scripted_entities.single_mut();
     scripting_runtime

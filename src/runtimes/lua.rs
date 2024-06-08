@@ -3,7 +3,7 @@ use bevy::{
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, IntoLuaMulti, Lua, UserData, Variadic};
+use mlua::{FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, Variadic};
 use serde::Deserialize;
 use std::{
     any::Any,
@@ -20,12 +20,10 @@ use crate::{
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone)]
-pub struct LuaValue<'a>(mlua::Value<'a>);
+pub struct LuaValue(Arc<RegistryKey>);
 
 // FIXME: Need to be wrapper in mutex
 // TODO: https://github.com/mlua-rs/mlua/issues/120
-unsafe impl Send for LuaValue<'_> {}
-unsafe impl Sync for LuaValue<'_> {}
 
 #[derive(Default, Resource)]
 pub struct LuaRuntime {
@@ -62,7 +60,7 @@ impl Runtime for LuaRuntime {
 
     type CallContext = ();
 
-    type Value = LuaValue<'static>;
+    type Value = LuaValue;
 
     type RawEngine = Lua;
 
@@ -112,11 +110,15 @@ impl Runtime for LuaRuntime {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: bevy::prelude::Entity,
-        args: impl FuncArgs<Self::Value>,
+        args: impl FuncArgs<Self::Value, Self>,
     ) -> Result<(), crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args.parse().into_iter().map(|a| a.0).collect();
+        let args: Vec<mlua::Value> = args
+            .parse(&engine)
+            .into_iter()
+            .map(|a| engine.registry_value(&*a.0).unwrap())
+            .collect();
         func.call::<_, ()>(args).unwrap();
         Ok(())
     }
@@ -142,52 +144,46 @@ impl Runtime for LuaRuntime {
 }
 
 impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
-    fn into_runtime_value_with_engine(
-        _value: (),
-        _runtime: &Lua,
-    ) -> <LuaRuntime as Runtime>::Value {
-        LuaValue(mlua::Value::Nil)
+    fn into_runtime_value_with_engine(_value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
+        LuaValue(Arc::new(
+            runtime.create_registry_value(mlua::Value::Nil).unwrap(),
+        ))
     }
 }
 
-impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue<'a> {
-    fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue<'static> {
+impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue {
+    fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
         let e = value.into_lua(engine).unwrap();
-        match e {
-            mlua::Value::Number(n) => LuaValue(mlua::Value::Number(n)),
-            mlua::Value::Integer(n) => LuaValue(mlua::Value::Integer(n)),
-            _ => todo!(),
-        }
+        let key = engine.create_registry_value(e.clone()).unwrap();
+        LuaValue(Arc::new(key))
     }
 }
 
 impl<'a, T: FromLua<'a>> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
-    fn from_runtime_value_with_engine(value: LuaValue<'a>, engine: &'a Lua) -> Self {
-        T::from_lua(value.0, engine).unwrap()
+    fn from_runtime_value_with_engine(value: LuaValue, engine: &'a Lua) -> Self {
+        engine.registry_value(&value.0).unwrap()
     }
 }
 
-impl From<()> for LuaValue<'_> {
-    fn from(_value: ()) -> Self {
-        LuaValue(mlua::Value::Nil)
-    }
-}
-
-impl<'a> FuncArgs<LuaValue<'a>> for () {
-    fn parse(self) -> Vec<LuaValue<'a>> {
+impl<'a> FuncArgs<LuaValue, LuaRuntime> for () {
+    fn parse(self, engine: &Lua) -> Vec<LuaValue> {
         Vec::new()
     }
 }
 
-impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue<'a>> for Vec<T> {
-    fn parse(self) -> Vec<LuaValue<'a>> {
+impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue, LuaRuntime> for Vec<T> {
+    fn parse(self, engine: &Lua) -> Vec<LuaValue> {
         self.into_iter()
-            .map(|_| LuaValue(mlua::Value::Nil))
+            .map(|_| {
+                LuaValue(Arc::new(
+                    engine.create_registry_value(mlua::Value::Nil).unwrap(),
+                ))
+            })
             .collect()
     }
 }
 
-impl UserData for Promise<(), LuaValue<'static>> {}
+impl UserData for Promise<(), LuaValue> {}
 
 pub mod prelude {
     pub use super::{LuaRuntime, LuaScript, LuaScriptData};

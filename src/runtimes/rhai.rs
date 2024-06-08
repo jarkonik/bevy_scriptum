@@ -109,13 +109,13 @@ impl Runtime for RhaiRuntime {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl FuncArgs<Self::Value>,
+        args: impl FuncArgs<Self::Value, Self>,
     ) -> Result<(), ScriptingError> {
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;
         scope.push(ENTITY_VAR_NAME, entity);
         let options = CallFnOptions::new().eval_ast(false);
-        let args = args.parse();
+        let args = args.parse(&self.engine);
         let result = self
             .engine
             .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
@@ -200,14 +200,14 @@ impl<'a, T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<'a, T, RhaiRun
     }
 }
 
-impl FuncArgs<RhaiValue> for () {
-    fn parse(self) -> Vec<RhaiValue> {
+impl FuncArgs<RhaiValue, RhaiRuntime> for () {
+    fn parse(self, engnie: &rhai::Engine) -> Vec<RhaiValue> {
         Vec::new()
     }
 }
 
-impl<T: Clone + Send + Sync + 'static> FuncArgs<RhaiValue> for Vec<T> {
-    fn parse(self) -> Vec<RhaiValue> {
+impl<T: Clone + Send + Sync + 'static> FuncArgs<RhaiValue, RhaiRuntime> for Vec<T> {
+    fn parse(self, engine: &rhai::Engine) -> Vec<RhaiValue> {
         self.into_iter()
             .map(|v| RhaiValue(Dynamic::from(v)))
             .collect()
