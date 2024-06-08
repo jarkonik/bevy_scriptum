@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use crate::{promise::Promise, Runtime};
 
 /// A system that can be used to call a script function.
-pub struct CallbackSystem<R: Runtime> {
+pub struct CallbackSystem<'runtime, R: Runtime<'runtime>> {
     pub(crate) system: Box<dyn System<In = Vec<R::Value>, Out = R::Value>>,
     pub(crate) arg_types: Vec<TypeId>,
 }
@@ -16,13 +16,13 @@ pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
 }
 
 /// A struct representing a Bevy system that can be called from a script.
-pub(crate) struct Callback<R: Runtime> {
+pub(crate) struct Callback<'runtime, R: Runtime<'runtime>> {
     pub(crate) name: String,
-    pub(crate) system: Arc<Mutex<CallbackSystem<R>>>,
+    pub(crate) system: Arc<Mutex<CallbackSystem<'runtime, R>>>,
     pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<R::CallContext, R::Value>>>>,
 }
 
-impl<R: Runtime> Clone for Callback<R> {
+impl<'runtime, R: Runtime<'runtime>> Clone for Callback<'runtime, R> {
     fn clone(&self) -> Self {
         Callback {
             name: self.name.clone(),
@@ -32,7 +32,7 @@ impl<R: Runtime> Clone for Callback<R> {
     }
 }
 
-impl<R: Runtime> CallbackSystem<R> {
+impl<R: Runtime<'static>> CallbackSystem<'static, R> {
     pub(crate) fn call(
         &mut self,
         call: &FunctionCallEvent<R::CallContext, R::Value>,
@@ -42,27 +42,29 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-pub trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
-    fn into_runtime_value_with_engine(value: V, engine: &'a R::RawEngine) -> R::Value;
+pub trait IntoRuntimeValueWithEngine<'runtime, V, R: Runtime<'runtime>> {
+    fn into_runtime_value_with_engine(value: V, engine: &'runtime R::RawEngine) -> R::Value;
 }
 
-pub trait FromRuntimeValueWithEngine<'a, R: Runtime> {
-    fn from_runtime_value_with_engine(value: R::Value, engine: &'a R::RawEngine) -> Self;
+pub trait FromRuntimeValueWithEngine<'runtime, R: Runtime<'runtime>> {
+    fn from_runtime_value_with_engine(value: R::Value, engine: &'runtime R::RawEngine) -> Self;
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker> {
+pub trait IntoCallbackSystem<'runtime, R: Runtime<'runtime>, In, Out, Marker>:
+    IntoSystem<In, Out, Marker>
+{
     /// Convert this function into a [CallbackSystem].
     #[must_use]
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<'runtime, R>;
 }
 
-impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
+impl<R: Runtime<'static>, Out, FN, Marker> IntoCallbackSystem<'static, R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
     Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, R>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<'static, R> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
@@ -82,14 +84,14 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, ($($t,)+), Out, Marker>
+        impl<RN: Runtime<'static>, $($t,)+ Out, FN, Marker> IntoCallbackSystem<'static, RN, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
             Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
             $($t: 'static + Clone + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<'static, RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
                 let system_fn = move |mut args: In<Vec<RN::Value>>, world: &mut World| {

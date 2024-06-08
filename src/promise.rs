@@ -23,9 +23,13 @@ pub struct Promise<C: Send, V: Send> {
 
 impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
-    fn resolve<R: Runtime>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
+    fn resolve<'runtime, R: Runtime<'runtime>>(
+        &mut self,
+        runtime: &mut R,
+        val: R::Value,
+    ) -> Result<(), ScriptingError>
     where
-        R: Runtime<Value = V, CallContext = C>,
+        R: Runtime<'runtime, Value = V, CallContext = C>,
     {
         for callback in &self.callbacks {
             let next_val =
@@ -43,13 +47,13 @@ impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
 
 impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
-    pub(crate) fn resolve<R: Runtime>(
+    pub(crate) fn resolve<'runtime, R: Runtime<'runtime>>(
         &mut self,
         runtime: &mut R,
         val: R::Value,
     ) -> Result<(), ScriptingError>
     where
-        R: Runtime<Value = V, CallContext = C>,
+        R: Runtime<'runtime, Value = V, CallContext = C>,
     {
         if let Ok(mut inner) = self.inner.lock() {
             inner.resolve(runtime, val)?;

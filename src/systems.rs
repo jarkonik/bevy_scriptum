@@ -13,7 +13,7 @@ use crate::{
 use super::components::Script;
 
 /// Reloads scripts when they are modified.
-pub(crate) fn reload_scripts<R: Runtime>(
+pub(crate) fn reload_scripts<'runtime, R: Runtime<'runtime>>(
     mut commands: Commands,
     mut ev_asset: EventReader<AssetEvent<R::ScriptAsset>>,
     mut scripts: Query<(Entity, &mut Script<R::ScriptAsset>)>,
@@ -31,7 +31,7 @@ pub(crate) fn reload_scripts<R: Runtime>(
 
 /// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
 #[allow(clippy::type_complexity)]
-pub(crate) fn process_new_scripts<R: Runtime>(
+pub(crate) fn process_new_scripts<'runtime, R: Runtime<'runtime>>(
     mut commands: Commands,
     mut added_scripted_entities: Query<
         (Entity, &mut Script<R::ScriptAsset>),
@@ -61,7 +61,9 @@ pub(crate) fn process_new_scripts<R: Runtime>(
 }
 
 /// Initializes callbacks. Registers them in the scripting engine.
-pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
+pub(crate) fn init_callbacks<R: for<'runtime> Runtime<'runtime>>(
+    world: &mut World,
+) -> Result<(), ScriptingError> {
     let mut callbacks_resource = world
         .get_resource_mut::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
@@ -122,7 +124,9 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
 }
 
 /// Processes calls. Calls the user-defined callback systems
-pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), ScriptingError> {
+pub(crate) fn process_calls<R: for<'runtime> Runtime<'runtime>>(
+    world: &mut World,
+) -> Result<(), ScriptingError> {
     let callbacks_resource = world
         .get_resource::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;

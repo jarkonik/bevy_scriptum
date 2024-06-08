@@ -230,7 +230,7 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
-pub trait Runtime: Resource + Default {
+pub trait Runtime<'runtime>: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
     type ScriptData: Component;
@@ -285,15 +285,18 @@ pub trait FuncArgs<V> {
 pub trait BuildScriptingRuntime {
     /// Returns a "runtime" type than can be used to setup scripting runtime(
     /// add scripting functions etc.).
-    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
+    fn add_scripting<R: for<'runtime> Runtime<'runtime>>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self;
 }
 
-pub struct ScriptingRuntimeBuilder<'a, R: Runtime> {
+pub struct ScriptingRuntimeBuilder<'a, R: for<'runtime> Runtime<'runtime>> {
     _phantom_data: PhantomData<R>,
     world: &'a mut World,
 }
 
-impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
+impl<'a, R: for<'runtime> Runtime<'runtime>> ScriptingRuntimeBuilder<'a, R> {
     fn new(world: &'a mut World) -> Self {
         Self {
             _phantom_data: PhantomData,
@@ -304,11 +307,11 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     pub fn add_function<In, Out, Marker>(
         self,
         name: String,
-        fun: impl IntoCallbackSystem<R, In, Out, Marker>,
+        fun: impl IntoCallbackSystem<'static, R, In, Out, Marker>,
     ) -> Self {
         let system = fun.into_callback_system(self.world);
 
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks<R>>();
+        let mut callbacks_resource = self.world.resource_mut::<Callbacks<'static, R>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
@@ -321,7 +324,10 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
 }
 
 impl BuildScriptingRuntime for App {
-    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
+    fn add_scripting<R: for<'runtime> Runtime<'runtime>>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self {
         self.world
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
@@ -355,12 +361,12 @@ impl BuildScriptingRuntime for App {
 
 /// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_function].
 #[derive(Resource)]
-struct Callbacks<R: Runtime> {
-    uninitialized_callbacks: Vec<Callback<R>>,
-    callbacks: Mutex<Vec<Callback<R>>>,
+struct Callbacks<'runtime, R: Runtime<'runtime>> {
+    uninitialized_callbacks: Vec<Callback<'runtime, R>>,
+    callbacks: Mutex<Vec<Callback<'runtime, R>>>,
 }
 
-impl<R: Runtime> Default for Callbacks<R> {
+impl<'runtime, R: Runtime<'runtime>> Default for Callbacks<'runtime, R> {
     fn default() -> Self {
         Self {
             uninitialized_callbacks: Default::default(),

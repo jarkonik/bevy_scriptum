@@ -53,7 +53,7 @@ impl From<String> for LuaScript {
 #[derive(Component)]
 pub struct LuaScriptData;
 
-impl Runtime for LuaRuntime {
+impl<'runtime> Runtime<'runtime> for LuaRuntime {
     type Schedule = LuaSchedule;
 
     type ScriptAsset = LuaScript;
