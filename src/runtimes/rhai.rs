@@ -50,7 +50,7 @@ pub struct RhaiScriptData {
 #[derive(Clone)]
 pub struct RhaiValue(rhai::Dynamic);
 
-impl Runtime<'_> for RhaiRuntime {
+impl<'runtime> Runtime<'runtime> for RhaiRuntime {
     type Schedule = RhaiSchedule;
     type ScriptAsset = RhaiScript;
     type ScriptData = RhaiScriptData;

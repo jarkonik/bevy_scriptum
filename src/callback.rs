@@ -59,12 +59,13 @@ pub trait IntoCallbackSystem<'runtime, R: Runtime<'runtime>, In, Out, Marker>:
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<'runtime, R>;
 }
 
-impl<R: Runtime<'static>, Out, FN, Marker> IntoCallbackSystem<'static, R, (), Out, Marker> for FN
+impl<'runtime: 'static, R: Runtime<'runtime>, Out, FN, Marker>
+    IntoCallbackSystem<'runtime, R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, R>,
+    Out: IntoRuntimeValueWithEngine<'runtime, Out, R>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem<'static, R> {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<'runtime, R> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
@@ -84,14 +85,14 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<RN: Runtime<'static>, $($t,)+ Out, FN, Marker> IntoCallbackSystem<'static, RN, ($($t,)+), Out, Marker>
+        impl<'runtime: 'static, RN: Runtime<'runtime>, $($t,)+ Out, FN, Marker> IntoCallbackSystem<'runtime, RN, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
+            Out: IntoRuntimeValueWithEngine<'runtime, Out, RN>,
             $($t: 'static + Clone + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem<'static, RN> {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<'runtime, RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
                 let system_fn = move |mut args: In<Vec<RN::Value>>, world: &mut World| {
