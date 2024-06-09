@@ -27,6 +27,21 @@ pub struct LuaRuntime {
     engine: LuaEngine,
 }
 
+#[derive(Clone, Copy)]
+pub struct BevyEntity(pub Entity);
+
+impl FromLua<'_> for BevyEntity {
+    fn from_lua(
+        value: mlua::prelude::LuaValue<'_>,
+        lua: &'_ Lua,
+    ) -> mlua::prelude::LuaResult<Self> {
+        match value {
+            mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl Default for LuaRuntime {
     fn default() -> Self {
         let engine = LuaEngine::default();
@@ -34,8 +49,8 @@ impl Default for LuaRuntime {
         {
             let engine = engine.lock().unwrap();
             engine
-                .register_userdata_type::<Entity>(|typ| {
-                    typ.add_method("index", |_, entity, ()| Ok(entity.index()));
+                .register_userdata_type::<BevyEntity>(|typ| {
+                    typ.add_method("index", |_, entity, ()| Ok(entity.0.index()));
                 })
                 .unwrap();
 
@@ -131,7 +146,7 @@ impl Runtime for LuaRuntime {
             .create_function(move |engine, args: Variadic<mlua::Value>| {
                 let args = {
                     args.into_iter()
-                        .map(|x| LuaValue::into_runtime_value_with_engine(x, engine))
+                        .map(|x| LuaValue(Arc::new(engine.create_registry_value(x).unwrap())))
                         .collect()
                 };
                 Ok(f((), args).unwrap())
@@ -178,16 +193,7 @@ impl Runtime for LuaRuntime {
         f(&engine)
     }
 }
-
-impl<'a> IntoRuntimeValueWithEngine<'a, (), LuaRuntime> for () {
-    fn into_runtime_value_with_engine(_value: (), runtime: &Lua) -> <LuaRuntime as Runtime>::Value {
-        LuaValue(Arc::new(
-            runtime.create_registry_value(mlua::Value::Nil).unwrap(),
-        ))
-    }
-}
-
-impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for LuaValue {
+impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
         let e = value.into_lua(engine).unwrap();
         let key = engine.create_registry_value(e.clone()).unwrap();
@@ -222,5 +228,5 @@ impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue, LuaRuntime> for Vec<T> {
 impl UserData for Promise<(), LuaValue> {}
 
 pub mod prelude {
-    pub use super::{LuaRuntime, LuaScript, LuaScriptData};
+    pub use super::{BevyEntity, LuaRuntime, LuaScript, LuaScriptData};
 }
