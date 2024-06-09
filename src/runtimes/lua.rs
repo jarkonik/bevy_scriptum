@@ -210,7 +210,7 @@ impl Runtime for LuaRuntime {
 impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
         let e = value.into_lua(engine).unwrap();
-        let key = engine.create_registry_value(e.clone()).unwrap();
+        let key = engine.create_registry_value(e).unwrap();
         LuaValue(Arc::new(key))
     }
 }
