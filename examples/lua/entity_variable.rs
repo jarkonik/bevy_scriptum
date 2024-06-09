@@ -12,6 +12,6 @@ fn main() {
 
 fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn(Script::<LuaScript>::new(
-        assets_server.load("examples/rhai/entity_variable.rhai"),
+        assets_server.load("examples/lua/entity_variable.lua"),
     ));
 }
