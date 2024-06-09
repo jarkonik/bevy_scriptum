@@ -2,6 +2,6 @@
 -- it is automatically available in all scripts
 
 -- get name of the entity
-entity:get_name():and_then(function(name)
+get_name(entity):and_then(function(name)
 	print(name)
 end)

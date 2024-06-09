@@ -14,7 +14,7 @@ use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime,
+    FuncArgs, Runtime, ENTITY_VAR_NAME,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
@@ -29,6 +29,7 @@ pub struct LuaRuntime {
 
 #[derive(Clone, Copy)]
 pub struct BevyEntity(pub Entity);
+impl UserData for BevyEntity {}
 
 impl FromLua<'_> for BevyEntity {
     fn from_lua(
@@ -122,6 +123,10 @@ impl Runtime for LuaRuntime {
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
+        engine
+            .globals()
+            .set(ENTITY_VAR_NAME, BevyEntity(entity))
+            .unwrap();
         engine.load(&script.0).exec().unwrap();
         Ok(LuaScriptData)
     }
@@ -180,7 +185,16 @@ impl Runtime for LuaRuntime {
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        todo!()
+        let engine = self.engine.lock().unwrap();
+        let val = engine.registry_value::<Function>(&value.0).unwrap();
+        let args: Vec<mlua::Value> = args
+            .into_iter()
+            .map(|a| engine.registry_value(&a.0).unwrap())
+            .collect();
+        let result = val.call::<_, mlua::Value>(args).unwrap();
+        Ok(LuaValue(Arc::new(
+            engine.create_registry_value(result).unwrap(),
+        )))
     }
 
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
