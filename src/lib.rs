@@ -267,7 +267,7 @@ pub trait Runtime: Resource + Default {
         script_data: &mut Self::ScriptData,
         entity: Entity,
         args: impl FuncArgs<Self::Value, Self>,
-    ) -> Result<(), ScriptingError>;
+    ) -> Result<Self::Value, ScriptingError>;
 
     fn call_fn_from_value(
         &self,

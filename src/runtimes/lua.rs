@@ -3,7 +3,9 @@ use bevy::{
     ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use mlua::{FromLua, Function, IntoLua, Lua, RegistryKey, UserData, UserDataMethods, Variadic};
+use mlua::{
+    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataMethods, Variadic,
+};
 use serde::Deserialize;
 use std::{
     borrow::BorrowMut,
@@ -145,7 +147,6 @@ impl Runtime for LuaRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        let engine_closure = self.engine.clone();
         let engine = self.engine.lock().unwrap();
         let func = engine
             .create_function(move |engine, args: Variadic<mlua::Value>| {
@@ -167,7 +168,7 @@ impl Runtime for LuaRuntime {
         script_data: &mut Self::ScriptData,
         entity: bevy::prelude::Entity,
         args: impl FuncArgs<Self::Value, Self>,
-    ) -> Result<(), crate::ScriptingError> {
+    ) -> Result<Self::Value, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
         let args: Vec<mlua::Value> = args
@@ -175,8 +176,10 @@ impl Runtime for LuaRuntime {
             .into_iter()
             .map(|a| engine.registry_value(&a.0).unwrap())
             .collect();
-        func.call::<_, ()>(args).unwrap();
-        Ok(())
+        let result = func.call::<_, mlua::Value>(args).unwrap();
+        Ok(LuaValue(Arc::new(
+            engine.create_registry_value(result).unwrap(),
+        )))
     }
 
     fn call_fn_from_value(
@@ -187,11 +190,14 @@ impl Runtime for LuaRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let val = engine.registry_value::<Function>(&value.0).unwrap();
-        let args: Vec<mlua::Value> = args
+        let args = args
             .into_iter()
-            .map(|a| engine.registry_value(&a.0).unwrap())
-            .collect();
-        let result = val.call::<_, mlua::Value>(args).unwrap();
+            .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
+        let result = val
+            .call::<_, mlua::Value>(Variadic::from_iter(args))
+            .unwrap();
+        let result = mlua::Value::Nil;
+
         Ok(LuaValue(Arc::new(
             engine.create_registry_value(result).unwrap(),
         )))
