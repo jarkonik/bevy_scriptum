@@ -27,18 +27,21 @@ fn startup(
     mut scripting_runtime: ResMut<LuaRuntime>,
     assets_server: Res<AssetServer>,
 ) {
-    let engine = scripting_runtime.with_engine_mut(|engine| {
-        engine.register_userdata_type::<MyType>(|typ| {
-            // Register a method on MyType
-            typ.add_method("my_method", |_, my_type_instance: &MyType, ()| {
-                Ok(my_type_instance.my_field)
+    scripting_runtime.with_engine_mut(|engine| {
+        engine
+            .register_userdata_type::<MyType>(|typ| {
+                // Register a method on MyType
+                typ.add_method("my_method", |_, my_type_instance: &MyType, ()| {
+                    Ok(my_type_instance.my_field)
+                })
             })
-        });
+            .unwrap();
+
         // Register a "constructor" for MyType
         let my_type_constructor = engine
             .create_function(|_, ()| Ok(MyType { my_field: 42 }))
             .unwrap();
-        engine.globals().set("MyType", my_type_constructor);
+        engine.globals().set("MyType", my_type_constructor).unwrap();
     });
 
     commands.spawn(Script::<LuaScript>::new(

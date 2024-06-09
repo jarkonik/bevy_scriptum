@@ -112,6 +112,45 @@ macro_rules! scripting_tests {
         }
 
         #[test]
+        fn rust_function_gets_called_from_script_with_multiple_params() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct TestResource {
+                a: i64,
+                b: String,
+            }
+
+            app.world.init_resource::<TestResource>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((a, b)): In<(i64, String)>, mut res: ResMut<TestResource>| {
+                        res.a = a;
+                        res.b = b;
+                    },
+                );
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/rust_function_gets_called_from_script_with_multiple_params.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(app.world.get_resource::<TestResource>().unwrap().a, 5);
+            assert_eq!(
+                app.world.get_resource::<TestResource>().unwrap().b,
+                String::from("test")
+            );
+        }
+
+        #[test]
         fn test_script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 

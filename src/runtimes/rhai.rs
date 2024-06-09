@@ -110,7 +110,7 @@ impl Runtime for RhaiRuntime {
         script_data: &mut Self::ScriptData,
         entity: Entity,
         args: impl FuncArgs<Self::Value, Self>,
-    ) -> Result<(), ScriptingError> {
+    ) -> Result<RhaiValue, ScriptingError> {
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;
         scope.push(ENTITY_VAR_NAME, entity);
@@ -120,13 +120,15 @@ impl Runtime for RhaiRuntime {
             .engine
             .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(n, _) if n == name => {}
+        match result {
+            Ok(val) => Ok(RhaiValue(val)),
+            Err(e) => match *e {
+                rhai::EvalAltResult::ErrorFunctionNotFound(n, _) if n == name => {
+                    Ok(RhaiValue(().into())) // # FIXME this should actually be an error in most contexts
+                }
                 e => Err(ScriptingError::RuntimeError(Box::new(e)))?,
-            }
+            },
         }
-        Ok(())
     }
 
     fn call_fn_from_value(
@@ -195,19 +197,19 @@ impl Default for RhaiRuntime {
 }
 
 impl<'a, T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<'a, T, RhaiRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, runtime: &'a rhai::Engine) -> RhaiValue {
+    fn into_runtime_value_with_engine(value: T, _engine: &'a rhai::Engine) -> RhaiValue {
         RhaiValue(Dynamic::from(value))
     }
 }
 
 impl FuncArgs<RhaiValue, RhaiRuntime> for () {
-    fn parse(self, engnie: &rhai::Engine) -> Vec<RhaiValue> {
+    fn parse(self, _engnie: &rhai::Engine) -> Vec<RhaiValue> {
         Vec::new()
     }
 }
 
 impl<T: Clone + Send + Sync + 'static> FuncArgs<RhaiValue, RhaiRuntime> for Vec<T> {
-    fn parse(self, engine: &rhai::Engine) -> Vec<RhaiValue> {
+    fn parse(self, _engine: &rhai::Engine) -> Vec<RhaiValue> {
         self.into_iter()
             .map(|v| RhaiValue(Dynamic::from(v)))
             .collect()
@@ -221,14 +223,8 @@ impl From<()> for RhaiValue {
 }
 
 impl<T: Clone + 'static> FromRuntimeValueWithEngine<'_, RhaiRuntime> for T {
-    fn from_runtime_value_with_engine(value: RhaiValue, engine: &rhai::Engine) -> Self {
+    fn from_runtime_value_with_engine(value: RhaiValue, _engine: &rhai::Engine) -> Self {
         value.0.clone_cast()
-    }
-}
-
-impl<'a> From<RhaiValue> for i64 {
-    fn from(value: RhaiValue) -> Self {
-        todo!()
     }
 }
 
