@@ -4,7 +4,8 @@ use bevy::{
     reflect::TypePath,
 };
 use mlua::{
-    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataMethods, Variadic,
+    FromLua, FromLuaMulti, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData,
+    UserDataMethods, Variadic,
 };
 use serde::Deserialize;
 use std::{
@@ -212,11 +213,10 @@ impl Runtime for LuaRuntime {
         f(&engine)
     }
 }
-impl<'a, T: IntoLua<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
+impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
-        let e = value.into_lua(engine).unwrap();
-        let key = engine.create_registry_value(e).unwrap();
-        LuaValue(Arc::new(key))
+        let value = value.into_lua_multi(engine).unwrap().into_iter().next();
+        LuaValue(Arc::new(engine.create_registry_value(value).unwrap()))
     }
 }
 
