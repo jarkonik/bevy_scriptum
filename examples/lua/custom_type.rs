@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
+use mlua::{UserData, UserDataMethods};
 
 fn main() {
     App::new()
@@ -19,23 +20,28 @@ struct MyType {
     my_field: u32,
 }
 
+impl UserData for MyType {}
+
 fn startup(
     mut commands: Commands,
     mut scripting_runtime: ResMut<LuaRuntime>,
     assets_server: Res<AssetServer>,
 ) {
     let engine = scripting_runtime.with_engine_mut(|engine| {
-        // engine
-        //     .register_type_with_name::<MyType>("MyType")
-        //     // Register a method on MyType
-        //     .register_fn("my_method", |my_type_instance: &mut MyType| {
-        //         my_type_instance.my_field
-        //     })
-        //     // Register a "constructor" for MyType
-        //     .register_fn("new_my_type", || MyType { my_field: 42 });
+        engine.register_userdata_type::<MyType>(|typ| {
+            // Register a method on MyType
+            typ.add_method("my_method", |_, my_type_instance: &MyType, ()| {
+                Ok(my_type_instance.my_field)
+            })
+        });
+        // Register a "constructor" for MyType
+        let my_type_constructor = engine
+            .create_function(|_, ()| Ok(MyType { my_field: 42 }))
+            .unwrap();
+        engine.globals().set("MyType", my_type_constructor);
     });
 
     commands.spawn(Script::<LuaScript>::new(
-        assets_server.load("examples/rhai/custom_type.rhai"),
+        assets_server.load("examples/lua/custom_type.lua"),
     ));
 }
