@@ -217,8 +217,11 @@ impl Runtime for LuaRuntime {
 }
 impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
-        let value = value.into_lua_multi(engine).unwrap().into_iter().next();
-        LuaValue(Arc::new(engine.create_registry_value(value).unwrap()))
+        let mut iter = value.into_lua_multi(engine).unwrap().into_iter();
+        if iter.len() > 1 {
+            unimplemented!("Returning multiple values from function");
+        }
+        LuaValue(Arc::new(engine.create_registry_value(iter.next()).unwrap()))
     }
 }
 
