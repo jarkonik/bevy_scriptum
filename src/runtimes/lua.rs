@@ -171,12 +171,13 @@ impl Runtime for LuaRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
         let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args: Vec<mlua::Value> = args
+        let args = args
             .parse(&engine)
             .into_iter()
-            .map(|a| engine.registry_value(&a.0).unwrap())
-            .collect();
-        let result = func.call::<_, mlua::Value>(args).unwrap();
+            .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
+        let result = func
+            .call::<_, mlua::Value>(Variadic::from_iter(args))
+            .unwrap();
         Ok(LuaValue(Arc::new(
             engine.create_registry_value(result).unwrap(),
         )))
@@ -196,8 +197,6 @@ impl Runtime for LuaRuntime {
         let result = val
             .call::<_, mlua::Value>(Variadic::from_iter(args))
             .unwrap();
-        let result = mlua::Value::Nil;
-
         Ok(LuaValue(Arc::new(
             engine.create_registry_value(result).unwrap(),
         )))
