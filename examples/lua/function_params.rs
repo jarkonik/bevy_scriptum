@@ -28,9 +28,10 @@ fn main() {
                         println!("called with i64: {} and string: '{}'", x, y);
                     },
                 );
+            // TODO: implement
             // .add_function(
             //     String::from("fun_with_i64_and_array_param"),
-            //     |In((x, y)): In<(i64, Vec<mlua::Value>)>| {
+            //     |In((x, y)): In<(i64, mlua::Table)>| {
             //         println!(
             //             "called with i64: {} and dynamically typed array: '{:?}'",
             //             x, y
