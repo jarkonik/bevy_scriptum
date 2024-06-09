@@ -27,17 +27,16 @@ fn main() {
                     |In((x, y)): In<(i64, String)>| {
                         println!("called with i64: {} and string: '{}'", x, y);
                     },
+                )
+                .add_function(
+                    String::from("fun_with_i64_and_array_param"),
+                    |In((x, y)): In<(i64, mlua::Value)>| {
+                        println!(
+                            "called with i64: {} and dynamically typed array: '{:?}'",
+                            x, y
+                        );
+                    },
                 );
-            // TODO: implement
-            // .add_function(
-            //     String::from("fun_with_i64_and_array_param"),
-            //     |In((x, y)): In<(i64, mlua::Table)>| {
-            //         println!(
-            //             "called with i64: {} and dynamically typed array: '{:?}'",
-            //             x, y
-            //         );
-            //     },
-            // );
         })
         .add_systems(Startup, startup)
         .run();
