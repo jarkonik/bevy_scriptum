@@ -87,7 +87,7 @@ macro_rules! impl_tuple {
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
             Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
-            $($t: 'static + Clone + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
+            $($t: 'static + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);

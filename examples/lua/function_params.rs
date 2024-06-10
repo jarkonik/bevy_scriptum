@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
+use std::fmt::Write;
 
 fn main() {
     App::new()
@@ -30,11 +31,21 @@ fn main() {
                 )
                 .add_function(
                     String::from("fun_with_i64_and_array_param"),
-                    |In((x, y)): In<(i64, mlua::Value)>| {
-                        println!(
-                            "called with i64: {} and dynamically typed array: '{:?}'",
-                            x, y
-                        );
+                    |In((x, y)): In<(i64, mlua::RegistryKey)>, runtime: Res<LuaRuntime>| {
+                        runtime.with_engine(|engine| {
+                            println!(
+                                "called with i64: {} and dynamically typed array: [{:?}]",
+                                x,
+                                engine
+                                    .registry_value::<mlua::Table>(&y)
+                                    .unwrap()
+                                    .pairs::<usize, mlua::Value>()
+                                    .map(|pair| pair.unwrap())
+                                    .map(|(_, v)| format!("{:?}", v))
+                                    .collect::<Vec<String>>()
+                                    .join(",")
+                            );
+                        });
                     },
                 );
         })
