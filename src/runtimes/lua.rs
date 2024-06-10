@@ -4,12 +4,11 @@ use bevy::{
     reflect::TypePath,
 };
 use mlua::{
-    FromLua, FromLuaMulti, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData,
+    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData,
     UserDataMethods, Variadic,
 };
 use serde::Deserialize;
 use std::{
-    borrow::BorrowMut,
     sync::{Arc, Mutex},
 };
 
@@ -39,7 +38,7 @@ impl UserData for BevyEntity {}
 impl FromLua<'_> for BevyEntity {
     fn from_lua(
         value: mlua::prelude::LuaValue<'_>,
-        lua: &'_ Lua,
+        _lua: &'_ Lua,
     ) -> mlua::prelude::LuaResult<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
@@ -139,7 +138,7 @@ impl Runtime for LuaRuntime {
     fn register_fn(
         &mut self,
         name: String,
-        arg_types: Vec<std::any::TypeId>,
+        _arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
@@ -168,8 +167,8 @@ impl Runtime for LuaRuntime {
     fn call_fn(
         &self,
         name: &str,
-        script_data: &mut Self::ScriptData,
-        entity: bevy::prelude::Entity,
+        _script_data: &mut Self::ScriptData,
+        _entity: bevy::prelude::Entity,
         args: impl FuncArgs<Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
@@ -189,7 +188,7 @@ impl Runtime for LuaRuntime {
     fn call_fn_from_value(
         &self,
         value: &Self::Value,
-        context: &Self::CallContext,
+        _context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let engine = self.engine.lock().unwrap();
@@ -232,7 +231,7 @@ impl<'a, T: FromLua<'a>> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
 }
 
 impl<'a> FuncArgs<LuaValue, LuaRuntime> for () {
-    fn parse(self, engine: &Lua) -> Vec<LuaValue> {
+    fn parse(self, _engine: &Lua) -> Vec<LuaValue> {
         Vec::new()
     }
 }
