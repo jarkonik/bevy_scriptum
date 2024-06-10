@@ -1,10 +1,12 @@
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, system::Resource},
+    math::Vec3,
     reflect::TypePath,
 };
 use mlua::{
-    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataMethods, Variadic,
+    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataFields,
+    UserDataMethods, Variadic,
 };
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
@@ -15,13 +17,23 @@ use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ENTITY_VAR_NAME,
+    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone)]
 pub struct LuaValue(Arc<RegistryKey>);
+
+impl LuaValue {
+    fn new<'a, T: IntoLua<'a>>(engine: &'a Lua, value: T) -> Self {
+        Self(Arc::new(
+            engine
+                .create_registry_value(value)
+                .expect("Error creating a registry key for value"),
+        ))
+    }
+}
 
 #[derive(Resource)]
 pub struct LuaRuntime {
@@ -30,9 +42,27 @@ pub struct LuaRuntime {
 
 #[derive(Clone, Copy)]
 pub struct BevyEntity(pub Entity);
+
 impl UserData for BevyEntity {}
 
 impl FromLua<'_> for BevyEntity {
+    fn from_lua(
+        value: mlua::prelude::LuaValue<'_>,
+        _lua: &'_ Lua,
+    ) -> mlua::prelude::LuaResult<Self> {
+        match value {
+            mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct BevyVec3(pub Vec3);
+
+impl UserData for BevyVec3 {}
+
+impl FromLua<'_> for BevyVec3 {
     fn from_lua(
         value: mlua::prelude::LuaValue<'_>,
         _lua: &'_ Lua,
@@ -49,35 +79,29 @@ impl Default for LuaRuntime {
         let engine = LuaEngine::default();
 
         {
-            let engine = engine.lock().unwrap();
+            let engine = engine.lock().expect("Failed to lock engine");
             engine
                 .register_userdata_type::<BevyEntity>(|typ| {
                     typ.add_method("index", |_, entity, ()| Ok(entity.0.index()));
                 })
-                .unwrap();
+                .expect("Failed to register BevyEntity userdata type");
 
             engine
                 .register_userdata_type::<Promise<(), LuaValue>>(|typ| {
                     typ.add_method_mut("and_then", |engine, promise, callback: Function| {
-                        let val = engine.create_registry_value(callback).unwrap();
-                        Ok(Promise::then(promise, LuaValue(Arc::new(val))))
+                        Ok(Promise::then(promise, LuaValue::new(engine, callback)))
                     });
                 })
-                .unwrap();
-        }
+                .expect("Failed to register Promise userdata type");
 
-        // engine
-        //     .register_type_with_name::<Vec3>("Vec3")
-        //     .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-        //         Vec3::new(x as f32, y as f32, z as f32)
-        //     })
-        //     .register_get("x", |vec: &mut Vec3| vec.x as f64)
-        //     .register_get("y", |vec: &mut Vec3| vec.y as f64)
-        //     .register_get("z", |vec: &mut Vec3| vec.z as f64);
-        // #[allow(deprecated)]
-        // engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
-        //
-        // RhaiRuntime { engine }
+            engine
+                .register_userdata_type::<BevyVec3>(|typ| {
+                    typ.add_field_method_get("x", |_engine, vec| Ok(vec.0.x));
+                    typ.add_field_method_get("y", |_engine, vec| Ok(vec.0.y));
+                    typ.add_field_method_get("z", |_engine, vec| Ok(vec.0.z));
+                })
+                .expect("Failed to register BevyVec3 userdata type");
+        }
 
         Self { engine }
     }
@@ -118,17 +142,21 @@ impl Runtime for LuaRuntime {
     type RawEngine = Lua;
 
     // TODO: Should be renamed or even split as it also evals
+    // should also be private to crate
     fn create_script_data(
         &self,
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
-        engine
-            .globals()
-            .set(ENTITY_VAR_NAME, BevyEntity(entity))
-            .unwrap();
-        engine.load(&script.0).exec().unwrap();
+        self.with_engine(|engine| {
+            // TODO: We somehow need to set it per script not here in globals
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, BevyEntity(entity))
+                .expect("Error setting entity global variable");
+            engine.load(&script.0).exec()
+        })
+        .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
         Ok(LuaScriptData)
     }
 
@@ -146,18 +174,19 @@ impl Runtime for LuaRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
-        let func = engine
-            .create_function(move |engine, args: Variadic<mlua::Value>| {
-                let args = {
-                    args.into_iter()
-                        .map(|x| LuaValue(Arc::new(engine.create_registry_value(x).unwrap())))
-                        .collect()
-                };
-                Ok(f((), args).unwrap())
-            })
-            .unwrap();
-        engine.globals().set(name, func).unwrap();
+        self.with_engine(|engine| {
+            let func = engine
+                .create_function(move |engine, args: Variadic<mlua::Value>| {
+                    let args = { args.into_iter().map(|x| LuaValue::new(engine, x)).collect() };
+                    let result = f((), args).unwrap();
+                    Ok(result)
+                })
+                .unwrap();
+            engine
+                .globals()
+                .set(name, func)
+                .expect("Error registering function in global lua scope");
+        });
         Ok(())
     }
 
@@ -168,18 +197,19 @@ impl Runtime for LuaRuntime {
         _entity: bevy::prelude::Entity,
         args: impl FuncArgs<Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
-        let func = engine.globals().get::<_, Function>(name).unwrap();
-        let args = args
-            .parse(&engine)
-            .into_iter()
-            .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
-        let result = func
-            .call::<_, mlua::Value>(Variadic::from_iter(args))
-            .unwrap();
-        Ok(LuaValue(Arc::new(
-            engine.create_registry_value(result).unwrap(),
-        )))
+        self.with_engine(|engine| {
+            let func = engine.globals().get::<_, Function>(name).unwrap();
+            let args = args
+                .parse(engine)
+                .into_iter()
+                .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
+            let result = func
+                .call::<_, mlua::Value>(Variadic::from_iter(args))
+                .unwrap();
+            Ok(LuaValue(Arc::new(
+                engine.create_registry_value(result).unwrap(),
+            )))
+        })
     }
 
     fn call_fn_from_value(
