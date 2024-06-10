@@ -101,6 +101,10 @@ impl Default for LuaRuntime {
                     typ.add_field_method_get("z", |_engine, vec| Ok(vec.0.z));
                 })
                 .expect("Failed to register BevyVec3 userdata type");
+            let vec3_constructor = engine
+                .create_function(|_, (x, y, z)| Ok(BevyVec3(Vec3::new(x, y, z))))
+                .unwrap();
+            engine.globals().set("Vec3", vec3_constructor).unwrap();
         }
 
         Self { engine }
