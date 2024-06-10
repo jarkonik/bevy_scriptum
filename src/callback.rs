@@ -15,11 +15,13 @@ pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
     pub(crate) promise: Promise<C, V>,
 }
 
+type Calls<C, V> = Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>;
+
 /// A struct representing a Bevy system that can be called from a script.
 pub(crate) struct Callback<R: Runtime> {
     pub(crate) name: String,
     pub(crate) system: Arc<Mutex<CallbackSystem<R>>>,
-    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent<R::CallContext, R::Value>>>>,
+    pub(crate) calls: Calls<R::CallContext, R::Value>,
 }
 
 impl<R: Runtime> Clone for Callback<R> {
