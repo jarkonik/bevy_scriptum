@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
-use std::fmt::Write;
 
 fn main() {
     App::new()
