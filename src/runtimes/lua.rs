@@ -4,13 +4,10 @@ use bevy::{
     reflect::TypePath,
 };
 use mlua::{
-    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData,
-    UserDataMethods, Variadic,
+    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataMethods, Variadic,
 };
 use serde::Deserialize;
-use std::{
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 // TODO: add example and implementation for builting types vec3 and others?
 
@@ -230,13 +227,13 @@ impl<'a, T: FromLua<'a>> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
     }
 }
 
-impl<'a> FuncArgs<LuaValue, LuaRuntime> for () {
+impl FuncArgs<LuaValue, LuaRuntime> for () {
     fn parse(self, _engine: &Lua) -> Vec<LuaValue> {
         Vec::new()
     }
 }
 
-impl<'a, T: IntoLua<'static>> FuncArgs<LuaValue, LuaRuntime> for Vec<T> {
+impl<T: IntoLua<'static>> FuncArgs<LuaValue, LuaRuntime> for Vec<T> {
     fn parse(self, engine: &Lua) -> Vec<LuaValue> {
         self.into_iter()
             .map(|_| {
