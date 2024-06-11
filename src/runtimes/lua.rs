@@ -199,7 +199,7 @@ impl Runtime for LuaRuntime {
         name: &str,
         _script_data: &mut Self::ScriptData,
         _entity: bevy::prelude::Entity,
-        args: impl FuncArgs<Self::Value, Self>,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         self.with_engine(|engine| {
             let func = engine.globals().get::<_, Function>(name).unwrap();
@@ -261,21 +261,15 @@ impl<'a, T: FromLua<'a>> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
     }
 }
 
-impl FuncArgs<LuaValue, LuaRuntime> for () {
+impl FuncArgs<'_, LuaValue, LuaRuntime> for () {
     fn parse(self, _engine: &Lua) -> Vec<LuaValue> {
         Vec::new()
     }
 }
 
-impl<T: IntoLua<'static>> FuncArgs<LuaValue, LuaRuntime> for Vec<T> {
-    fn parse(self, engine: &Lua) -> Vec<LuaValue> {
-        self.into_iter()
-            .map(|_| {
-                LuaValue(Arc::new(
-                    engine.create_registry_value(mlua::Value::Nil).unwrap(),
-                ))
-            })
-            .collect()
+impl<'a, T: IntoLua<'a>> FuncArgs<'a, LuaValue, LuaRuntime> for Vec<T> {
+    fn parse(self, engine: &'a Lua) -> Vec<LuaValue> {
+        self.into_iter().map(|x| LuaValue::new(engine, x)).collect()
     }
 }
 

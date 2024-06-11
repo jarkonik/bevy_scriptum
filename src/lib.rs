@@ -266,7 +266,7 @@ pub trait Runtime: Resource + Default {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl FuncArgs<Self::Value, Self>,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, ScriptingError>;
 
     fn call_fn_from_value(
@@ -277,8 +277,8 @@ pub trait Runtime: Resource + Default {
     ) -> Result<Self::Value, ScriptingError>;
 }
 
-pub trait FuncArgs<V, R: Runtime> {
-    fn parse(self, engine: &R::RawEngine) -> Vec<V>;
+pub trait FuncArgs<'a, V, R: Runtime> {
+    fn parse(self, engine: &'a R::RawEngine) -> Vec<V>;
 }
 
 /// An extension trait for [App] that allows to setup a scripting runtime `R`.
