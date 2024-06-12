@@ -52,7 +52,7 @@ impl FromLua<'_> for BevyEntity {
     ) -> mlua::prelude::LuaResult<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
-            _ => unreachable!(),
+            _ => panic!("got {:?} instead of BevyEntity", value),
         }
     }
 }
@@ -69,7 +69,7 @@ impl FromLua<'_> for BevyVec3 {
     ) -> mlua::prelude::LuaResult<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
-            _ => unreachable!(),
+            _ => panic!("got {:?} instead of BevyVec3", value),
         }
     }
 }
