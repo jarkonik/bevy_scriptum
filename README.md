@@ -1,7 +1,7 @@
 # bevy_scriptum 📜
 
 bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-Currently, only [Rhai](https://rhai.rs/) is supported, but more languages may be added in the future.
+Currently, [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) languages are supported.
 
 It's main advantages include:
 - low-boilerplate
@@ -84,7 +84,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = "0.2"
+bevy_scriptum = "0.4"
 ```
 
 or execute `cargo add bevy_scriptum` from your project directory.
