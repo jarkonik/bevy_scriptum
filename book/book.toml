@@ -7,6 +7,6 @@ title = "bevy_scriptum"
 
 [preprocessor.keeper]
 command = "mdbook-keeper"
-manifest_dir = "."
+manifest_dir = "../"
 externs = ["bevy", "bevy_scriptum"]
 build_features = ["luajit", "rhai"]
