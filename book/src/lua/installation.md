@@ -4,6 +4,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
+bevy = { version = "0.13" }
 bevy_scriptum = { version = "0.5", features = ["luajit"] }
 ```
 
