@@ -49,6 +49,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
 trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
+    fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32);
 }
 
 macro_rules! scripting_tests {
@@ -172,7 +173,7 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "a_value", 1i64);
+            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
         }
 
         #[test]
@@ -197,8 +198,8 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "a_value", 1i64);
-            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "b_value", 2i64);
+            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "b_value", 2i32);
         }
 
         #[test]
@@ -271,6 +272,12 @@ mod rhai_tests {
             let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
             assert_eq!(state[key].clone_cast::<i64>(), value);
         }
+
+        fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32) {
+            let script_data = world.get::<Self::ScriptData>(entity_id).unwrap();
+            let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
+            assert_eq!(state[key].clone_cast::<i32>(), value);
+        }
     }
 
     scripting_tests!(RhaiRuntime, "rhai", "rhai");
@@ -289,6 +296,14 @@ mod lua_tests {
             runtime.with_engine(|engine| {
                 let state = engine.globals().get::<_, Table>("State").unwrap();
                 assert_eq!(state.get::<_, i64>(key).unwrap(), value);
+            });
+        }
+
+        fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32) {
+            let runtime = world.get_resource::<LuaRuntime>().unwrap();
+            runtime.with_engine(|engine| {
+                let state = engine.globals().get::<_, Table>("State").unwrap();
+                assert_eq!(state.get::<_, i32>(key).unwrap(), value);
             });
         }
     }
