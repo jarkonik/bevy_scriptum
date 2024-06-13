@@ -126,12 +126,7 @@ impl Runtime for RhaiRuntime {
         scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
         match result {
             Ok(val) => Ok(RhaiValue(val)),
-            Err(e) => match *e {
-                rhai::EvalAltResult::ErrorFunctionNotFound(n, _) if n == name => {
-                    Ok(RhaiValue(().into())) // # FIXME this should actually be an error in most contexts
-                }
-                e => Err(ScriptingError::RuntimeError(Box::new(e)))?,
-            },
+            Err(e) => Err(ScriptingError::RuntimeError(Box::new(e))),
         }
     }
 

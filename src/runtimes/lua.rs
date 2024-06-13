@@ -202,17 +202,18 @@ impl Runtime for LuaRuntime {
         args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         self.with_engine(|engine| {
-            let func = engine.globals().get::<_, Function>(name).unwrap();
+            let func = engine
+                .globals()
+                .get::<_, Function>(name)
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
             let args = args
                 .parse(engine)
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = func
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
-                .unwrap();
-            Ok(LuaValue(Arc::new(
-                engine.create_registry_value(result).unwrap(),
-            )))
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            Ok(LuaValue::new(engine, result))
         })
     }
 
@@ -222,17 +223,18 @@ impl Runtime for LuaRuntime {
         _context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        let engine = self.engine.lock().unwrap();
-        let val = engine.registry_value::<Function>(&value.0).unwrap();
-        let args = args
-            .into_iter()
-            .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
-        let result = val
-            .call::<_, mlua::Value>(Variadic::from_iter(args))
-            .unwrap();
-        Ok(LuaValue(Arc::new(
-            engine.create_registry_value(result).unwrap(),
-        )))
+        self.with_engine(|engine| {
+            let val = engine
+                .registry_value::<Function>(&value.0)
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            let args = args
+                .into_iter()
+                .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
+            let result = val
+                .call::<_, mlua::Value>(Variadic::from_iter(args))
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            Ok(LuaValue::new(engine, result))
+        })
     }
 
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {

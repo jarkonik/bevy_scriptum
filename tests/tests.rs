@@ -218,9 +218,32 @@ macro_rules! scripting_tests {
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
                     let (entity, mut script_data) = scripted_entities.single_mut();
-                    scripting_runtime
-                        .call_fn("test_func", &mut script_data, entity, vec![1, 2])
-                        .unwrap();
+                    let result =
+                        scripting_runtime.call_fn("test_func", &mut script_data, entity, ());
+                    assert!(result.is_err());
+                },
+            );
+        }
+
+        #[test]
+        fn test_call_script_function_that_does_not_exist() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|_| {});
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/call_script_function_that_causes_runtime_error.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let result =
+                        scripting_runtime.call_fn("does_not_exist", &mut script_data, entity, ());
+                    assert!(result.is_err());
                 },
             );
         }
@@ -322,7 +345,7 @@ mod lua_tests {
             });
         }
 
-        fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32) {
+        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
             let runtime = world.get_resource::<LuaRuntime>().unwrap();
             runtime.with_engine(|engine| {
                 let state = engine.globals().get::<_, Table>("State").unwrap();
