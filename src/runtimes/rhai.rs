@@ -116,6 +116,11 @@ impl Runtime for RhaiRuntime {
         scope.push(ENTITY_VAR_NAME, entity);
         let options = CallFnOptions::new().eval_ast(false);
         let args = args.parse(&self.engine);
+        let args = args
+            .parse(&self.engine)
+            .into_iter()
+            .map(|a| a.0)
+            .collect::<Vec<Dynamic>>();
         let result = self
             .engine
             .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
@@ -213,12 +218,6 @@ impl<T: Clone + Send + Sync + 'static> FuncArgs<'_, RhaiValue, RhaiRuntime> for 
         self.into_iter()
             .map(|v| RhaiValue(Dynamic::from(v)))
             .collect()
-    }
-}
-
-impl From<()> for RhaiValue {
-    fn from(value: ()) -> Self {
-        RhaiValue(Dynamic::from(value))
     }
 }
 

@@ -2,9 +2,6 @@ use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::rhai::prelude::*;
 
-#[derive(Component)]
-struct Comp;
-
 fn main() {
     App::new()
         // This is just needed for headless console app, not needed for a regular bevy game

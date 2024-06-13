@@ -151,6 +151,57 @@ macro_rules! scripting_tests {
         }
 
         #[test]
+        fn test_script_function_gets_called_from_rust_with_single_param() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|_| {});
+
+            let entity_id = run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/script_function_gets_called_from_rust_with_single_param.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    scripting_runtime
+                        .call_fn("test_func", &mut script_data, entity, vec![1])
+                        .unwrap();
+                },
+            );
+
+            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "a_value", 1i64);
+        }
+
+        #[test]
+        fn test_script_function_gets_called_from_rust_with_multiple_params() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|_| {});
+
+            let entity_id = run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/script_function_gets_called_from_rust_with_multiple_params.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    scripting_runtime
+                        .call_fn("test_func", &mut script_data, entity, vec![1, 2])
+                        .unwrap();
+                },
+            );
+
+            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "a_value", 1i64);
+            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "b_value", 2i64);
+        }
+
+        #[test]
         fn test_script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 
