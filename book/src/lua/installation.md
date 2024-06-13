@@ -5,7 +5,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 bevy = "0.13"
-bevy_scriptum = { version = "0.5", features = ["luajit"] }
+bevy_scriptum = { version = "0.5", features = ["lua"] }
 ```
 
 If you need a different version of bevy you need to use a matching bevy_scriptum

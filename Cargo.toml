@@ -11,7 +11,7 @@ repository = "https://github.com/jarkonik/bevy_scriptum"
 keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
 
 [features]
-luajit = ["mlua/luajit"]
+lua = ["mlua/luajit"]
 rhai = ["dep:rhai"]
 
 [dependencies]

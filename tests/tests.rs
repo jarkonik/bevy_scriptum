@@ -225,7 +225,7 @@ mod rhai_tests {
     scripting_tests!(RhaiRuntime, "rhai", "rhai");
 }
 
-#[cfg(feature = "luajit")]
+#[cfg(feature = "lua")]
 mod lua_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::lua::prelude::*;

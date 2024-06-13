@@ -25,7 +25,7 @@ jobs:
     - name: Install cargo-examples
       run: cargo install cargo-examples
     - name: Run all examples
-      run: cargo examples --features=luajit,rhai
+      run: cargo examples --features=lua,rhai
     - name: Install latest mdbook
       run: |
         tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
