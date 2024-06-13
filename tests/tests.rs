@@ -203,6 +203,29 @@ macro_rules! scripting_tests {
         }
 
         #[test]
+        fn test_call_script_function_that_casues_runtime_error() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|_| {});
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/call_script_function_that_causes_runtime_error.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    scripting_runtime
+                        .call_fn("test_func", &mut script_data, entity, vec![1, 2])
+                        .unwrap();
+                },
+            );
+        }
+
+        #[test]
         fn test_script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 
