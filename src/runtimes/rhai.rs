@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, fmt::Debug};
 
 use bevy::{
     asset::Asset,
@@ -47,7 +47,7 @@ pub struct RhaiScriptData {
     pub(crate) ast: rhai::AST,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct RhaiValue(rhai::Dynamic);
 
 impl Runtime for RhaiRuntime {
@@ -115,7 +115,6 @@ impl Runtime for RhaiRuntime {
         let scope = &mut script_data.scope;
         scope.push(ENTITY_VAR_NAME, entity);
         let options = CallFnOptions::new().eval_ast(false);
-        let args = args.parse(&self.engine);
         let args = args
             .parse(&self.engine)
             .into_iter()
