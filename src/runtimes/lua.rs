@@ -101,8 +101,11 @@ impl Default for LuaRuntime {
                 .expect("Failed to register BevyVec3 userdata type");
             let vec3_constructor = engine
                 .create_function(|_, (x, y, z)| Ok(BevyVec3(Vec3::new(x, y, z))))
-                .unwrap();
-            engine.globals().set("Vec3", vec3_constructor).unwrap();
+                .expect("Failed to create Vec3 constructor");
+            engine
+                .globals()
+                .set("Vec3", vec3_constructor)
+                .expect("Failed to set Vec3 global");
         }
 
         Self { engine }
@@ -143,20 +146,22 @@ impl Runtime for LuaRuntime {
 
     type RawEngine = Lua;
 
-    // TODO: Should be renamed or even split as it also evals
-    // should also be private to crate
-    fn create_script_data(
+    fn eval(
         &self,
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         self.with_engine(|engine| {
-            // TODO: We somehow need to set it per script not here in globals
             engine
                 .globals()
                 .set(ENTITY_VAR_NAME, BevyEntity(entity))
                 .expect("Error setting entity global variable");
-            engine.load(&script.0).exec()
+            let result = engine.load(&script.0).exec();
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, mlua::Value::Nil)
+                .expect("Error clearing entity global variable");
+            result
         })
         .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
         Ok(LuaScriptData)
@@ -196,10 +201,14 @@ impl Runtime for LuaRuntime {
         &self,
         name: &str,
         _script_data: &mut Self::ScriptData,
-        _entity: bevy::prelude::Entity,
+        entity: bevy::prelude::Entity,
         args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         self.with_engine(|engine| {
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, BevyEntity(entity))
+                .expect("Error setting entity global variable");
             let func = engine
                 .globals()
                 .get::<_, Function>(name)
@@ -211,6 +220,10 @@ impl Runtime for LuaRuntime {
             let result = func
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
                 .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, mlua::Value::Nil)
+                .expect("Error clearing entity global variable");
             Ok(LuaValue::new(engine, result))
         })
     }
@@ -245,6 +258,7 @@ impl Runtime for LuaRuntime {
         f(&engine)
     }
 }
+
 impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
         let mut iter = value.into_lua_multi(engine).unwrap().into_iter();

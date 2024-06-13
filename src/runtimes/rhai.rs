@@ -59,7 +59,7 @@ impl Runtime for RhaiRuntime {
     type Value = RhaiValue;
     type RawEngine = rhai::Engine;
 
-    fn create_script_data(
+    fn eval(
         &self,
         script: &Self::ScriptAsset,
         entity: Entity,

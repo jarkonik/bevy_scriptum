@@ -23,7 +23,7 @@ pub struct Promise<C: Send, V: Send> {
 
 impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
-    fn resolve<R: Runtime>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
+    fn resolve<R>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
     where
         R: Runtime<Value = V, CallContext = C>,
     {
@@ -34,7 +34,7 @@ impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
             callback
                 .following_promise
                 .lock()
-                .unwrap()
+                .expect("Failed to lock promise mutex")
                 .resolve(runtime, next_val)?;
         }
         Ok(())
@@ -43,7 +43,7 @@ impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
 
 impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
-    pub(crate) fn resolve<R: Runtime>(
+    pub(crate) fn resolve<R>(
         &mut self,
         runtime: &mut R,
         val: R::Value,
@@ -59,7 +59,10 @@ impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
 
     /// Register a callback that will be called when the [Promise] is resolved.
     pub(crate) fn then(&mut self, callback: V) -> Self {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self
+            .inner
+            .lock()
+            .expect("Failed to lock inner promise mutex");
         let following_inner = Arc::new(Mutex::new(PromiseInner {
             callbacks: vec![],
             context: inner.context.clone(),

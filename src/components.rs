@@ -7,7 +7,7 @@ pub struct Script<A: Asset> {
 }
 
 impl<A: Asset> Script<A> {
-    /// Create a new script component from a handle to a [RhaiScript] obtained using [AssetServer].
+    /// Create a new script component from a handle to a [Script] obtained using [AssetServer].
     pub fn new(script: Handle<A>) -> Self {
         Self { script }
     }

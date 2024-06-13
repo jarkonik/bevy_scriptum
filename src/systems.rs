@@ -29,7 +29,7 @@ pub(crate) fn reload_scripts<R: Runtime>(
     }
 }
 
-/// Processes new scripts. Evaluates them and stores the [rhai::Scope] and cached [rhai::AST] in [ScriptData].
+/// Processes new scripts. Evaluates them and stores the script data in the entity.
 #[allow(clippy::type_complexity)]
 pub(crate) fn process_new_scripts<R: Runtime>(
     mut commands: Commands,
@@ -44,7 +44,7 @@ pub(crate) fn process_new_scripts<R: Runtime>(
     for (entity, script_component) in &mut added_scripted_entities {
         tracing::trace!("evaulating a new script");
         if let Some(script) = scripts.get(&script_component.script) {
-            match scripting_runtime.create_script_data(script, entity) {
+            match scripting_runtime.eval(script, entity) {
                 Ok(script_data) => {
                     commands.entity(entity).insert(script_data);
                 }
@@ -94,7 +94,10 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                         })),
                     };
 
-                    let mut calls = callback.calls.lock().unwrap();
+                    let mut calls = callback
+                        .calls
+                        .lock()
+                        .expect("Failed to lock callback calls mutex");
 
                     calls.push(FunctionCallEvent {
                         promise: promise.clone(),
@@ -115,7 +118,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
     callbacks_resource
         .callbacks
         .lock()
-        .unwrap()
+        .expect("Failed to lock callbacks mutex")
         .append(&mut callbacks.clone());
 
     Ok(())
@@ -127,18 +130,25 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
         .get_resource::<Callbacks<R>>()
         .ok_or(ScriptingError::NoSettingsResource)?;
 
-    let callbacks = callbacks_resource.callbacks.lock().unwrap().clone();
+    let callbacks = callbacks_resource
+        .callbacks
+        .lock()
+        .expect("Failed to lock callbacks mutex")
+        .clone();
 
     for callback in callbacks.into_iter() {
         let calls = callback
             .calls
             .lock()
-            .unwrap()
+            .expect("Failed to lock callback calls mutex")
             .drain(..)
             .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value>>>();
         for mut call in calls {
             tracing::trace!("process_calls: calling '{}'", callback.name);
-            let mut system = callback.system.lock().unwrap();
+            let mut system = callback
+                .system
+                .lock()
+                .expect("Failed to lock callback system mutex");
             let val = system.call(&call, world);
             let mut runtime = world
                 .get_resource_mut::<R>()

@@ -10,9 +10,11 @@ static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 fn build_test_app() -> App {
     let mut app = App::new();
 
-    TRACING_SUBSCRIBER.get_or_init(|| {
-        tracing_subscriber::fmt().init();
-    });
+    if std::env::var("RUST_TEST_LOG").is_ok() {
+        TRACING_SUBSCRIBER.get_or_init(|| {
+            tracing_subscriber::fmt().init();
+        });
+    }
 
     app.add_plugins((AssetPlugin::default(), TaskPoolPlugin::default()));
     app
@@ -265,6 +267,62 @@ macro_rules! scripting_tests {
             );
 
             <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "times_called", 1i64);
+        }
+
+        #[test]
+        fn test_promise() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(String::from("rust_func"), || 123);
+            });
+
+            let entity_id = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/return_via_promise.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "x", 123i32);
+        }
+
+        #[test]
+        fn test_promise_runtime_error_does_not_panic() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(String::from("rust_func"), || 123);
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/promise_runtime_error.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+        }
+
+        #[test]
+        fn test_side_effects() {
+            let mut app = build_test_app();
+
+            #[derive(Component)]
+            struct MyTag;
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(String::from("spawn_entity"), |mut commands: Commands| {
+                    commands.spawn(MyTag);
+                });
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/side_effects.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            app.world.run_system_once(|tagged: Query<&MyTag>| {
+                tagged.single();
+            });
         }
 
         #[test]

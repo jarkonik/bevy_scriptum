@@ -1,5 +1,5 @@
 //! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-//! Currently, only [Rhai](https://rhai.rs/) is supported, but more languages may be added in the future.
+//! Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 //!
 //! It's main advantages include:
 //! - low-boilerplate
@@ -14,18 +14,18 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!     .add_scripting::<LuaRuntime>(|runtime| {
 //!          runtime.add_function(String::from("hello_bevy"), || {
 //!            println!("hello bevy, called from script");
 //!          });
 //!     });
 //! ```
 //! And you can call them in your scripts like this:
-//! ```rhai
+//! ```lua
 //! hello_bevy();
 //! ```
 //!
@@ -34,14 +34,14 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! #[derive(Component)]
 //! struct Player;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!     .add_scripting::<LuaRuntime>(|runtime| {
 //!         runtime.add_function(
 //!             String::from("print_player_names"),
 //!             |players: Query<&Name, With<Player>>| {
@@ -57,22 +57,21 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
-//! use rhai::ImmutableString;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!     .add_scripting::<LuaRuntime>(|runtime| {
 //!         runtime.add_function(
 //!             String::from("fun_with_string_param"),
-//!             |In((x,)): In<(ImmutableString,)>| {
+//!             |In((x,)): In<(String,)>| {
 //!                 println!("called with string: '{}'", x);
 //!             },
 //!         );
 //!     });
 //! ```
 //! which you can then call in your script like this:
-//! ```rhai
+//! ```lua
 //! fun_with_string_param("Hello world!");
 //! ```
 //!
@@ -92,7 +91,7 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
@@ -102,27 +101,26 @@
 //! You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 //!
 //! ```rust
-//! use rhai::ImmutableString;
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<RhaiRuntime>(|runtime| {
+//!     .add_scripting::<LuaRuntime>(|runtime| {
 //!        runtime.add_function(
 //!            String::from("my_print"),
-//!            |In((x,)): In<(ImmutableString,)>| {
+//!            |In((x,)): In<(String,)>| {
 //!                println!("my_print: '{}'", x);
 //!            },
 //!        );
 //!     });
 //! ```
 //!
-//! Then you can create a script file in `assets` directory called `script.rhai` that calls this function:
+//! Then you can create a script file in `assets` directory called `script.lua` that calls this function:
 //!
-//! ```rhai
-//! my_print("Hello world!");
+//! ```lua
+//! my_print("Hello world!")
 //! ```
 //!
 //! And spawn a `Script` component with a handle to a script source file`:
@@ -130,11 +128,11 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::Script;
-//! use bevy_scriptum::runtimes::rhai::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
-//!         commands.spawn(Script::<RhaiScript>::new(asset_server.load("script.rhai")));
+//!         commands.spawn(Script::<LuaScript>::new(asset_server.load("script.lua")));
 //!     });
 //! ```
 //!
@@ -160,10 +158,10 @@
 //!
 //! Every function called from script returns a promise that you can call `.then` with a callback function on. This callback function will be called when the promise is resolved, and will be passed the return value of the function called from script. For example:
 //!
-//! ```rhai
-//! get_player_name().then(|name| {
-//!     print(name);
-//! });
+//! ```lua
+//! get_player_name():and_then(function(name)
+//!     print(name)
+//! end);
 //! ```
 //!
 //! ## Access entity from script
@@ -172,8 +170,8 @@
 //! It exposes `.index()` method that returns bevy entity index.
 //! It is useful for accessing entity's components from scripts.
 //! It can be used in the following way:
-//! ```rhai
-//! print("Current entity index: " + entity.index());
+//! ```lua
+//! print("Current entity index: " .. entity.index())
 //! ```
 //!
 //! ## Contributing
@@ -242,7 +240,7 @@ pub trait Runtime: Resource + Default {
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
-    fn create_script_data(
+    fn eval(
         &self,
         script: &Self::ScriptAsset,
         entity: Entity,
