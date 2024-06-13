@@ -11,8 +11,6 @@ use mlua::{
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
-// TODO: add example and implementation for builting types vec3 and others?
-
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
