@@ -6,7 +6,7 @@
 //!
 //! API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
 //!
-//! bevy_scriptum main advantages include:
+//! bevy_scriptum's main advantages include:
 //! - low-boilerplate
 //! - easy to use
 //! - asynchronicity with a promise-based API
