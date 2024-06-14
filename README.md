@@ -6,6 +6,8 @@ Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, bu
 Everything you need to know to get started with using this library is contained in the
 [bevy_scriptum book](https://link-to-book.com)
 
+API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+
 bevy_scriptum main advantages include:
 - low-boilerplate
 - easy to use
