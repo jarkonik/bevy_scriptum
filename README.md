@@ -196,6 +196,8 @@ It is useful for accessing entity's components from scripts.
 It can be used in the following way:
 ```lua
 print("Current entity index: " .. entity:index())
+
+`entity` variable is currently not available within promise callbacks.
 ```
 
 ### Contributing
