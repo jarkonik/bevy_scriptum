@@ -165,13 +165,26 @@
 //!
 //! ## Promises - getting return values from scripts
 //!
-//! Every function called from script returns a promise that you can call `.then` with a callback function on. This callback function will be called when the promise is resolved, and will be passed the return value of the function called from script. For example:
+//! Every function called from script returns a promise that you can call `:and_then` with a callback function on. This callback function will be called when the promise is resolved, and will be passed the return value of the function called from script. For example:
 //!
 //! ```lua
 //! get_player_name():and_then(function(name)
 //!     print(name)
 //! end)
 //! ```
+//! which will print out `John` when used with following exposed function:
+//!
+//! ```
+//! use bevy::prelude::*;
+//! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
+//!
+//! App::new()
+//!    .add_plugins(DefaultPlugins)
+//!    .add_scripting::<LuaRuntime>(|runtime| {
+//!            runtime.add_function(String::from("get_player_name"), || String::from("John"));
+//!    });
+//! ````
 //!
 //! ## Access entity from script
 //!
