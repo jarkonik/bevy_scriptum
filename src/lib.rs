@@ -31,7 +31,7 @@
 //! ```
 //! And you can call them in your scripts like this:
 //! ```lua
-//! hello_bevy();
+//! hello_bevy()
 //! ```
 //!
 //! Every callback function that you expose to the scripting language is also a Bevy system, so you can easily query and mutate ECS components and resources just like you would in a regular Bevy system:
