@@ -149,7 +149,7 @@ You should then see `my_print: 'Hello world!'` printed in your console.
 
 ### Provided examples
 
-You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>`.  For example:
+You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>_<language_name>`.  For example:
 
 ```bash
 cargo run --example hello_world_lua
