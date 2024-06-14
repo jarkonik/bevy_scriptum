@@ -122,7 +122,7 @@ Then you can create a script file in `assets` directory called `script.lua` that
 my_print("Hello world!")
 ```
 
-And spawn a `Script` component with a handle to a script source file:
+And spawn an entity with attached `Script` component with a handle to a script source file:
 
 ```rust
 use bevy::prelude::*;
