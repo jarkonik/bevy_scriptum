@@ -116,7 +116,7 @@
 //! my_print("Hello world!")
 //! ```
 //!
-//! And spawn a `Script` component with a handle to a script source file`:
+//! And spawn a `Script` component with a handle to a script source file:
 //!
 //! ```rust
 //! use bevy::prelude::*;
