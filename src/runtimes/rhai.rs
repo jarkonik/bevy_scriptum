@@ -168,7 +168,7 @@ impl Default for RhaiRuntime {
 
         engine
             .register_type_with_name::<Entity>("Entity")
-            .register_fn("index", |entity: &mut Entity| entity.index());
+            .register_get("index", |entity: &mut Entity| entity.index());
         #[allow(deprecated)]
         engine
             .register_type_with_name::<Promise<rhai::NativeCallContextStore, RhaiValue>>("Promise")

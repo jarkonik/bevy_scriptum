@@ -80,7 +80,7 @@ impl Default for LuaRuntime {
             let engine = engine.lock().expect("Failed to lock engine");
             engine
                 .register_userdata_type::<BevyEntity>(|typ| {
-                    typ.add_method("index", |_, entity, ()| Ok(entity.0.index()));
+                    typ.add_field_method_get("index", |_, entity| Ok(entity.0.index()));
                 })
                 .expect("Failed to register BevyEntity userdata type");
 
