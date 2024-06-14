@@ -4,8 +4,7 @@
 //! Everything you need to know to get started with using this library is contained in the
 //! [bevy_scriptum book](https://link-to-book.com)
 //!
-//!
-//! It's main advantages include:
+//! bevy_scriptum main advantages include:
 //! - low-boilerplate
 //! - easy to use
 //! - asynchronicity with a promise-based API
