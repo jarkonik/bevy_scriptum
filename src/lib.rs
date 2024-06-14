@@ -1,6 +1,10 @@
 //! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
 //! Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 //!
+//! Everything you need to know to get started with using this library is contained in the
+//! [bevy_scriptum book](https://link-to-book.com)
+//!
+//!
 //! It's main advantages include:
 //! - low-boilerplate
 //! - easy to use
