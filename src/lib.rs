@@ -77,7 +77,7 @@
 //! ```
 //! which you can then call in your script like this:
 //! ```lua
-//! fun_with_string_param("Hello world!");
+//! fun_with_string_param("Hello world!")
 //! ```
 //!
 //! ## Usage
