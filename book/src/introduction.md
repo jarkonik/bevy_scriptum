@@ -179,11 +179,13 @@ use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
 
-App::new()
-   .add_plugins(DefaultPlugins)
-   .add_scripting::<LuaRuntime>(|runtime| {
-           runtime.add_function(String::from("get_player_name"), || String::from("John"));
-   });
+fn main() {
+    App::new()
+       .add_plugins(DefaultPlugins)
+       .add_scripting::<LuaRuntime>(|runtime| {
+               runtime.add_function(String::from("get_player_name"), || String::from("John"));
+       });
+}
 ````
 
 ## Access entity from script
