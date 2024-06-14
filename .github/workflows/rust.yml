@@ -33,5 +33,7 @@ jobs:
         mkdir mdbook
         curl -sSL $url | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
+    - name: Install mdbook-keeper
+      run: cargo install mdbook-keeper
     - name: Run book tests
       run: CARGO_MANIFEST_DIR=$(pwd) mdbook build book
