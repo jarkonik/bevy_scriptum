@@ -93,18 +93,6 @@ bevy_scriptum = { version = "0.5", features = ["lua"] }
 
 or execute `cargo add bevy_scriptum --features lua` from your project directory.
 
-Add the following to your `main.rs`:
-
-```rust
-use bevy::prelude::*;
-use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
-
-App::new()
-    .add_plugins(DefaultPlugins)
-    .run();
-```
-
 You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 
 ```rust
