@@ -88,10 +88,10 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = "0.2"
+bevy_scriptum = { version = "0.5", features = ["lua"] }
 ```
 
-or execute `cargo add bevy_scriptum` from your project directory.
+or execute `cargo add bevy_scriptum --features lua` from your project directory.
 
 Add the following to your `main.rs`:
 
