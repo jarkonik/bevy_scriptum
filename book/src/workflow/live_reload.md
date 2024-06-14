@@ -53,6 +53,7 @@ init()
 The function calls can be implemented on Rust side the following way:
 
 ```rust
+use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
 use bevy_scriptum::runtimes::lua::BevyVec3;
@@ -91,11 +92,16 @@ fn teardown(
         }
     }
 }
+
+fn main() {}
 ```
 
 And to tie this all together we do the following:
 
 ```rust
+use bevy::prelude::*;
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
 
 fn main() {
     App::new()
@@ -103,20 +109,31 @@ fn main() {
         .add_scripting::<LuaRuntime>(|builder| {
             builder
                 .add_function(String::from("spawn_player"), spawn_player)
-                .add_function(String::from("despawn"), despawn)
+                .add_function(String::from("despawn"), despawn);
         })
-        .add_systems(Startup, startup)
-        .add_systems(Update, (update, input, teardown))
+        .add_systems(Startup, init)
+        .add_systems(Update, (update, teardown))
         .run();
 }
+
+fn init() {} // Implemented elsewhere
+fn update() {} // Implemented elsewhere
+fn despawn() {} // Implemented elsewhere
+fn teardown() {} // Implemented elsewhere
+fn spawn_player() {} // Implemented elsewhere
 ```
 
 `despawn` can be implemented as:
 
 ```rust
+use bevy::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
+
 fn despawn(In((entity,)): In<(BevyEntity,)>, mut commands: Commands) {
     commands.entity(entity.0).despawn();
 }
+
+fn main() {} // Implemented elsewhere
 ```
 
 Implementation of `spawn_player` has been left out as an exercise for the reader.
