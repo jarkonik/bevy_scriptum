@@ -39,13 +39,7 @@ fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
 }
 
 fn call_rhai_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>, // TODO: this is ugly, more
-    // intuitively users would
-    // probably prefer to have what
-    // theyve added here, could be
-    // generic but Script not some
-    // RhaiScriptData they've never
-    // added themselves
+    mut scripted_entities: Query<(Entity, &mut RhaiScriptData)>,
     scripting_runtime: ResMut<RhaiRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {

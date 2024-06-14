@@ -27,7 +27,8 @@
 //!          runtime.add_function(String::from("hello_bevy"), || {
 //!            println!("hello bevy, called from script");
 //!          });
-//!     });
+//!     })
+//!     .run();
 //! ```
 //! And you can call them in your scripts like this:
 //! ```lua
@@ -55,7 +56,8 @@
 //!                 }
 //!             },
 //!         );
-//!     });
+//!     })
+//!     .run();
 //! ```
 //!
 //! You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
@@ -73,7 +75,8 @@
 //!                 println!("called with string: '{}'", x);
 //!             },
 //!         );
-//!     });
+//!     })
+//!     .run();
 //! ```
 //! which you can then call in your script like this:
 //! ```lua
@@ -107,7 +110,8 @@
 //!                println!("my_print: '{}'", x);
 //!            },
 //!        );
-//!     });
+//!     })
+//!     .run();
 //! ```
 //!
 //! Then you can create a script file in `assets` directory called `script.lua` that calls this function:
@@ -120,13 +124,23 @@
 //!
 //! ```rust
 //! use bevy::prelude::*;
-//! use bevy_scriptum::Script;
+//! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!        runtime.add_function(
+//!            String::from("my_print"),
+//!            |In((x,)): In<(String,)>| {
+//!                println!("my_print: '{}'", x);
+//!            },
+//!        );
+//!     })
 //!     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
 //!         commands.spawn(Script::<LuaScript>::new(asset_server.load("script.lua")));
-//!     });
+//!     })
+//!     .run();
 //! ```
 //!
 //! ## Provided examples
