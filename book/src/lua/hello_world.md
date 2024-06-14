@@ -10,23 +10,57 @@ For convenience there is a main "prelude" module provided called
 `bevy_scriptum::prelude` and a prelude for each runtime you have enabled as
 a create feature.
 
-All you need to do is register callbacks on your Bevy app like this:
+You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
+
 ```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::rhai::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<RhaiRuntime>(|runtime| {
-             runtime.add_function(String::from("hello_bevy"), || {
-               println!("hello bevy, called from script");
-             });
-        });
+        .add_scripting::<LuaRuntime>(|runtime| {
+           runtime.add_function(
+               String::from("my_print"),
+               |In((x,)): In<(String,)>| {
+                   println!("my_print: '{}'", x);
+               },
+           );
+        })
+        .run();
 }
 ```
-And you can call them in your scripts like this:
-```rhai
-hello_bevy();
+
+Then you can create a script file in `assets` directory called `script.lua` that calls this function:
+
+```lua
+my_print("Hello world!")
 ```
+
+And spawn an entity with attached `Script` component with a handle to a script source file:
+
+```rust
+use bevy::prelude::*;
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_scripting::<LuaRuntime>(|runtime| {
+           runtime.add_function(
+               String::from("my_print"),
+               |In((x,)): In<(String,)>| {
+                   println!("my_print: '{}'", x);
+               },
+           );
+        })
+        .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
+            commands.spawn(Script::<LuaScript>::new(asset_server.load("script.lua")));
+        })
+        .run();
+}
+```
+
+You should then see `my_print: 'Hello world!'` printed in your console.
