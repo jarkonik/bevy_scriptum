@@ -36,4 +36,6 @@ jobs:
     - name: Install mdbook-keeper
       run: cargo install mdbook-keeper
     - name: Run book tests
-      run: CARGO_MANIFEST_DIR=$(pwd) mdbook build book
+      run: |
+          cd book
+          CARGO_MANIFEST_DIR=$(pwd)/.. mdbook build
