@@ -16,13 +16,15 @@ use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::rhai::prelude::*;
 
-App::new()
-    .add_plugins(DefaultPlugins)
-    .add_scripting::<RhaiRuntime>(|runtime| {
-         runtime.add_function(String::from("hello_bevy"), || {
-           println!("hello bevy, called from script");
-         });
-    });
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_scripting::<RhaiRuntime>(|runtime| {
+             runtime.add_function(String::from("hello_bevy"), || {
+               println!("hello bevy, called from script");
+             });
+        });
+}
 ```
 And you can call them in your scripts like this:
 ```rhai
