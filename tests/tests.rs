@@ -52,6 +52,7 @@ trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
     fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32);
+    fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
 macro_rules! scripting_tests {
@@ -176,6 +177,42 @@ macro_rules! scripting_tests {
             );
 
             <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+        }
+
+        #[test]
+        fn test_script_function_gets_called_from_rust_with_heterogenous_params() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|_| {});
+
+            let entity_id = run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/script_function_gets_called_from_rust_with_multiple_params.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    scripting_runtime
+                        .call_fn(
+                            "test_func",
+                            &mut script_data,
+                            entity,
+                            (1, String::from("abc")),
+                        )
+                        .unwrap();
+                },
+            );
+
+            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_string(
+                &app.world,
+                entity_id,
+                "b_value",
+                &String::from("abc"),
+            );
         }
 
         #[test]
@@ -382,6 +419,12 @@ mod rhai_tests {
             let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
             assert_eq!(state[key].clone_cast::<i32>(), value);
         }
+
+        fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str) {
+            let script_data = world.get::<Self::ScriptData>(entity_id).unwrap();
+            let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
+            assert_eq!(state[key].clone_cast::<String>(), value);
+        }
     }
 
     scripting_tests!(RhaiRuntime, "rhai", "rhai");
@@ -408,6 +451,19 @@ mod lua_tests {
             runtime.with_engine(|engine| {
                 let state = engine.globals().get::<_, Table>("State").unwrap();
                 assert_eq!(state.get::<_, i32>(key).unwrap(), value);
+            });
+        }
+
+        fn assert_state_key_value_string(
+            world: &World,
+            _entity_id: Entity,
+            key: &str,
+            value: &str,
+        ) {
+            let runtime = world.get_resource::<LuaRuntime>().unwrap();
+            runtime.with_engine(|engine| {
+                let state = engine.globals().get::<_, Table>("State").unwrap();
+                assert_eq!(state.get::<_, String>(key).unwrap(), value);
             });
         }
     }
