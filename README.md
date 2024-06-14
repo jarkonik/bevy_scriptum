@@ -195,7 +195,7 @@ It exposes `.index()` method that returns bevy entity index.
 It is useful for accessing entity's components from scripts.
 It can be used in the following way:
 ```lua
-print("Current entity index: " .. entity.index())
+print("Current entity index: " .. entity:index())
 ```
 
 ### Contributing
