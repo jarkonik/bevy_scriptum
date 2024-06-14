@@ -145,12 +145,14 @@ App::new()
     .run();
 ```
 
+You should then see `my_print: 'Hello world!'` printed in your console.
+
 ### Provided examples
 
 You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>`.  For example:
 
 ```bash
-cargo run --example hello_world
+cargo run --example hello_world_lua
 ```
 The examples live in `examples` directory and their corresponding scripts live in `assets/examples` directory within the repository.
 
