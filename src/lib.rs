@@ -164,7 +164,7 @@
 //! ```lua
 //! get_player_name():and_then(function(name)
 //!     print(name)
-//! end);
+//! end)
 //! ```
 //!
 //! ## Access entity from script
