@@ -35,7 +35,7 @@ fn main() {
 In script:
 
 ```lua
-print_player_names();
+print_player_names()
 ```
 
 You can use functions that interact with Bevy entities and resources and
