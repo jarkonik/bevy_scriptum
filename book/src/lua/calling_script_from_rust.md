@@ -34,7 +34,7 @@ fn call_lua_on_update_from_rust(
 fn main() {}
 ```
 
-We can also pass some arguments by providing a tuple as the last
+We can also pass some arguments by providing a tuple or `Vec` as the last
 `call_fn` argument.
 
 ```rust
