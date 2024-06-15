@@ -38,7 +38,7 @@ pub struct LuaRuntime {
     engine: LuaEngine,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct BevyEntity(pub Entity);
 
 impl UserData for BevyEntity {}
@@ -55,7 +55,7 @@ impl FromLua<'_> for BevyEntity {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct BevyVec3(pub Vec3);
 
 impl UserData for BevyVec3 {}
@@ -290,7 +290,7 @@ impl<'a, T: IntoLua<'a>> FuncArgs<'a, LuaValue, LuaRuntime> for Vec<T> {
 impl UserData for Promise<(), LuaValue> {}
 
 pub mod prelude {
-    pub use super::{BevyEntity, LuaRuntime, LuaScript, LuaScriptData};
+    pub use super::{BevyEntity, BevyVec3, LuaRuntime, LuaScript, LuaScriptData};
 }
 
 macro_rules! impl_tuple {
