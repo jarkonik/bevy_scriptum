@@ -12,7 +12,6 @@ Then we will be able to call `call_fn` on it, providing the name
 of the function to call, `LuaScriptData` that has been automatically
 attached to entity after an entity with script attached has been spawned
 and its script evaluated, the entity and optionally some arguments.
-Arguments can be omitted by passing unit type intance to `call_fn` (`()`).
 
 ```rust
 use bevy::prelude::*;
