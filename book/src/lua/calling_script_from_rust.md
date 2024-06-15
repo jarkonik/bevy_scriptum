@@ -54,3 +54,6 @@ fn call_lua_on_update_from_rust(
 
 fn main() {}
 ```
+
+Any type that implements `IntoLua` can be passed as an argument withing the
+tuple in `call_fn`.
