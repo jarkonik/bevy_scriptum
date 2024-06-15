@@ -55,5 +55,13 @@ fn call_lua_on_update_from_rust(
 fn main() {}
 ```
 
+They will be passed to `on_update` Lua function
+```lua
+function on_update(a, b)
+    print(a) -- 123
+    print(b) -- hello
+end
+```
+
 Any type that implements `IntoLua` can be passed as an argument withing the
 tuple in `call_fn`.
