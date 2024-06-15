@@ -47,7 +47,7 @@ fn call_lua_on_update_from_rust(
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
         scripting_runtime
-            .call_fn("on_update", &mut script_data, entity, (1, String::from("hello")))
+            .call_fn("on_update", &mut script_data, entity, (123, String::from("hello")))
             .unwrap();
     }
 }
