@@ -67,3 +67,9 @@ fn main() {
         .run();
 }
 ```
+
+And it could be called in script like:
+
+```lua
+hurt_player(5)
+```
