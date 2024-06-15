@@ -207,6 +207,12 @@ impl FuncArgs<'_, RhaiValue, RhaiRuntime> for () {
     }
 }
 
+impl<A, B> FuncArgs<'_, RhaiValue, RhaiRuntime> for (A, B) {
+    fn parse(self, _engnie: &rhai::Engine) -> Vec<RhaiValue> {
+        Vec::new()
+    }
+}
+
 impl<T: Clone + Send + Sync + 'static> FuncArgs<'_, RhaiValue, RhaiRuntime> for Vec<T> {
     fn parse(self, _engine: &rhai::Engine) -> Vec<RhaiValue> {
         self.into_iter()

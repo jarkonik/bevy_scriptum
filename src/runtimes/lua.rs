@@ -281,6 +281,12 @@ impl FuncArgs<'_, LuaValue, LuaRuntime> for () {
     }
 }
 
+impl<A, B> FuncArgs<'_, LuaValue, LuaRuntime> for (A, B) {
+    fn parse(self, _engine: &Lua) -> Vec<LuaValue> {
+        Vec::new()
+    }
+}
+
 impl<'a, T: IntoLua<'a>> FuncArgs<'a, LuaValue, LuaRuntime> for Vec<T> {
     fn parse(self, engine: &'a Lua) -> Vec<LuaValue> {
         self.into_iter().map(|x| LuaValue::new(engine, x)).collect()
