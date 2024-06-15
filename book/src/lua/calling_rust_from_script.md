@@ -84,3 +84,9 @@ fn main() {
         .run();
 }
 ```
+
+The above function can be called from Lua
+
+```lua
+func_with_params("abc", 123)
+```
