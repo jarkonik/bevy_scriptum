@@ -44,11 +44,11 @@ impl<R: Runtime> CallbackSystem<R> {
     }
 }
 
-pub trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
+pub(crate) trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
     fn into_runtime_value_with_engine(value: V, engine: &'a R::RawEngine) -> R::Value;
 }
 
-pub trait FromRuntimeValueWithEngine<'a, R: Runtime> {
+pub(crate) trait FromRuntimeValueWithEngine<'a, R: Runtime> {
     fn from_runtime_value_with_engine(value: R::Value, engine: &'a R::RawEngine) -> Self;
 }
 
