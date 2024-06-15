@@ -84,12 +84,4 @@ fn main() {
         })
         .run();
 }
-
-fn pass_to_rust(
-    In((entity, translation)): In<(BevyEntity, BevyVec3)>,
-    mut entities: Query<&mut Transform>,
-) {
-    let mut transform = entities.get_mut(entity.0).unwrap();
-    transform.translation = translation.0;
-}
 ```
