@@ -281,9 +281,9 @@ impl FuncArgs<'_, LuaValue, LuaRuntime> for () {
     }
 }
 
-impl<A, B> FuncArgs<'_, LuaValue, LuaRuntime> for (A, B) {
-    fn parse(self, _engine: &Lua) -> Vec<LuaValue> {
-        Vec::new()
+impl<'a, A: IntoLua<'a>, B: IntoLua<'a>> FuncArgs<'a, LuaValue, LuaRuntime> for (A, B) {
+    fn parse(self, engine: &'a Lua) -> Vec<LuaValue> {
+        vec![LuaValue::new(engine, self.0), LuaValue::new(engine, self.1)]
     }
 }
 

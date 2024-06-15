@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::fmt::Debug;
 
 use bevy::{
     asset::Asset,
@@ -6,7 +6,7 @@ use bevy::{
     math::Vec3,
     reflect::TypePath,
 };
-use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, Scope};
+use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, Scope, Variant};
 use serde::Deserialize;
 
 use crate::{
@@ -195,7 +195,7 @@ impl Default for RhaiRuntime {
     }
 }
 
-impl<'a, T: Any + Clone + Send + Sync> IntoRuntimeValueWithEngine<'a, T, RhaiRuntime> for T {
+impl<'a, T: Clone + Variant> IntoRuntimeValueWithEngine<'a, T, RhaiRuntime> for T {
     fn into_runtime_value_with_engine(value: T, _engine: &'a rhai::Engine) -> RhaiValue {
         RhaiValue(Dynamic::from(value))
     }
@@ -207,9 +207,12 @@ impl FuncArgs<'_, RhaiValue, RhaiRuntime> for () {
     }
 }
 
-impl<A, B> FuncArgs<'_, RhaiValue, RhaiRuntime> for (A, B) {
-    fn parse(self, _engnie: &rhai::Engine) -> Vec<RhaiValue> {
-        Vec::new()
+impl<A: Clone + Variant, B: Clone + Variant> FuncArgs<'_, RhaiValue, RhaiRuntime> for (A, B) {
+    fn parse(self, _engine: &rhai::Engine) -> Vec<RhaiValue> {
+        vec![
+            RhaiValue(Dynamic::from(self.0)),
+            RhaiValue(Dynamic::from(self.1)),
+        ]
     }
 }
 
