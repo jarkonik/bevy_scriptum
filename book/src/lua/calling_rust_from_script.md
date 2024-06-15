@@ -90,3 +90,32 @@ The above function can be called from Lua
 ```lua
 func_with_params("abc", 123)
 ```
+
+## Return value via promise
+
+Any registered rust function that returns a value will retrurn a promise when
+called within a script. By calling `:and_then` on the promise you can register
+a callback that will receive the value returned from Rust function.
+
+```rust
+use bevy::prelude::*;
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_scripting::<LuaRuntime>(|runtime| {
+             runtime.add_function(String::from("returns_value"), || {
+                123
+             });
+        })
+        .run();
+}
+```
+
+```lua
+returns_value():and_then(function (value)
+    print(value) -- 123
+end)
+```

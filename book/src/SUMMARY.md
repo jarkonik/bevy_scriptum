@@ -11,7 +11,6 @@
         - [Interacting with bevy in callbacks](./lua/interacting_with_bevy.md)
         - [Builtin types](./lua/builtin_types.md)
         - [Builtin variables](./lua/builtin_variables.md)
-        - [Return value promises(TBD)]()
     - [Rhai](./rhai/rhai.md)
         - [Installation](./rhai/installation.md)
         - [Hello World(TBD)]()
