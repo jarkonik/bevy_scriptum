@@ -4,7 +4,7 @@ bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you 
 Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 
 Everything you need to know to get started with using this library is contained in the
-[bevy_scriptum book](https://link-to-book.com)
+[bevy_scriptum book](https://jarkonik.github.io/bevy_scriptum/)
 
 API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
 
