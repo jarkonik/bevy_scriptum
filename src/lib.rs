@@ -252,6 +252,9 @@ pub enum ScriptingError {
     NoSettingsResource,
 }
 
+/// Trait that represents a scripting runtime/engine. In practice it is
+/// implemented for a scripint language interpreter and the implementor provides
+/// function implementations for calling and registering functions within the interpreter.
 pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
@@ -338,6 +341,10 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
         }
     }
 
+    /// Registers a function for calling from within a script.
+    /// Provided function needs to be a valid bevy system and its
+    /// arguments and return value need to be convertible to runtime
+    /// value types.
     pub fn add_function<In, Out, Marker>(
         self,
         name: String,
@@ -358,6 +365,8 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
 }
 
 impl BuildScriptingRuntime for App {
+    /// Adds a scripting runtime. Registers required bevy systems that take
+    /// care of processing and running the scripts.
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
         self.world
             .resource_mut::<MainScheduleOrder>()

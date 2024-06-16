@@ -18,6 +18,8 @@ impl<A: Asset + From<String>> Default for ScriptLoader<A> {
     }
 }
 
+/// Allows providing an allow-list for extensions of AssetLoader for a Script
+/// asset
 pub trait GetExtensions {
     fn extensions() -> &'static [&'static str];
 }
