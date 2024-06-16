@@ -260,8 +260,14 @@ pub trait Runtime: Resource + Default {
     type Value: Send + Clone;
     type RawEngine;
 
+    /// Provides mutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
+    /// Provides immutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn eval(
@@ -270,6 +276,9 @@ pub trait Runtime: Resource + Default {
         entity: Entity,
     ) -> Result<Self::ScriptData, ScriptingError>;
 
+    /// Registers a new function within the scripting engine. Provided callback
+    /// function will be called when the function with provided name gets called
+    /// in script.
     fn register_fn(
         &mut self,
         name: String,
@@ -283,6 +292,9 @@ pub trait Runtime: Resource + Default {
             + 'static,
     ) -> Result<(), ScriptingError>;
 
+    /// Calls a function by name defined within the runtime in the context of the
+    /// entity that haas been paassed. Can return a dynamically typed value
+    /// that got returned from the function within a script.
     fn call_fn(
         &self,
         name: &str,
@@ -291,6 +303,9 @@ pub trait Runtime: Resource + Default {
         args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, ScriptingError>;
 
+    /// Calls a function by value defined within the runtime in the context of the
+    /// entity that haas been paassed. Can return a dynamically typed value
+    /// that got returned from the function within a script.
     fn call_fn_from_value(
         &self,
         value: &Self::Value,
