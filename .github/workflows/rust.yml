@@ -17,12 +17,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Clippy
-      run: cargo clippy --verbose -- -D warnings
+      run: cargo clippy --all-features --verbose -- -D warnings
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --all-features --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --all-features --verbose
     - name: Install cargo-examples
       run: cargo install cargo-examples
     - name: Run all examples
-      run: cargo examples
+      run: cargo examples --features=lua,rhai

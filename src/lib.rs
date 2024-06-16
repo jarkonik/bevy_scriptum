@@ -1,7 +1,12 @@
 //! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-//! Currently, only [Rhai](https://rhai.rs/) is supported, but more languages may be added in the future.
+//! Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 //!
-//! It's main advantages include:
+//! Everything you need to know to get started with using this library is contained in the
+//! [bevy_scriptum book](https://link-to-book.com)
+//!
+//! API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+//!
+//! bevy_scriptum's main advantages include:
 //! - low-boilerplate
 //! - easy to use
 //! - asynchronicity with a promise-based API
@@ -14,17 +19,20 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(String::from("hello_bevy"), || {
-//!       println!("hello bevy, called from script");
-//!     });
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!          runtime.add_function(String::from("hello_bevy"), || {
+//!            println!("hello bevy, called from script");
+//!          });
+//!     })
+//!     .run();
 //! ```
 //! And you can call them in your scripts like this:
-//! ```rhai
-//! hello_bevy();
+//! ```lua
+//! hello_bevy()
 //! ```
 //!
 //! Every callback function that you expose to the scripting language is also a Bevy system, so you can easily query and mutate ECS components and resources just like you would in a regular Bevy system:
@@ -32,42 +40,47 @@
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! #[derive(Component)]
 //! struct Player;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("print_player_names"),
-//!         |players: Query<&Name, With<Player>>| {
-//!             for player in &players {
-//!                 println!("player name: {}", player);
-//!             }
-//!         },
-//!     );
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!         runtime.add_function(
+//!             String::from("print_player_names"),
+//!             |players: Query<&Name, With<Player>>| {
+//!                 for player in &players {
+//!                     println!("player name: {}", player);
+//!                 }
+//!             },
+//!         );
+//!     })
+//!     .run();
 //! ```
 //!
 //! You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
 //! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
-//! use rhai::ImmutableString;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("fun_with_string_param"),
-//!         |In((x,)): In<(ImmutableString,)>| {
-//!             println!("called with string: '{}'", x);
-//!         },
-//!     );
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!         runtime.add_function(
+//!             String::from("fun_with_string_param"),
+//!             |In((x,)): In<(String,)>| {
+//!                 println!("called with string: '{}'", x);
+//!             },
+//!         );
+//!     })
+//!     .run();
 //! ```
 //! which you can then call in your script like this:
-//! ```rhai
-//! fun_with_string_param("Hello world!");
+//! ```lua
+//! fun_with_string_param("Hello world!")
 //! ```
 //!
 //! ## Usage
@@ -76,65 +89,68 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = "0.2"
+//! bevy_scriptum = { version = "0.5", features = ["lua"] }
 //! ```
 //!
-//! or execute `cargo add bevy_scriptum` from your project directory.
-//!
-//! Add the following to your `main.rs`:
-//!
-//! ```rust
-//! use bevy::prelude::*;
-//! use bevy_scriptum::prelude::*;
-//!
-//! App::new()
-//!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .run();
-//! ```
+//! or execute `cargo add bevy_scriptum --features lua` from your project directory.
 //!
 //! You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 //!
 //! ```rust
-//! use rhai::ImmutableString;
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugins(ScriptingPlugin::default())
-//!     .add_script_function(
-//!         String::from("my_print"),
-//!         |In((x,)): In<(ImmutableString,)>| {
-//!             println!("my_print: '{}'", x);
-//!         },
-//!     );
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!        runtime.add_function(
+//!            String::from("my_print"),
+//!            |In((x,)): In<(String,)>| {
+//!                println!("my_print: '{}'", x);
+//!            },
+//!        );
+//!     })
+//!     .run();
 //! ```
 //!
-//! Then you can create a script file in `assets` directory called `script.rhai` that calls this function:
+//! Then you can create a script file in `assets` directory called `script.lua` that calls this function:
 //!
-//! ```rhai
-//! my_print("Hello world!");
+//! ```lua
+//! my_print("Hello world!")
 //! ```
 //!
-//! And spawn a `Script` component with a handle to a script source file`:
+//! And spawn an entity with attached `Script` component with a handle to a script source file:
 //!
 //! ```rust
 //! use bevy::prelude::*;
-//! use bevy_scriptum::Script;
+//! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_scripting::<LuaRuntime>(|runtime| {
+//!        runtime.add_function(
+//!            String::from("my_print"),
+//!            |In((x,)): In<(String,)>| {
+//!                println!("my_print: '{}'", x);
+//!            },
+//!        );
+//!     })
 //!     .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
-//!         commands.spawn(Script::new(asset_server.load("script.rhai")));
-//!     });
+//!         commands.spawn(Script::<LuaScript>::new(asset_server.load("script.lua")));
+//!     })
+//!     .run();
 //! ```
+//!
+//! You should then see `my_print: 'Hello world!'` printed in your console.
 //!
 //! ## Provided examples
 //!
-//! You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>`.  For example:
+//! You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>_<language_name>`.  For example:
 //!
 //! ```bash
-//! cargo run --example hello_world
+//! cargo run --example hello_world_lua
 //! ```
 //! The examples live in `examples` directory and their corresponding scripts live in `assets/examples` directory within the repository.
 //!
@@ -142,30 +158,45 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|----------------------|
-//! | 0.13         | 0.4                  |
+//! | 0.13         | 0.4-0.5              |
 //! | 0.12         | 0.3                  |
 //! | 0.11         | 0.2                  |
 //! | 0.10         | 0.1                  |
 //!
 //! ## Promises - getting return values from scripts
 //!
-//! Every function called from script returns a promise that you can call `.then` with a callback function on. This callback function will be called when the promise is resolved, and will be passed the return value of the function called from script. For example:
+//! Every function called from script returns a promise that you can call `:and_then` with a callback function on. This callback function will be called when the promise is resolved, and will be passed the return value of the function called from script. For example:
 //!
-//! ```rhai
-//! get_player_name().then(|name| {
-//!     print(name);
-//! });
+//! ```lua
+//! get_player_name():and_then(function(name)
+//!     print(name)
+//! end)
 //! ```
+//! which will print out `John` when used with following exposed function:
+//!
+//! ```
+//! use bevy::prelude::*;
+//! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
+//!
+//! App::new()
+//!    .add_plugins(DefaultPlugins)
+//!    .add_scripting::<LuaRuntime>(|runtime| {
+//!            runtime.add_function(String::from("get_player_name"), || String::from("John"));
+//!    });
+//! ````
 //!
 //! ## Access entity from script
 //!
 //! A variable called `entity` is automatically available to all scripts - it represents bevy entity that the `Script` component is attached to.
-//! It exposes `.index()` method that returns bevy entity index.
+//! It exposes `index` property that returns bevy entity index.
 //! It is useful for accessing entity's components from scripts.
 //! It can be used in the following way:
-//! ```rhai
-//! print("Current entity index: " + entity.index());
+//! ```lua
+//! print("Current entity index: " .. entity.index)
 //! ```
+//!
+//! `entity` variable is currently not available within promise callbacks.
 //!
 //! ## Contributing
 //!
@@ -182,19 +213,27 @@ mod components;
 mod promise;
 mod systems;
 
-use std::sync::{Arc, Mutex};
+pub mod runtimes;
 
-pub use crate::components::{Script, ScriptData};
-pub use assets::RhaiScript;
+pub use crate::components::Script;
+use assets::GetExtensions;
+use promise::Promise;
 
-use bevy::prelude::*;
-use callback::{Callback, RegisterCallbackFunction};
-use rhai::{CallFnOptions, Dynamic, Engine, EvalAltResult, FuncArgs, ParseError};
-use systems::{init_callbacks, init_engine, log_errors, process_calls};
+use std::{
+    any::TypeId,
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
+
+use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use callback::{Callback, IntoCallbackSystem};
+use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
 use self::{
-    assets::RhaiScriptLoader,
+    assets::ScriptLoader,
     systems::{process_new_scripts, reload_scripts},
 };
 
@@ -204,126 +243,178 @@ const ENTITY_VAR_NAME: &str = "entity";
 #[derive(Error, Debug)]
 pub enum ScriptingError {
     #[error("script runtime error: {0}")]
-    RuntimeError(#[from] Box<EvalAltResult>),
+    RuntimeError(Box<dyn std::error::Error>),
     #[error("script compilation error: {0}")]
-    CompileError(#[from] ParseError),
+    CompileError(Box<dyn std::error::Error>),
     #[error("no runtime resource present")]
     NoRuntimeResource,
     #[error("no settings resource present")]
     NoSettingsResource,
 }
 
-#[derive(Default)]
-pub struct ScriptingPlugin;
+/// Trait that represents a scripting runtime/engine. In practice it is
+/// implemented for a scripint language interpreter and the implementor provides
+/// function implementations for calling and registering functions within the interpreter.
+pub trait Runtime: Resource + Default {
+    type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
+    type ScriptAsset: Asset + From<String> + GetExtensions;
+    type ScriptData: Component;
+    type CallContext: Send + Clone;
+    type Value: Send + Clone;
+    type RawEngine;
 
-impl Plugin for ScriptingPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_asset_loader(RhaiScriptLoader)
-            .init_asset::<RhaiScript>()
-            .init_resource::<Callbacks>()
-            .insert_resource(ScriptingRuntime::default())
-            .add_systems(Startup, init_engine.pipe(log_errors))
-            .add_systems(
-                Update,
-                (
-                    reload_scripts,
-                    process_calls.pipe(log_errors).after(process_new_scripts),
-                    init_callbacks.pipe(log_errors),
-                    process_new_scripts.pipe(log_errors).after(init_callbacks),
-                ),
-            );
-    }
-}
+    /// Provides mutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
-#[derive(Resource, Default)]
-pub struct ScriptingRuntime {
-    engine: Engine,
-}
+    /// Provides immutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
-impl ScriptingRuntime {
-    /// Get a  mutable reference to the internal [rhai::Engine].
-    pub fn engine_mut(&mut self) -> &mut Engine {
-        &mut self.engine
-    }
-
-    /// Call a function that is available in the scope of the script.
-    pub fn call_fn(
-        &mut self,
-        function_name: &str,
-        script_data: &mut ScriptData,
+    fn eval(
+        &self,
+        script: &Self::ScriptAsset,
         entity: Entity,
-        args: impl FuncArgs,
-    ) -> Result<(), ScriptingError> {
-        let ast = script_data.ast.clone();
-        let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
-        let options = CallFnOptions::new().eval_ast(false);
-        let result =
-            self.engine
-                .call_fn_with_options::<Dynamic>(options, scope, &ast, function_name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
-        if let Err(err) = result {
-            match *err {
-                rhai::EvalAltResult::ErrorFunctionNotFound(name, _) if name == function_name => {}
-                e => Err(Box::new(e))?,
-            }
+    ) -> Result<Self::ScriptData, ScriptingError>;
+
+    /// Registers a new function within the scripting engine. Provided callback
+    /// function will be called when the function with provided name gets called
+    /// in script.
+    fn register_fn(
+        &mut self,
+        name: String,
+        arg_types: Vec<TypeId>,
+        f: impl Fn(
+                Self::CallContext,
+                Vec<Self::Value>,
+            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+            + Send
+            + Sync
+            + 'static,
+    ) -> Result<(), ScriptingError>;
+
+    /// Calls a function by name defined within the runtime in the context of the
+    /// entity that haas been paassed. Can return a dynamically typed value
+    /// that got returned from the function within a script.
+    fn call_fn(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+    ) -> Result<Self::Value, ScriptingError>;
+
+    /// Calls a function by value defined within the runtime in the context of the
+    /// entity that haas been paassed. Can return a dynamically typed value
+    /// that got returned from the function within a script.
+    fn call_fn_from_value(
+        &self,
+        value: &Self::Value,
+        context: &Self::CallContext,
+        args: Vec<Self::Value>,
+    ) -> Result<Self::Value, ScriptingError>;
+}
+
+pub trait FuncArgs<'a, V, R: Runtime> {
+    fn parse(self, engine: &'a R::RawEngine) -> Vec<V>;
+}
+
+/// An extension trait for [App] that allows to setup a scripting runtime `R`.
+pub trait BuildScriptingRuntime {
+    /// Returns a "runtime" type than can be used to setup scripting runtime(
+    /// add scripting functions etc.).
+    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
+}
+
+pub struct ScriptingRuntimeBuilder<'a, R: Runtime> {
+    _phantom_data: PhantomData<R>,
+    world: &'a mut World,
+}
+
+impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
+    fn new(world: &'a mut World) -> Self {
+        Self {
+            _phantom_data: PhantomData,
+            world,
         }
-        Ok(())
     }
-}
 
-/// An extension trait for [App] that allows to register a script function.
-pub trait AddScriptFunctionAppExt {
-    fn add_script_function<
-        Out,
-        Marker,
-        A: 'static,
-        const N: usize,
-        const X: bool,
-        R: 'static,
-        const F: bool,
-        Args,
-    >(
-        &mut self,
+    /// Registers a function for calling from within a script.
+    /// Provided function needs to be a valid bevy system and its
+    /// arguments and return value need to be convertible to runtime
+    /// value types.
+    pub fn add_function<In, Out, Marker>(
+        self,
         name: String,
-        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
-    ) -> &mut Self;
-}
+        fun: impl IntoCallbackSystem<R, In, Out, Marker>,
+    ) -> Self {
+        let system = fun.into_callback_system(self.world);
 
-/// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_script_function].
-#[derive(Resource, Default)]
-struct Callbacks {
-    uninitialized_callbacks: Vec<Callback>,
-    callbacks: Mutex<Vec<Callback>>,
-}
-
-impl AddScriptFunctionAppExt for App {
-    fn add_script_function<
-        Out,
-        Marker,
-        A: 'static,
-        const N: usize,
-        const X: bool,
-        R: 'static,
-        const F: bool,
-        Args,
-    >(
-        &mut self,
-        name: String,
-        system: impl RegisterCallbackFunction<Out, Marker, A, N, X, R, F, Args>,
-    ) -> &mut Self {
-        let system = system.into_callback_system(&mut self.world);
-        let mut callbacks_resource = self.world.resource_mut::<Callbacks>();
+        let mut callbacks_resource = self.world.resource_mut::<Callbacks<R>>();
 
         callbacks_resource.uninitialized_callbacks.push(Callback {
             name,
             system: Arc::new(Mutex::new(system)),
             calls: Arc::new(Mutex::new(vec![])),
         });
+
         self
     }
 }
 
+impl BuildScriptingRuntime for App {
+    /// Adds a scripting runtime. Registers required bevy systems that take
+    /// care of processing and running the scripts.
+    fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
+        self.world
+            .resource_mut::<MainScheduleOrder>()
+            .insert_after(Update, R::Schedule::default());
+
+        self.register_asset_loader(ScriptLoader::<R::ScriptAsset>::default())
+            .init_schedule(R::Schedule::default())
+            .init_asset::<R::ScriptAsset>()
+            .init_resource::<Callbacks<R>>()
+            .insert_resource(R::default())
+            .add_systems(
+                R::Schedule::default(),
+                (
+                    reload_scripts::<R>,
+                    process_calls::<R>
+                        .pipe(log_errors)
+                        .after(process_new_scripts::<R>),
+                    init_callbacks::<R>.pipe(log_errors),
+                    process_new_scripts::<R>
+                        .pipe(log_errors)
+                        .after(init_callbacks::<R>),
+                ),
+            );
+
+        let runtime = ScriptingRuntimeBuilder::<R>::new(&mut self.world);
+
+        f(runtime);
+
+        self
+    }
+}
+
+/// A resource that stores all the callbacks that were registered using [AddScriptFunctionAppExt::add_function].
+#[derive(Resource)]
+struct Callbacks<R: Runtime> {
+    uninitialized_callbacks: Vec<Callback<R>>,
+    callbacks: Mutex<Vec<Callback<R>>>,
+}
+
+impl<R: Runtime> Default for Callbacks<R> {
+    fn default() -> Self {
+        Self {
+            uninitialized_callbacks: Default::default(),
+            callbacks: Default::default(),
+        }
+    }
+}
+
 pub mod prelude {
-    pub use crate::{AddScriptFunctionAppExt, ScriptingPlugin};
+    pub use crate::{BuildScriptingRuntime as _, Runtime as _, Script};
 }

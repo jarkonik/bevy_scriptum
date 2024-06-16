@@ -2,64 +2,80 @@ use bevy::prelude::*;
 use core::any::TypeId;
 use std::sync::{Arc, Mutex};
 
-use rhai::{Dynamic, Variant};
-
-use crate::promise::Promise;
+use crate::{promise::Promise, Runtime};
 
 /// A system that can be used to call a script function.
-pub struct CallbackSystem {
-    pub(crate) system: Box<dyn System<In = Vec<Dynamic>, Out = Dynamic>>,
+pub struct CallbackSystem<R: Runtime> {
+    pub(crate) system: Box<dyn System<In = Vec<R::Value>, Out = R::Value>>,
     pub(crate) arg_types: Vec<TypeId>,
 }
 
-pub(crate) struct FunctionCallEvent {
-    pub(crate) params: Vec<Dynamic>,
-    pub(crate) promise: Promise,
+pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
+    pub(crate) params: Vec<V>,
+    pub(crate) promise: Promise<C, V>,
 }
+
+type Calls<C, V> = Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>;
 
 /// A struct representing a Bevy system that can be called from a script.
-#[derive(Clone)]
-pub(crate) struct Callback {
+pub(crate) struct Callback<R: Runtime> {
     pub(crate) name: String,
-    pub(crate) system: Arc<Mutex<CallbackSystem>>,
-    pub(crate) calls: Arc<Mutex<Vec<FunctionCallEvent>>>,
+    pub(crate) system: Arc<Mutex<CallbackSystem<R>>>,
+    pub(crate) calls: Calls<R::CallContext, R::Value>,
 }
 
-impl CallbackSystem {
-    pub(crate) fn call(&mut self, call: &FunctionCallEvent, world: &mut World) -> Dynamic {
+impl<R: Runtime> Clone for Callback<R> {
+    fn clone(&self) -> Self {
+        Callback {
+            name: self.name.clone(),
+            system: self.system.clone(),
+            calls: self.calls.clone(),
+        }
+    }
+}
+
+impl<R: Runtime> CallbackSystem<R> {
+    pub(crate) fn call(
+        &mut self,
+        call: &FunctionCallEvent<R::CallContext, R::Value>,
+        world: &mut World,
+    ) -> R::Value {
         self.system.run(call.params.clone(), world)
     }
 }
 
-/// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait RegisterCallbackFunction<
-    Out,
-    Marker,
-    A: 'static,
-    const N: usize,
-    const X: bool,
-    R: 'static,
-    const F: bool,
-    Args,
->: IntoSystem<Args, Out, Marker>
-{
-    /// Convert this function into a [CallbackSystem].
-    #[must_use]
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem;
+/// Allows converting to a wrapper type that the library uses internally for data
+pub(crate) trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
+    fn into_runtime_value_with_engine(value: V, engine: &'a R::RawEngine) -> R::Value;
 }
 
-impl<Out, FN, Marker> RegisterCallbackFunction<Out, Marker, (), 1, false, Dynamic, false, ()> for FN
+/// Allows converting from a wrapper type that the library uses internally for data to underlying
+/// concrete type.
+pub(crate) trait FromRuntimeValueWithEngine<'a, R: Runtime> {
+    fn from_runtime_value_with_engine(value: R::Value, engine: &'a R::RawEngine) -> Self;
+}
+
+/// Trait that alllows to convert a script callback function into a Bevy [`System`].
+pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker> {
+    /// Convert this function into a [CallbackSystem].
+    #[must_use]
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
+}
+
+impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
-    Out: Sync + Variant + Clone,
+    Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, R>,
 {
-    fn into_callback_system(self, world: &mut World) -> CallbackSystem {
+    fn into_callback_system(self, world: &mut World) -> CallbackSystem<R> {
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
-        let system_fn = move |_args: In<Vec<Dynamic>>, world: &mut World| {
+        let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
-            Dynamic::from(result)
+            let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
+            runtime
+                .with_engine_mut(move |engine| Out::into_runtime_value_with_engine(result, engine))
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -71,23 +87,29 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<$($t,)+ Out, FN, Marker> RegisterCallbackFunction<Out, Marker, ($($t,)+), 1, false, Dynamic, false, ($($t,)+)>
+        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, ($($t,)+), Out, Marker>
             for FN
         where
             FN: IntoSystem<($($t,)+), Out, Marker>,
-            Out: Sync + Variant + Clone,
-            $($t: 'static + Clone,)+
+            Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
+            $($t: 'static + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
-            fn into_callback_system(self, world: &mut World) -> CallbackSystem {
+            fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
-                let system_fn = move |args: In<Vec<Dynamic>>, world: &mut World| {
-                    let args = (
-                        $(args.0.get($idx).unwrap().clone_cast::<$t>(), )+
-                    );
+                let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
+                    let args  = runtime.with_engine_mut(move |engine| {
+                        (
+                            $($t::from_runtime_value_with_engine(args.get($idx).expect(&format!("Failed to get function argument for index {}", $idx)).clone(), engine), )+
+                        )
+                    });
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
-                    Dynamic::from(result)
+                    let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
+                    runtime.with_engine_mut(move |engine| {
+                        Out::into_runtime_value_with_engine(result, engine)
+                    })
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

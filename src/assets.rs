@@ -1,20 +1,31 @@
+use std::marker::PhantomData;
+
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
-    reflect::TypePath,
     utils::BoxedFuture,
 };
-use serde::Deserialize;
 
-/// A script that can be loaded by the [crate::ScriptingPlugin].
-#[derive(Asset, Debug, Deserialize, TypePath)]
-pub struct RhaiScript(pub String);
+/// A loader for script assets.
+pub struct ScriptLoader<A: Asset + From<String>> {
+    _phantom_data: PhantomData<A>,
+}
 
-/// A loader for [RhaiScript] assets.
-#[derive(Default)]
-pub struct RhaiScriptLoader;
+impl<A: Asset + From<String>> Default for ScriptLoader<A> {
+    fn default() -> Self {
+        Self {
+            _phantom_data: Default::default(),
+        }
+    }
+}
 
-impl AssetLoader for RhaiScriptLoader {
-    type Asset = RhaiScript;
+/// Allows providing an allow-list for extensions of AssetLoader for a Script
+/// asset
+pub trait GetExtensions {
+    fn extensions() -> &'static [&'static str];
+}
+
+impl<A: Asset + From<String> + GetExtensions> AssetLoader for ScriptLoader<A> {
+    type Asset = A;
     type Settings = ();
     type Error = anyhow::Error;
 
@@ -23,17 +34,18 @@ impl AssetLoader for RhaiScriptLoader {
         reader: &'a mut Reader,
         _settings: &'a Self::Settings,
         _load_context: &'a mut LoadContext,
-    ) -> BoxedFuture<'a, anyhow::Result<RhaiScript, anyhow::Error>> {
+    ) -> BoxedFuture<'a, anyhow::Result<A, anyhow::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
 
-            let rhai_script = RhaiScript(String::from_utf8(bytes.to_vec())?);
+            let script_text = String::from_utf8(bytes.to_vec())?;
+            let rhai_script: A = script_text.into();
             Ok(rhai_script)
         })
     }
 
     fn extensions(&self) -> &[&str] {
-        &["rhai"]
+        A::extensions()
     }
 }
