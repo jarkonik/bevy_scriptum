@@ -482,3 +482,32 @@ mod lua_tests {
 
     scripting_tests!(LuaRuntime, "lua", "lua");
 }
+
+#[cfg(feature = "ruby")]
+mod ruby_tests {
+    use bevy::prelude::*;
+    use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
+
+    impl AssertStateKeyValue for RubyRuntime {
+        type ScriptData = RubyScriptData;
+
+        fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
+            todo!();
+        }
+
+        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
+            todo!();
+        }
+
+        fn assert_state_key_value_string(
+            world: &World,
+            _entity_id: Entity,
+            key: &str,
+            value: &str,
+        ) {
+            todo!();
+        }
+    }
+
+    scripting_tests!(RubyRuntime, "ruby", "rb");
+}
