@@ -1,4 +1,4 @@
-use bevy::{app::AppExit, ecs::event::ManualEventReader, prelude::*};
+use bevy::{app::AppExit, prelude::*};
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
 
@@ -7,18 +7,11 @@ fn main() {
         // This is just needed for headless console app, not needed for a regular bevy game
         // that uses a winit window
         .set_runner(move |mut app: App| {
-            let mut app_exit_event_reader = ManualEventReader::<AppExit>::default();
             loop {
-                if let Some(app_exit_events) = app.world.get_resource_mut::<Events<AppExit>>() {
-                    if app_exit_event_reader
-                        .read(&app_exit_events)
-                        .last()
-                        .is_some()
-                    {
-                        break;
-                    }
-                }
                 app.update();
+                if let Some(exit) = app.should_exit() {
+                    return exit;
+                }
             }
         })
         .add_plugins(DefaultPlugins)
@@ -45,6 +38,6 @@ fn print_entity_names_and_quit(query: Query<&Name>, mut exit: EventWriter<AppExi
         for e in &query {
             println!("{}", e);
         }
-        exit.send(AppExit);
+        exit.send(AppExit::Success);
     }
 }

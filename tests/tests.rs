@@ -25,12 +25,12 @@ fn run_script<R: Runtime, Out, Marker>(
     path: String,
     system: impl IntoSystem<(), Out, Marker>,
 ) -> Entity {
-    let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
+    let asset_server = app.world_mut().get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load::<R::ScriptAsset>(path);
 
-    let entity_id = app.world.spawn(Script::new(asset)).id();
+    let entity_id = app.world_mut().spawn(Script::new(asset)).id();
     app.update(); // let `ScriptData` resources be added to entities
-    app.world.run_system_once(system);
+    app.world_mut().run_system_once(system);
     app.update(); // let callbacks be executed
 
     entity_id
@@ -91,7 +91,7 @@ macro_rules! scripting_tests {
                 my_int: i64,
             }
 
-            app.world.init_resource::<IntResource>();
+            app.world_mut().init_resource::<IntResource>();
 
             app.add_scripting::<$runtime>(|runtime| {
                 runtime.add_function(
@@ -112,7 +112,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            assert_eq!(app.world.get_resource::<IntResource>().unwrap().my_int, 5);
+            assert_eq!(app.world().get_resource::<IntResource>().unwrap().my_int, 5);
         }
 
         #[test]
@@ -125,7 +125,7 @@ macro_rules! scripting_tests {
                 b: String,
             }
 
-            app.world.init_resource::<TestResource>();
+            app.world_mut().init_resource::<TestResource>();
 
             app.add_scripting::<$runtime>(|runtime| {
                 runtime.add_function(
@@ -147,9 +147,9 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            assert_eq!(app.world.get_resource::<TestResource>().unwrap().a, 5);
+            assert_eq!(app.world().get_resource::<TestResource>().unwrap().a, 5);
             assert_eq!(
-                app.world.get_resource::<TestResource>().unwrap().b,
+                app.world().get_resource::<TestResource>().unwrap().b,
                 String::from("test")
             );
         }
@@ -176,7 +176,7 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "a_value", 1i32);
         }
 
         #[test]
@@ -206,9 +206,9 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "a_value", 1i32);
             <$runtime>::assert_state_key_value_string(
-                &app.world,
+                &app.world(),
                 entity_id,
                 "b_value",
                 &String::from("abc"),
@@ -237,8 +237,8 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "b_value", 2i32);
+            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "b_value", 2i32);
         }
 
         #[test]
@@ -303,7 +303,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "times_called", 1i64);
+            <$runtime>::assert_state_key_value_i64(&app.world(), entity_id, "times_called", 1i64);
         }
 
         #[test]
@@ -320,7 +320,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "x", 123i32);
+            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "x", 123i32);
         }
 
         #[test]
@@ -357,7 +357,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            app.world.run_system_once(|tagged: Query<&MyTag>| {
+            app.world_mut().run_system_once(|tagged: Query<&MyTag>| {
                 tagged.single();
             });
         }
@@ -371,7 +371,7 @@ macro_rules! scripting_tests {
                 times_called: u8,
             }
 
-            app.world.init_resource::<TimesCalled>();
+            app.world_mut().init_resource::<TimesCalled>();
 
             app.add_scripting::<$runtime>(|runtime| {
                 runtime.add_function(String::from("rust_func"), |mut res: ResMut<TimesCalled>| {
@@ -390,7 +390,7 @@ macro_rules! scripting_tests {
             );
 
             assert_eq!(
-                app.world
+                app.world()
                     .get_resource::<TimesCalled>()
                     .unwrap()
                     .times_called,
