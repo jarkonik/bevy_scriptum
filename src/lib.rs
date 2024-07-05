@@ -161,11 +161,12 @@
 //! ## Bevy compatibility
 //!
 //! | bevy version | bevy_scriptum version |
-//! |--------------|----------------------|
-//! | 0.13         | 0.4-0.5              |
-//! | 0.12         | 0.3                  |
-//! | 0.11         | 0.2                  |
-//! | 0.10         | 0.1                  |
+//! |--------------|-----------------------|
+//! | 0.14         | 0.6                   |
+//! | 0.13         | 0.4-0.5               |
+//! | 0.12         | 0.3                   |
+//! | 0.11         | 0.2                   |
+//! | 0.10         | 0.1                   |
 //!
 //! ## Promises - getting return values from scripts
 //!
@@ -372,7 +373,7 @@ impl BuildScriptingRuntime for App {
     /// Adds a scripting runtime. Registers required bevy systems that take
     /// care of processing and running the scripts.
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
-        self.world
+        self.world_mut()
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
 
@@ -395,7 +396,7 @@ impl BuildScriptingRuntime for App {
                 ),
             );
 
-        let runtime = ScriptingRuntimeBuilder::<R>::new(&mut self.world);
+        let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
 
         f(runtime);
 

@@ -94,7 +94,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = { version = "0.5", features = ["lua"] }
+bevy_scriptum = { version = "0.6", features = ["lua"] }
 ```
 
 or execute `cargo add bevy_scriptum --features lua` from your project directory.
