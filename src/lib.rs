@@ -373,8 +373,7 @@ impl BuildScriptingRuntime for App {
     /// Adds a scripting runtime. Registers required bevy systems that take
     /// care of processing and running the scripts.
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
-        let world = &mut self.world_mut();
-        world
+        self.world_mut()
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
 
@@ -397,8 +396,7 @@ impl BuildScriptingRuntime for App {
                 ),
             );
 
-        let world = &mut self.world_mut();
-        let runtime = ScriptingRuntimeBuilder::<R>::new(world);
+        let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
 
         f(runtime);
 
