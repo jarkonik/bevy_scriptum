@@ -215,14 +215,13 @@
 mod assets;
 mod callback;
 mod components;
-mod plugin_builder;
 mod promise;
 mod systems;
 
 pub mod runtimes;
 
-pub use crate::plugin_builder::ScriptingApiBuilder;
 pub use crate::components::Script;
+pub use crate::plugin_builder::ScriptingApiBuilder;
 use assets::GetExtensions;
 use promise::Promise;
 
@@ -335,7 +334,10 @@ pub trait BuildScriptingRuntime {
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
 
     /// Returns a "runtime" type that can be used to add additional scripting functions from plugins etc.
-    fn add_scripting_api<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
+    fn add_scripting_api<R: Runtime>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self;
 }
 
 pub struct ScriptingRuntimeBuilder<'a, R: Runtime> {
@@ -408,13 +410,16 @@ impl BuildScriptingRuntime for App {
         self
     }
 
-    /// Adds a way to add additional accesspoints to the scripting runtime. For example from plugins to add 
+    /// Adds a way to add additional accesspoints to the scripting runtime. For example from plugins to add
     /// for example additional lua functions to the runtime.
-    /// 
+    ///
     /// Be careful with calling this though, make sure that the `add_scripting` call is already called before calling this function.
-    fn add_scripting_api<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
+    fn add_scripting_api<R: Runtime>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self {
         let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
-        
+
         f(runtime);
 
         self
