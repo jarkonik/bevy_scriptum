@@ -94,6 +94,10 @@ name = "hello_world_lua"
 path = "examples/lua/hello_world.rs"
 
 [[example]]
+name = "multiple_plugins"
+path = "examples/lua/multiple_plugins.rs"
+
+[[example]]
 name = "non_closure_system_lua"
 path = "examples/lua/non_closure_system.rs"
 
