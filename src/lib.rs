@@ -221,7 +221,6 @@ mod systems;
 pub mod runtimes;
 
 pub use crate::components::Script;
-pub use crate::plugin_builder::ScriptingApiBuilder;
 use assets::GetExtensions;
 use promise::Promise;
 
