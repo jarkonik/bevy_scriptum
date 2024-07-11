@@ -215,11 +215,13 @@
 mod assets;
 mod callback;
 mod components;
+mod plugin_builder;
 mod promise;
 mod systems;
 
 pub mod runtimes;
 
+pub use crate::plugin_builder::ScriptingApiBuilder;
 pub use crate::components::Script;
 use assets::GetExtensions;
 use promise::Promise;
