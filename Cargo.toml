@@ -54,6 +54,10 @@ name = "hello_world_rhai"
 path = "examples/rhai/hello_world.rs"
 
 [[example]]
+name = "multiple_plugins_rhai"
+path = "examples/rhai/multiple_plugins.rs"
+
+[[example]]
 name = "non_closure_system_rhai"
 path = "examples/rhai/non_closure_system.rs"
 
@@ -94,7 +98,7 @@ name = "hello_world_lua"
 path = "examples/lua/hello_world.rs"
 
 [[example]]
-name = "multiple_plugins"
+name = "multiple_plugins_lua"
 path = "examples/lua/multiple_plugins.rs"
 
 [[example]]
