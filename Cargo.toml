@@ -13,19 +13,27 @@ keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
 [features]
 lua = ["mlua/luajit"]
 rhai = ["dep:rhai"]
-ruby = ["dep:magnus"]
+rune = ["dep:rune"]
 
 [dependencies]
 bevy = { default-features = false, version = "0.13.0", features = [
     "bevy_asset",
 ] }
 serde = "1.0.162"
-rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"], optional = true }
+rhai = { version = "1.14.0", features = [
+    "sync",
+    "internals",
+    "unchecked",
+], optional = true }
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 tracing = "0.1.40"
-mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"], optional = true }
-magnus = { version = "0.6.4", optional = true }
+mlua = { version = "0.9.8", features = [
+    "luajit",
+    "vendored",
+    "send",
+], optional = true }
+rune = { version = "0.13.3", optional = true }
 
 [[example]]
 name = "call_function_from_rust_rhai"

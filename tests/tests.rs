@@ -471,13 +471,13 @@ mod lua_tests {
     scripting_tests!(LuaRuntime, "lua", "lua");
 }
 
-#[cfg(feature = "ruby")]
-mod ruby_tests {
+#[cfg(feature = "rune")]
+mod rune_tests {
     use bevy::prelude::*;
-    use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
+    use bevy_scriptum::runtimes::rune::{prelude::*, RuneScriptData};
 
-    impl AssertStateKeyValue for RubyRuntime {
-        type ScriptData = RubyScriptData;
+    impl AssertStateKeyValue for RuneRuntime {
+        type ScriptData = RuneScriptData;
 
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
             todo!();
@@ -497,5 +497,5 @@ mod ruby_tests {
         }
     }
 
-    scripting_tests!(RubyRuntime, "ruby", "rb");
+    scripting_tests!(RuneRuntime, "rune", "rn");
 }

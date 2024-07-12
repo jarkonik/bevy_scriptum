@@ -1,8 +1,11 @@
+use std::sync::Mutex;
+
 use bevy::{
     asset::Asset,
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
+use rune::{runtime::RuntimeContext, Context, Source, Sources, Vm};
 use serde::Deserialize;
 
 use crate::{
@@ -12,48 +15,56 @@ use crate::{
 };
 
 #[derive(Resource)]
-pub struct RubyRuntime {}
+pub struct RuneRuntime {
+    context: Context,
+    engine: std::sync::Arc<RuntimeContext>,
+}
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
-pub struct RubySchedule;
+pub struct RuneSchedule;
 
 #[derive(Asset, Debug, Deserialize, TypePath)]
-pub struct RubyScript(pub String);
+pub struct RuneScript(pub String);
 
 #[derive(Component)]
-pub struct RubyScriptData;
+pub struct RuneScriptData;
 
-impl GetExtensions for RubyScript {
+impl GetExtensions for RuneScript {
     fn extensions() -> &'static [&'static str] {
-        todo!()
+        &["rn"]
     }
 }
 
-impl From<String> for RubyScript {
+impl From<String> for RuneScript {
     fn from(value: String) -> Self {
-        todo!()
+        Self(value)
     }
 }
 
-impl Default for RubyRuntime {
+impl Default for RuneRuntime {
     fn default() -> Self {
-        Self {}
+        let context = Context::with_default_modules().unwrap();
+        let runtime = std::sync::Arc::new(context.runtime().unwrap());
+        Self {
+            context: context,
+            engine: runtime,
+        }
     }
 }
 
 #[derive(Clone)]
-pub struct RubyValue(());
+pub struct RuneValue(());
 
-impl Runtime for RubyRuntime {
-    type Schedule = RubySchedule;
+impl Runtime for RuneRuntime {
+    type Schedule = RuneSchedule;
 
-    type ScriptAsset = RubyScript;
+    type ScriptAsset = RuneScript;
 
-    type ScriptData = RubyScriptData;
+    type ScriptData = RuneScriptData;
 
     type CallContext = ();
 
-    type Value = RubyValue;
+    type Value = RuneValue;
 
     type RawEngine = ();
 
@@ -70,7 +81,17 @@ impl Runtime for RubyRuntime {
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        todo!()
+        let mut sources = Sources::new();
+        sources
+            .insert(Source::memory("pub fn add(a, b) { a + b }").unwrap())
+            .unwrap();
+        let result = rune::prepare(&mut sources)
+            .with_context(&self.context)
+            .build()
+            .unwrap();
+
+        Vm::new(self.engine.clone(), std::sync::Arc::new(result));
+        Ok(RuneScriptData)
     }
 
     fn register_fn(
@@ -111,39 +132,39 @@ impl Runtime for RubyRuntime {
 }
 
 pub mod prelude {
-    pub use super::RubyRuntime;
+    pub use super::RuneRuntime;
 }
 
-impl<T> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
-    fn from_runtime_value_with_engine(value: RubyValue, engine: &()) -> Self {
+impl<T> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
+    fn from_runtime_value_with_engine(value: RuneValue, engine: &()) -> Self {
         todo!();
     }
 }
 
-impl<T> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &()) -> RubyValue {
+impl<T> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
+    fn into_runtime_value_with_engine(value: T, engine: &()) -> RuneValue {
         todo!();
     }
 }
 
-impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
-    fn parse(self, _engine: &()) -> Vec<RubyValue> {
+impl FuncArgs<'_, RuneValue, RuneRuntime> for () {
+    fn parse(self, _engine: &()) -> Vec<RuneValue> {
         Vec::new()
     }
 }
 
-impl<T> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, engine: &()) -> Vec<RubyValue> {
-        self.into_iter().map(|x| RubyValue(())).collect()
+impl<T> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
+    fn parse(self, engine: &()) -> Vec<RuneValue> {
+        self.into_iter().map(|x| RuneValue(())).collect()
     }
 }
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<'a, $($t,)+> FuncArgs<'a, RubyValue, RubyRuntime>
+        impl<'a, $($t,)+> FuncArgs<'a, RuneValue, RuneRuntime>
             for ($($t,)+)
         {
-            fn parse(self, engine: &'a ()) -> Vec<RubyValue> {
+            fn parse(self, engine: &'a ()) -> Vec<RuneValue> {
                 todo!();
             }
         }
