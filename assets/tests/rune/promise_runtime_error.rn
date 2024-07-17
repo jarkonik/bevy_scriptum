@@ -1,0 +1,3 @@
+pub fn test_func() {
+	rust_func().then(|x| dbg("abc" + 5))
+}
