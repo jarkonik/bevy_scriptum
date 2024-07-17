@@ -5,9 +5,9 @@ use bevy::{
 };
 use rune::{
     alloc::clone::TryClone as _,
-    runtime::{ConstValue, GuardedArgs, RuntimeContext, Shared, VmResult},
+    runtime::{ConstValue, GuardedArgs, RuntimeContext, Shared, Stack, VmResult},
     termcolor::{ColorChoice, StandardStream},
-    Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Vm,
+    vm_try, Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Value, Vm,
 };
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
@@ -120,7 +120,22 @@ impl Runtime for RuneRuntime {
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
         let mut module = Module::new();
-        module.function(name.as_str(), || ()).build().unwrap();
+        module
+            .raw_function(name.as_str(), move |stack: &mut Stack, args_len: usize| {
+                let mut args = Vec::new();
+                for _ in 0..args_len {
+                    let val = ConstValue::from_value(vm_try!(stack.pop())).unwrap();
+                    let val = RuneValue(Arc::new(Mutex::new(val)));
+                    args.push(val);
+                }
+                let result = f((), args).unwrap();
+                // let args = { args.into_iter().map(|x| LuaValue::new(engine, x)).collect() };
+                // let result = f((), args).unwrap();
+                stack.push(Value::EmptyTuple).unwrap();
+                VmResult::Ok(())
+            })
+            .build()
+            .unwrap();
         self.context.install(module).unwrap();
         self.engine = Arc::new(self.context.runtime().unwrap());
         Ok(())
@@ -208,7 +223,7 @@ impl<T> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &RuneRuntime) -> RuneValue {
-        todo!();
+        RuneValue(Arc::new(Mutex::new(ConstValue::EmptyTuple)))
     }
 }
 
