@@ -1,0 +1,3 @@
+pub fn test_func(a) {
+	set_state_value("a_value", a);
+}

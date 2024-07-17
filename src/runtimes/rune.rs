@@ -1,12 +1,15 @@
-use std::sync::Mutex;
-
 use bevy::{
     asset::Asset,
     ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
     reflect::TypePath,
 };
-use rune::{runtime::RuntimeContext, Context, Source, Sources, Vm};
+use rune::{
+    runtime::{GuardedArgs, RuntimeContext},
+    termcolor::{ColorChoice, StandardStream},
+    Context, Diagnostics, Module, Source, Sources, Unit, Vm,
+};
 use serde::Deserialize;
+use std::sync::Arc;
 
 use crate::{
     assets::GetExtensions,
@@ -16,8 +19,8 @@ use crate::{
 
 #[derive(Resource)]
 pub struct RuneRuntime {
-    context: Context,
-    engine: std::sync::Arc<RuntimeContext>,
+    pub context: Context,
+    pub engine: std::sync::Arc<RuntimeContext>,
 }
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
@@ -27,7 +30,9 @@ pub struct RuneSchedule;
 pub struct RuneScript(pub String);
 
 #[derive(Component)]
-pub struct RuneScriptData;
+pub struct RuneScriptData {
+    pub unit: Arc<Unit>,
+}
 
 impl GetExtensions for RuneScript {
     fn extensions() -> &'static [&'static str] {
@@ -66,14 +71,14 @@ impl Runtime for RuneRuntime {
 
     type Value = RuneValue;
 
-    type RawEngine = ();
+    type RawEngine = Self;
 
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
-        todo!()
+        f(self)
     }
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
-        todo!()
+        f(self)
     }
 
     fn eval(
@@ -82,16 +87,21 @@ impl Runtime for RuneRuntime {
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let mut sources = Sources::new();
-        sources
-            .insert(Source::memory("pub fn add(a, b) { a + b }").unwrap())
-            .unwrap();
+        sources.insert(Source::memory(&script.0).unwrap()).unwrap();
+        let mut diagnostics = Diagnostics::new();
         let result = rune::prepare(&mut sources)
             .with_context(&self.context)
-            .build()
-            .unwrap();
+            .with_diagnostics(&mut diagnostics)
+            .build();
+        if !diagnostics.is_empty() {
+            let mut writer = StandardStream::stderr(ColorChoice::Always);
+            diagnostics.emit(&mut writer, &sources).unwrap();
+        }
 
-        Vm::new(self.engine.clone(), std::sync::Arc::new(result));
-        Ok(RuneScriptData)
+        let unit = result.unwrap();
+        Ok(RuneScriptData {
+            unit: Arc::new(unit),
+        })
     }
 
     fn register_fn(
@@ -108,7 +118,11 @@ impl Runtime for RuneRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        todo!()
+        let mut module = Module::new();
+        module.function(name.as_str(), || ()).build().unwrap();
+        self.context.install(module).unwrap();
+        self.engine = Arc::new(self.context.runtime().unwrap());
+        Ok(())
     }
 
     fn call_fn(
@@ -118,7 +132,11 @@ impl Runtime for RuneRuntime {
         entity: bevy::prelude::Entity,
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        todo!()
+        let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
+        let args = args.parse(self);
+        vm.call([name], ()).unwrap();
+
+        Ok(RuneValue(()))
     }
 
     fn call_fn_from_value(
@@ -135,26 +153,44 @@ pub mod prelude {
     pub use super::RuneRuntime;
 }
 
+impl<T> GuardedArgs for T
+where
+    T: for<'a> FuncArgs<'a, RuneValue, RuneRuntime>,
+{
+    type Guard = T;
+
+    unsafe fn unsafe_into_stack(
+        self,
+        stack: &mut rune::runtime::Stack,
+    ) -> rune::runtime::VmResult<Self::Guard> {
+        todo!()
+    }
+
+    fn count(&self) -> usize {
+        todo!()
+    }
+}
+
 impl<T> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
-    fn from_runtime_value_with_engine(value: RuneValue, engine: &()) -> Self {
+    fn from_runtime_value_with_engine(value: RuneValue, engine: &RuneRuntime) -> Self {
         todo!();
     }
 }
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &()) -> RuneValue {
+    fn into_runtime_value_with_engine(value: T, engine: &RuneRuntime) -> RuneValue {
         todo!();
     }
 }
 
 impl FuncArgs<'_, RuneValue, RuneRuntime> for () {
-    fn parse(self, _engine: &()) -> Vec<RuneValue> {
+    fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
         Vec::new()
     }
 }
 
 impl<T> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
-    fn parse(self, engine: &()) -> Vec<RuneValue> {
+    fn parse(self, engine: &RuneRuntime) -> Vec<RuneValue> {
         self.into_iter().map(|x| RuneValue(())).collect()
     }
 }
@@ -164,7 +200,7 @@ macro_rules! impl_tuple {
         impl<'a, $($t,)+> FuncArgs<'a, RuneValue, RuneRuntime>
             for ($($t,)+)
         {
-            fn parse(self, engine: &'a ()) -> Vec<RuneValue> {
+            fn parse(self, engine: &RuneRuntime) -> Vec<RuneValue> {
                 todo!();
             }
         }

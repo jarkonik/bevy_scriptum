@@ -20,11 +20,13 @@ fn build_test_app() -> App {
     app
 }
 
-fn run_script<R: Runtime, Out, Marker>(
+fn run_script<R: Runtime + Prepare, Out, Marker>(
     app: &mut App,
     path: String,
     system: impl IntoSystem<(), Out, Marker>,
 ) -> Entity {
+    R::prepare(&mut app.world);
+
     let asset_server = app.world.get_resource_mut::<AssetServer>().unwrap();
     let asset = asset_server.load::<R::ScriptAsset>(path);
 
@@ -53,6 +55,10 @@ trait AssertStateKeyValue {
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
     fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32);
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
+}
+
+trait Prepare {
+    fn prepare(_world: &mut World) {}
 }
 
 macro_rules! scripting_tests {
@@ -405,6 +411,8 @@ mod rhai_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::rhai::prelude::*;
 
+    impl Prepare for RhaiRuntime {}
+
     impl AssertStateKeyValue for RhaiRuntime {
         type ScriptData = RhaiScriptData;
 
@@ -434,6 +442,8 @@ mod rhai_tests {
 mod lua_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::lua::prelude::*;
+
+    impl Prepare for LuaRuntime {}
 
     impl AssertStateKeyValue for LuaRuntime {
         type ScriptData = LuaScriptData;
@@ -473,14 +483,62 @@ mod lua_tests {
 
 #[cfg(feature = "rune")]
 mod rune_tests {
-    use bevy::prelude::*;
+
+    use std::{any::Any, collections::HashMap, sync::Mutex};
+
+    use bevy::{prelude::*, time};
     use bevy_scriptum::runtimes::rune::{prelude::*, RuneScriptData};
+    use rune::{Hash, Module, Vm};
+
+    #[derive(Resource)]
+    struct State {
+        state: std::sync::Arc<Mutex<HashMap<String, Box<dyn Any + Send>>>>,
+    }
+
+    impl Prepare for RuneRuntime {
+        fn prepare(world: &mut World) {
+            let mut state = HashMap::new();
+            state.insert(
+                String::from("times_called"),
+                Box::new(0 as i64) as Box<dyn Any + Send>,
+            );
+            let state = std::sync::Arc::new(Mutex::new(state));
+            world.insert_resource(State {
+                state: state.clone(),
+            });
+            let mut runtime = world.get_resource_mut::<RuneRuntime>().unwrap();
+            let mut m = Module::new();
+
+            let state_closure = state.clone();
+            m.function("set_state_value", move |a: String, b: String| {
+                let mut state = state.lock().unwrap();
+                let times_called: i64 = *(state["times_called"].downcast_ref::<i64>().unwrap());
+                state.insert("times_called".into(), Box::new(times_called + 1));
+            })
+            .build()
+            .unwrap();
+
+            m.function("increment_times_called", move || {
+                let mut state = state_closure.lock().unwrap();
+                let times_called: i64 = *(state["times_called"].downcast_ref::<i64>().unwrap());
+                state.insert("times_called".into(), Box::new(times_called + 1));
+            })
+            .build()
+            .unwrap();
+
+            runtime.context.install(m).unwrap();
+            runtime.engine = std::sync::Arc::new(runtime.context.runtime().unwrap());
+        }
+    }
 
     impl AssertStateKeyValue for RuneRuntime {
         type ScriptData = RuneScriptData;
 
-        fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
-            todo!();
+        fn assert_state_key_value_i64(world: &World, entity: Entity, key: &str, value: i64) {
+            let state = world.get_resource::<State>().unwrap();
+            let mut state = state.state.lock().unwrap();
+            let x: i64 = *(state["times_called"].downcast_ref().unwrap());
+            assert_eq!(x, value);
         }
 
         fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
