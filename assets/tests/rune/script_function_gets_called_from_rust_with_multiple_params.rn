@@ -1,0 +1,4 @@
+pub fn test_func(a, b) {
+	set_state_value("a_value", a);
+	set_state_value("b_value", b);
+}
