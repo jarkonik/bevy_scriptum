@@ -3,5 +3,5 @@ State = {
 }
 
 function test_func(x)
-	called_with = x
+	State.called_with = x
 end
