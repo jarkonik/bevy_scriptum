@@ -4,12 +4,13 @@ use bevy::{
     reflect::TypePath,
 };
 use rune::{
-    runtime::{GuardedArgs, RuntimeContext, Shared, VmResult},
+    alloc::clone::TryClone as _,
+    runtime::{ConstValue, GuardedArgs, RuntimeContext, Shared, VmResult},
     termcolor::{ColorChoice, StandardStream},
-    Context, Diagnostics, Module, Source, Sources, Unit, Vm,
+    Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Vm,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     assets::GetExtensions,
@@ -58,7 +59,7 @@ impl Default for RuneRuntime {
 }
 
 #[derive(Clone)]
-pub struct RuneValue(());
+pub struct RuneValue(Arc<Mutex<ConstValue>>);
 
 impl Runtime for RuneRuntime {
     type Schedule = RuneSchedule;
@@ -134,9 +135,10 @@ impl Runtime for RuneRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
         let args = RuneArgs(args.parse(self));
-        vm.call([name], args).unwrap();
+        let result = vm.call([name], args).unwrap();
+        let result = ConstValue::from_value(result).unwrap();
 
-        Ok(RuneValue(()))
+        Ok(RuneValue(Arc::new(Mutex::new(result))))
     }
 
     fn call_fn_from_value(
@@ -156,22 +158,41 @@ pub mod prelude {
 struct RuneArgs(Vec<RuneValue>);
 
 impl GuardedArgs for RuneArgs {
-    type Guard = RuneValue;
+    type Guard = ();
 
-    unsafe fn unsafe_into_stack(
-        self,
-        stack: &mut rune::runtime::Stack,
-    ) -> rune::runtime::VmResult<Self::Guard> {
+    unsafe fn unsafe_into_stack(self, stack: &mut rune::runtime::Stack) -> VmResult<Self::Guard> {
         for val in self.0 {
-            stack
-                // .push(rune::Value::String(
-                //     Shared::new(rune::alloc::String::try_from("blke").unwrap()).unwrap(),
-                // ))
-                .push(rune::Value::Integer(5))
-                .unwrap();
-            //     stack.push(val);
+            let val = val.0.lock().unwrap();
+            let val = val.try_clone().unwrap().into_value().unwrap();
+            stack.push(val).unwrap();
         }
-        VmResult::Ok(RuneValue(()))
+        VmResult::Ok(())
+    }
+
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl rune::runtime::Args for RuneArgs {
+    fn into_stack(self, stack: &mut rune::runtime::Stack) -> VmResult<()> {
+        for val in self.0.into_iter() {
+            let val = val.0.lock().unwrap();
+            let val = val.try_clone().unwrap().into_value().unwrap();
+            stack.push(val).unwrap();
+        }
+        VmResult::Ok(())
+    }
+
+    fn try_into_vec(self) -> VmResult<rune::alloc::Vec<rune::Value>> {
+        let mut v = rune::alloc::Vec::new();
+
+        for val in self.0 {
+            let val = val.0.lock().unwrap();
+            let val = val.try_clone().unwrap().into_value().unwrap();
+            v.try_push(val).unwrap();
+        }
+        return VmResult::Ok(v);
     }
 
     fn count(&self) -> usize {
@@ -197,9 +218,15 @@ impl FuncArgs<'_, RuneValue, RuneRuntime> for () {
     }
 }
 
-impl<T> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
+impl<T: ToValue> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
     fn parse(self, engine: &RuneRuntime) -> Vec<RuneValue> {
-        self.into_iter().map(|x| RuneValue(())).collect()
+        self.into_iter()
+            .map(|x| {
+                RuneValue(Arc::new(Mutex::new(
+                    ConstValue::from_value(x.to_value().unwrap()).unwrap(),
+                )))
+            })
+            .collect()
     }
 }
 
