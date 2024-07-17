@@ -82,7 +82,34 @@
 //! ```lua
 //! fun_with_string_param("Hello world!")
 //! ```
+//! It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
+//! This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
+//! ```rust 
+//! use bevy::prelude::*;
+//! use bevy_scriptum::prelude::*;
+//! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! struct MyPlugin;
+//! impl Plugin for MyPlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.add_scripting_api::<LuaRuntime>(|runtime| {
+//!             runtime.add_function(String::from("hello_from_my_plugin"), || {
+//!                 info!("Hello from MyPlugin");
+//!             });
+//!         });
+//!     }
+//! }
+//!
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_scripting::<LuaRuntime>(|_| {
+//!         // nice and clean
+//!     })
+//!     .add_plugins(MyPlugin)
+//!     .run();
+//! ```
+//! 
+//! 
 //! ## Usage
 //!
 //! Add the following to your `Cargo.toml`:
@@ -331,6 +358,12 @@ pub trait BuildScriptingRuntime {
     /// Returns a "runtime" type than can be used to setup scripting runtime(
     /// add scripting functions etc.).
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self;
+
+    /// Returns a "runtime" type that can be used to add additional scripting functions from plugins etc.
+    fn add_scripting_api<R: Runtime>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self;
 }
 
 pub struct ScriptingRuntimeBuilder<'a, R: Runtime> {
@@ -396,6 +429,21 @@ impl BuildScriptingRuntime for App {
                 ),
             );
 
+        let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
+
+        f(runtime);
+
+        self
+    }
+
+    /// Adds a way to add additional accesspoints to the scripting runtime. For example from plugins to add
+    /// for example additional lua functions to the runtime.
+    ///
+    /// Be careful with calling this though, make sure that the `add_scripting` call is already called before calling this function.
+    fn add_scripting_api<R: Runtime>(
+        &mut self,
+        f: impl Fn(ScriptingRuntimeBuilder<R>),
+    ) -> &mut Self {
         let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
 
         f(runtime);
