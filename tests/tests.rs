@@ -52,8 +52,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
 
 trait AssertStateKeyValue {
     type ScriptData;
-    fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
-    fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32);
+    fn assert_state_key_value_integer(world: &World, entity_id: Entity, key: &str, value: i64);
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
@@ -182,7 +181,7 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "a_value", 1i64);
         }
 
         #[test]
@@ -212,7 +211,7 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "a_value", 1i64);
             <$runtime>::assert_state_key_value_string(
                 &app.world,
                 entity_id,
@@ -243,8 +242,8 @@ macro_rules! scripting_tests {
                 },
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "a_value", 1i32);
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "b_value", 2i32);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "a_value", 1);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "b_value", 2);
         }
 
         #[test]
@@ -309,7 +308,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            <$runtime>::assert_state_key_value_i64(&app.world, entity_id, "times_called", 1i64);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "times_called", 1);
         }
 
         #[test]
@@ -326,7 +325,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            <$runtime>::assert_state_key_value_i32(&app.world, entity_id, "x", 123i32);
+            <$runtime>::assert_state_key_value_integer(&app.world, entity_id, "x", 123);
         }
 
         #[test]
@@ -416,16 +415,17 @@ mod rhai_tests {
     impl AssertStateKeyValue for RhaiRuntime {
         type ScriptData = RhaiScriptData;
 
-        fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64) {
+        fn assert_state_key_value_integer(world: &World, entity_id: Entity, key: &str, value: i64) {
             let script_data = world.get::<Self::ScriptData>(entity_id).unwrap();
             let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
-            assert_eq!(state[key].clone_cast::<i64>(), value);
-        }
-
-        fn assert_state_key_value_i32(world: &World, entity_id: Entity, key: &str, value: i32) {
-            let script_data = world.get::<Self::ScriptData>(entity_id).unwrap();
-            let state = script_data.scope.get_value::<rhai::Map>("state").unwrap();
-            assert_eq!(state[key].clone_cast::<i32>(), value);
+            assert_eq!(
+                state[key]
+                    .clone()
+                    .try_cast::<i64>()
+                    .or_else(|| state[key].clone().try_cast::<i32>().map(|x| x as i64))
+                    .unwrap(),
+                value
+            );
         }
 
         fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str) {
@@ -448,19 +448,22 @@ mod lua_tests {
     impl AssertStateKeyValue for LuaRuntime {
         type ScriptData = LuaScriptData;
 
-        fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
+        fn assert_state_key_value_integer(
+            world: &World,
+            _entity_id: Entity,
+            key: &str,
+            value: i64,
+        ) {
             let runtime = world.get_resource::<LuaRuntime>().unwrap();
             runtime.with_engine(|engine| {
                 let state = engine.globals().get::<_, Table>("State").unwrap();
-                assert_eq!(state.get::<_, i64>(key).unwrap(), value);
-            });
-        }
-
-        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
-            let runtime = world.get_resource::<LuaRuntime>().unwrap();
-            runtime.with_engine(|engine| {
-                let state = engine.globals().get::<_, Table>("State").unwrap();
-                assert_eq!(state.get::<_, i32>(key).unwrap(), value);
+                assert_eq!(
+                    state
+                        .get::<_, i64>(key)
+                        .or_else(|_| state.get::<_, i32>(key).map(|x| x as i64))
+                        .unwrap(),
+                    value
+                );
             });
         }
 
@@ -510,10 +513,9 @@ mod rune_tests {
             let mut m = Module::new();
 
             let state_closure = state.clone();
-            m.function("set_state_value", move |a: String, b: String| {
+            m.function("set_state_value", move |key: String, value: i64| {
                 let mut state = state.lock().unwrap();
-                let times_called: i64 = *(state["times_called"].downcast_ref::<i64>().unwrap());
-                state.insert("times_called".into(), Box::new(times_called + 1));
+                state.insert(key, Box::new(value));
             })
             .build()
             .unwrap();
@@ -534,15 +536,15 @@ mod rune_tests {
     impl AssertStateKeyValue for RuneRuntime {
         type ScriptData = RuneScriptData;
 
-        fn assert_state_key_value_i64(world: &World, entity: Entity, key: &str, value: i64) {
+        fn assert_state_key_value_integer(world: &World, entity: Entity, key: &str, value: i64) {
             let state = world.get_resource::<State>().unwrap();
             let mut state = state.state.lock().unwrap();
-            let x: i64 = *(state["times_called"].downcast_ref().unwrap());
+            let x: i64 = *(state
+                .get(key)
+                .expect(&format!("no key {}", key))
+                .downcast_ref()
+                .unwrap());
             assert_eq!(x, value);
-        }
-
-        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
-            todo!();
         }
 
         fn assert_state_key_value_string(

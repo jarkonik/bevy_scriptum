@@ -4,7 +4,7 @@ use bevy::{
     reflect::TypePath,
 };
 use rune::{
-    runtime::{GuardedArgs, RuntimeContext},
+    runtime::{GuardedArgs, RuntimeContext, Shared, VmResult},
     termcolor::{ColorChoice, StandardStream},
     Context, Diagnostics, Module, Source, Sources, Unit, Vm,
 };
@@ -133,8 +133,8 @@ impl Runtime for RuneRuntime {
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
-        let args = args.parse(self);
-        vm.call([name], ()).unwrap();
+        let args = RuneArgs(args.parse(self));
+        vm.call([name], args).unwrap();
 
         Ok(RuneValue(()))
     }
@@ -153,21 +153,29 @@ pub mod prelude {
     pub use super::RuneRuntime;
 }
 
-impl<T> GuardedArgs for T
-where
-    T: for<'a> FuncArgs<'a, RuneValue, RuneRuntime>,
-{
-    type Guard = T;
+struct RuneArgs(Vec<RuneValue>);
+
+impl GuardedArgs for RuneArgs {
+    type Guard = RuneValue;
 
     unsafe fn unsafe_into_stack(
         self,
         stack: &mut rune::runtime::Stack,
     ) -> rune::runtime::VmResult<Self::Guard> {
-        todo!()
+        for val in self.0 {
+            stack
+                // .push(rune::Value::String(
+                //     Shared::new(rune::alloc::String::try_from("blke").unwrap()).unwrap(),
+                // ))
+                .push(rune::Value::Integer(5))
+                .unwrap();
+            //     stack.push(val);
+        }
+        VmResult::Ok(RuneValue(()))
     }
 
     fn count(&self) -> usize {
-        todo!()
+        self.0.len()
     }
 }
 
