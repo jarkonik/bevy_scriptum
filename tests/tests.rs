@@ -489,9 +489,9 @@ mod rune_tests {
 
     use std::{any::Any, collections::HashMap, sync::Mutex};
 
-    use bevy::{prelude::*, time};
+    use bevy::{prelude::*};
     use bevy_scriptum::runtimes::rune::{prelude::*, RuneScriptData};
-    use rune::{Hash, Module, Vm};
+    use rune::{Module};
 
     #[derive(Resource)]
     struct State {
@@ -503,7 +503,7 @@ mod rune_tests {
             let mut state = HashMap::new();
             state.insert(
                 String::from("times_called"),
-                Box::new(0 as i64) as Box<dyn Any + Send>,
+                Box::new(0_i64) as Box<dyn Any + Send>,
             );
             let state = std::sync::Arc::new(Mutex::new(state));
             world.insert_resource(State {
@@ -538,10 +538,10 @@ mod rune_tests {
 
         fn assert_state_key_value_integer(world: &World, entity: Entity, key: &str, value: i64) {
             let state = world.get_resource::<State>().unwrap();
-            let mut state = state.state.lock().unwrap();
+            let state = state.state.lock().unwrap();
             let x: i64 = *(state
                 .get(key)
-                .expect(&format!("no key {}", key))
+                .unwrap_or_else(|| panic!("no key {}", key))
                 .downcast_ref()
                 .unwrap());
             assert_eq!(x, value);

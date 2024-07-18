@@ -5,7 +5,7 @@ use bevy::{
 };
 use rune::{
     alloc::clone::TryClone as _,
-    runtime::{ConstValue, GuardedArgs, RuntimeContext, Shared, Stack, VmResult},
+    runtime::{ConstValue, GuardedArgs, RuntimeContext, Stack, VmResult},
     termcolor::{ColorChoice, StandardStream},
     vm_try, Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Value, Vm,
 };
@@ -52,7 +52,7 @@ impl Default for RuneRuntime {
         let context = Context::with_default_modules().unwrap();
         let runtime = std::sync::Arc::new(context.runtime().unwrap());
         Self {
-            context: context,
+            context,
             engine: runtime,
         }
     }
@@ -85,7 +85,7 @@ impl Runtime for RuneRuntime {
     fn eval(
         &self,
         script: &Self::ScriptAsset,
-        entity: bevy::prelude::Entity,
+        _entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let mut sources = Sources::new();
         sources.insert(Source::memory(&script.0).unwrap()).unwrap();
@@ -108,7 +108,7 @@ impl Runtime for RuneRuntime {
     fn register_fn(
         &mut self,
         name: String,
-        arg_types: Vec<std::any::TypeId>,
+        _arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
@@ -128,7 +128,7 @@ impl Runtime for RuneRuntime {
                     let val = RuneValue(Arc::new(Mutex::new(val)));
                     args.push(val);
                 }
-                let result = f((), args).unwrap();
+                let _result = f((), args).unwrap();
                 // let args = { args.into_iter().map(|x| LuaValue::new(engine, x)).collect() };
                 // let result = f((), args).unwrap();
                 stack.push(Value::EmptyTuple).unwrap();
@@ -145,7 +145,7 @@ impl Runtime for RuneRuntime {
         &self,
         name: &str,
         script_data: &mut Self::ScriptData,
-        entity: bevy::prelude::Entity,
+        _entity: bevy::prelude::Entity,
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
@@ -158,9 +158,9 @@ impl Runtime for RuneRuntime {
 
     fn call_fn_from_value(
         &self,
-        value: &Self::Value,
-        context: &Self::CallContext,
-        args: Vec<Self::Value>,
+        _value: &Self::Value,
+        _context: &Self::CallContext,
+        _args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         todo!()
     }
@@ -207,7 +207,7 @@ impl rune::runtime::Args for RuneArgs {
             let val = val.try_clone().unwrap().into_value().unwrap();
             v.try_push(val).unwrap();
         }
-        return VmResult::Ok(v);
+        VmResult::Ok(v)
     }
 
     fn count(&self) -> usize {
@@ -216,13 +216,13 @@ impl rune::runtime::Args for RuneArgs {
 }
 
 impl<T> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
-    fn from_runtime_value_with_engine(value: RuneValue, engine: &RuneRuntime) -> Self {
+    fn from_runtime_value_with_engine(_value: RuneValue, _engine: &RuneRuntime) -> Self {
         todo!();
     }
 }
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &RuneRuntime) -> RuneValue {
+    fn into_runtime_value_with_engine(_value: T, _engine: &RuneRuntime) -> RuneValue {
         RuneValue(Arc::new(Mutex::new(ConstValue::EmptyTuple)))
     }
 }
@@ -234,7 +234,7 @@ impl FuncArgs<'_, RuneValue, RuneRuntime> for () {
 }
 
 impl<T: ToValue> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
-    fn parse(self, engine: &RuneRuntime) -> Vec<RuneValue> {
+    fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
         self.into_iter()
             .map(|x| {
                 RuneValue(Arc::new(Mutex::new(
@@ -250,7 +250,7 @@ macro_rules! impl_tuple {
         impl<'a, $($t,)+> FuncArgs<'a, RuneValue, RuneRuntime>
             for ($($t,)+)
         {
-            fn parse(self, engine: &RuneRuntime) -> Vec<RuneValue> {
+            fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
                 todo!();
             }
         }
