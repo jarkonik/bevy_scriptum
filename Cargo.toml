@@ -33,7 +33,7 @@ mlua = { version = "0.9.8", features = [
     "vendored",
     "send",
 ], optional = true }
-rune = { version = "0.13.3", optional = true }
+rune = { version = "0.13.3", optional = true, features = ["alloc"] }
 
 [[example]]
 name = "call_function_from_rust_rhai"

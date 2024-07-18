@@ -491,7 +491,8 @@ mod rune_tests {
 
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::rune::{prelude::*, RuneScriptData};
-    use rune::Module;
+    use rhai::Variant;
+    use rune::{Module, Value};
 
     #[derive(Resource)]
     struct State {
@@ -513,9 +514,20 @@ mod rune_tests {
             let mut m = Module::new();
 
             let state_closure = state.clone();
-            m.function("set_state_value", move |key: String, value: i64| {
+            m.function("set_state_value", move |key: String, value: Value| {
                 let mut state = state.lock().unwrap();
-                state.insert(key, Box::new(value));
+                let value = value
+                    .as_integer()
+                    .into_result()
+                    .map(|x| Box::new(x) as Box<dyn Any + Send>)
+                    .or_else(|_| {
+                        value
+                            .into_string()
+                            .into_result()
+                            .map(|x| Box::new(x.take().unwrap().into_std()) as Box<dyn Any + Send>)
+                    })
+                    .unwrap();
+                state.insert(key, value);
             })
             .build()
             .unwrap();
@@ -548,12 +560,18 @@ mod rune_tests {
         }
 
         fn assert_state_key_value_string(
-            _world: &World,
+            world: &World,
             _entity_id: Entity,
-            _key: &str,
-            _value: &str,
+            key: &str,
+            value: &str,
         ) {
-            todo!();
+            let state = world.get_resource::<State>().unwrap();
+            let state = state.state.lock().unwrap();
+
+            let x = state.get(key).unwrap_or_else(|| panic!("no key {}", key));
+            let x: String = x.downcast_ref::<String>().unwrap().to_string();
+
+            assert_eq!(x, value);
         }
     }
 
