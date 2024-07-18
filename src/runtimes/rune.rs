@@ -129,8 +129,6 @@ impl Runtime for RuneRuntime {
                     args.push(val);
                 }
                 let _result = f((), args).unwrap();
-                // let args = { args.into_iter().map(|x| LuaValue::new(engine, x)).collect() };
-                // let result = f((), args).unwrap();
                 stack.push(Value::EmptyTuple).unwrap();
                 VmResult::Ok(())
             })
@@ -215,15 +213,17 @@ impl rune::runtime::Args for RuneArgs {
     }
 }
 
-impl<T> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
-    fn from_runtime_value_with_engine(_value: RuneValue, _engine: &RuneRuntime) -> Self {
-        todo!();
+impl<T: FromValue> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
+    fn from_runtime_value_with_engine(value: RuneValue, engine: &RuneRuntime) -> Self {
+        let value = value.0.lock().unwrap().try_clone().unwrap();
+        T::from_value(value.into_value().unwrap()).unwrap()
     }
 }
 
-impl<T> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
-    fn into_runtime_value_with_engine(_value: T, _engine: &RuneRuntime) -> RuneValue {
-        RuneValue(Arc::new(Mutex::new(ConstValue::EmptyTuple)))
+impl<T: ToValue> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
+    fn into_runtime_value_with_engine(value: T, _engine: &RuneRuntime) -> RuneValue {
+        let const_value = ConstValue::from_value(value.to_value().unwrap()).unwrap();
+        RuneValue(Arc::new(Mutex::new(const_value)))
     }
 }
 
@@ -247,11 +247,13 @@ impl<T: ToValue> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<'a, $($t,)+> FuncArgs<'a, RuneValue, RuneRuntime>
+        impl<'a, $($t: ToValue,)+> FuncArgs<'a, RuneValue, RuneRuntime>
             for ($($t,)+)
         {
             fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
-                todo!();
+                vec![
+                    $(RuneValue(Arc::new(Mutex::new(ConstValue::from_value(self.$idx.to_value().unwrap()).unwrap()))), )+
+                ]
             }
         }
     };
