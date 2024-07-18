@@ -489,9 +489,9 @@ mod rune_tests {
 
     use std::{any::Any, collections::HashMap, sync::Mutex};
 
-    use bevy::{prelude::*};
+    use bevy::prelude::*;
     use bevy_scriptum::runtimes::rune::{prelude::*, RuneScriptData};
-    use rune::{Module};
+    use rune::Module;
 
     #[derive(Resource)]
     struct State {
@@ -536,7 +536,7 @@ mod rune_tests {
     impl AssertStateKeyValue for RuneRuntime {
         type ScriptData = RuneScriptData;
 
-        fn assert_state_key_value_integer(world: &World, entity: Entity, key: &str, value: i64) {
+        fn assert_state_key_value_integer(world: &World, _entity: Entity, key: &str, value: i64) {
             let state = world.get_resource::<State>().unwrap();
             let state = state.state.lock().unwrap();
             let x: i64 = *(state
@@ -548,10 +548,10 @@ mod rune_tests {
         }
 
         fn assert_state_key_value_string(
-            world: &World,
+            _world: &World,
             _entity_id: Entity,
-            key: &str,
-            value: &str,
+            _key: &str,
+            _value: &str,
         ) {
             todo!();
         }
