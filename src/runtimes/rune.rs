@@ -128,6 +128,7 @@ impl Runtime for RuneRuntime {
                     let val = RuneValue(Arc::new(Mutex::new(val)));
                     args.push(val);
                 }
+                args.reverse();
                 let _result = f((), args).unwrap();
                 stack.push(Value::EmptyTuple).unwrap();
                 VmResult::Ok(())
