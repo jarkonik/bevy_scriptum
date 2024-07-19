@@ -68,8 +68,10 @@ struct RunePromise(Promise<(), RuneValue>);
 
 impl RunePromise {
     #[rune::function(instance, path = Self::then)]
-    fn then(value: RunePromise) {
-        todo!();
+    fn then(mut value: RunePromise, callback: Value) -> RunePromise {
+        RunePromise(value.0.then(RuneValue(Arc::new(Mutex::new(
+            ConstValue::from_value(callback).unwrap(),
+        )))))
     }
 }
 
