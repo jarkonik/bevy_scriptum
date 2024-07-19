@@ -66,6 +66,13 @@ pub struct RuneValue(Arc<Mutex<ConstValue>>);
 #[derive(Any)]
 struct RunePromise(Promise<(), RuneValue>);
 
+impl RunePromise {
+    #[rune::function(instance, path = Self::then)]
+    fn then(value: RunePromise) {
+        todo!();
+    }
+}
+
 impl Runtime for RuneRuntime {
     type Schedule = RuneSchedule;
 
@@ -140,6 +147,8 @@ impl Runtime for RuneRuntime {
             })
             .build()
             .unwrap();
+        module.ty::<RunePromise>().unwrap();
+        module.function_meta(RunePromise::then).unwrap();
         self.context.install(module).unwrap();
         self.engine = Arc::new(self.context.runtime().unwrap());
         Ok(())
