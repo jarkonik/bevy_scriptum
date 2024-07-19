@@ -5,9 +5,10 @@ use bevy::{
 };
 use rune::{
     alloc::clone::TryClone as _,
-    runtime::{ConstValue, GuardedArgs, RuntimeContext, Stack, VmResult},
+    runtime::{AnyObj, ConstValue, GuardedArgs, RuntimeContext, Stack, VmResult},
     termcolor::{ColorChoice, StandardStream},
-    vm_try, Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Value, Vm,
+    vm_try, Any, Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Value,
+    Vm,
 };
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
@@ -15,6 +16,7 @@ use std::sync::{Arc, Mutex};
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
+    promise::Promise,
     FuncArgs, Runtime,
 };
 
@@ -60,6 +62,9 @@ impl Default for RuneRuntime {
 
 #[derive(Clone)]
 pub struct RuneValue(Arc<Mutex<ConstValue>>);
+
+#[derive(Any)]
+struct RunePromise(Promise<(), RuneValue>);
 
 impl Runtime for RuneRuntime {
     type Schedule = RuneSchedule;
@@ -129,8 +134,8 @@ impl Runtime for RuneRuntime {
                     args.push(val);
                 }
                 args.reverse();
-                let _result = f((), args).unwrap();
-                stack.push(Value::EmptyTuple).unwrap();
+                let result = RunePromise(f((), args).unwrap());
+                stack.push(result.to_value().unwrap()).unwrap();
                 VmResult::Ok(())
             })
             .build()
@@ -150,7 +155,9 @@ impl Runtime for RuneRuntime {
         let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
         let args = RuneArgs(args.parse(self));
         let result = vm.call([name], args).unwrap();
-        let result = ConstValue::from_value(result).unwrap();
+        let result = ConstValue::from_value(result)
+            .into_result()
+            .unwrap_or(ConstValue::EmptyTuple);
 
         Ok(RuneValue(Arc::new(Mutex::new(result))))
     }
