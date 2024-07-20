@@ -5,7 +5,9 @@ use bevy::{
 };
 use rune::{
     alloc::clone::TryClone as _,
-    runtime::{AnyObj, ConstValue, GuardedArgs, RuntimeContext, Stack, VmResult},
+    runtime::{
+        AnyObj, ConstValue, Function, GuardedArgs, RuntimeContext, Stack, SyncFunction, VmResult,
+    },
     termcolor::{ColorChoice, StandardStream},
     vm_try, Any, Context, Diagnostics, FromValue, Module, Source, Sources, ToValue, Unit, Value,
     Vm,
@@ -61,7 +63,10 @@ impl Default for RuneRuntime {
 }
 
 #[derive(Clone)]
-pub struct RuneValue(Arc<Mutex<ConstValue>>);
+pub enum RuneValue {
+    ConstValue(Arc<Mutex<ConstValue>>),
+    Function(Arc<Mutex<SyncFunction>>),
+}
 
 #[derive(Any)]
 struct RunePromise(Promise<(), RuneValue>);
@@ -69,8 +74,8 @@ struct RunePromise(Promise<(), RuneValue>);
 impl RunePromise {
     #[rune::function(instance, path = Self::then)]
     fn then(mut value: RunePromise, callback: Value) -> RunePromise {
-        RunePromise(value.0.then(RuneValue(Arc::new(Mutex::new(
-            ConstValue::from_value(callback).unwrap(),
+        RunePromise(value.0.then(RuneValue::ConstValue(Arc::new(Mutex::new(
+            ConstValue::EmptyTuple,
         )))))
     }
 }
@@ -139,7 +144,7 @@ impl Runtime for RuneRuntime {
                 let mut args = Vec::new();
                 for _ in 0..args_len {
                     let val = ConstValue::from_value(vm_try!(stack.pop())).unwrap();
-                    let val = RuneValue(Arc::new(Mutex::new(val)));
+                    let val = RuneValue::ConstValue(Arc::new(Mutex::new(val)));
                     args.push(val);
                 }
                 args.reverse();
@@ -166,20 +171,45 @@ impl Runtime for RuneRuntime {
         let mut vm = Vm::new(self.engine.clone(), script_data.unit.clone());
         let args = RuneArgs(args.parse(self));
         let result = vm.call([name], args).unwrap();
-        let result = ConstValue::from_value(result)
-            .into_result()
-            .unwrap_or(ConstValue::EmptyTuple);
 
-        Ok(RuneValue(Arc::new(Mutex::new(result))))
+        match result {
+            Value::Function(_) => {
+                let result = Function::from_value(result)
+                    .into_result()
+                    .map(|x| RuneValue::Function(Arc::new(Mutex::new(x.into_sync().unwrap()))))
+                    .unwrap();
+                Ok(result)
+            }
+            _ => {
+                let result = ConstValue::from_value(result)
+                    .into_result()
+                    .map(|x| RuneValue::ConstValue(Arc::new(Mutex::new(x))))
+                    .unwrap();
+                Ok(result)
+            }
+        }
     }
 
     fn call_fn_from_value(
         &self,
-        _value: &Self::Value,
+        value: &Self::Value,
         _context: &Self::CallContext,
-        _args: Vec<Self::Value>,
+        args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        todo!()
+        match value {
+            RuneValue::Function(val) => {
+                let fun = val.lock().unwrap();
+                // let val = val.try_clone().unwrap().into_value().unwrap();
+                // let fun = Function::from_value(val).unwrap();
+
+                let r: Value = fun.call(RuneArgs(args)).unwrap();
+
+                Ok(RuneValue::ConstValue(Arc::new(Mutex::new(
+                    ConstValue::from_value(r).unwrap(),
+                ))))
+            }
+            RuneValue::ConstValue(_) => todo!(),
+        }
     }
 }
 
@@ -194,9 +224,14 @@ impl GuardedArgs for RuneArgs {
 
     unsafe fn unsafe_into_stack(self, stack: &mut rune::runtime::Stack) -> VmResult<Self::Guard> {
         for val in self.0 {
-            let val = val.0.lock().unwrap();
-            let val = val.try_clone().unwrap().into_value().unwrap();
-            stack.push(val).unwrap();
+            match val {
+                RuneValue::ConstValue(val) => {
+                    let val = val.lock().unwrap();
+                    let val = val.try_clone().unwrap().into_value().unwrap();
+                    stack.push(val).unwrap();
+                }
+                RuneValue::Function(_) => unimplemented!(),
+            }
         }
         VmResult::Ok(())
     }
@@ -209,9 +244,14 @@ impl GuardedArgs for RuneArgs {
 impl rune::runtime::Args for RuneArgs {
     fn into_stack(self, stack: &mut rune::runtime::Stack) -> VmResult<()> {
         for val in self.0.into_iter() {
-            let val = val.0.lock().unwrap();
-            let val = val.try_clone().unwrap().into_value().unwrap();
-            stack.push(val).unwrap();
+            match val {
+                RuneValue::ConstValue(val) => {
+                    let val = val.lock().unwrap();
+                    let val = val.try_clone().unwrap().into_value().unwrap();
+                    stack.push(val).unwrap();
+                }
+                RuneValue::Function(_) => unimplemented!(),
+            }
         }
         VmResult::Ok(())
     }
@@ -220,9 +260,14 @@ impl rune::runtime::Args for RuneArgs {
         let mut v = rune::alloc::Vec::new();
 
         for val in self.0 {
-            let val = val.0.lock().unwrap();
-            let val = val.try_clone().unwrap().into_value().unwrap();
-            v.try_push(val).unwrap();
+            match val {
+                RuneValue::ConstValue(val) => {
+                    let val = val.lock().unwrap();
+                    let val = val.try_clone().unwrap().into_value().unwrap();
+                    v.try_push(val).unwrap();
+                }
+                RuneValue::Function(_) => unimplemented!(),
+            }
         }
         VmResult::Ok(v)
     }
@@ -234,15 +279,20 @@ impl rune::runtime::Args for RuneArgs {
 
 impl<T: FromValue> FromRuntimeValueWithEngine<'_, RuneRuntime> for T {
     fn from_runtime_value_with_engine(value: RuneValue, engine: &RuneRuntime) -> Self {
-        let value = value.0.lock().unwrap().try_clone().unwrap();
-        T::from_value(value.into_value().unwrap()).unwrap()
+        match value {
+            RuneValue::ConstValue(val) => {
+                let val = val.lock().unwrap().try_clone().unwrap();
+                T::from_value(val.into_value().unwrap()).unwrap()
+            }
+            RuneValue::Function(_) => unimplemented!(),
+        }
     }
 }
 
 impl<T: ToValue> IntoRuntimeValueWithEngine<'_, T, RuneRuntime> for T {
     fn into_runtime_value_with_engine(value: T, _engine: &RuneRuntime) -> RuneValue {
         let const_value = ConstValue::from_value(value.to_value().unwrap()).unwrap();
-        RuneValue(Arc::new(Mutex::new(const_value)))
+        RuneValue::ConstValue(Arc::new(Mutex::new(const_value)))
     }
 }
 
@@ -256,7 +306,7 @@ impl<T: ToValue> FuncArgs<'_, RuneValue, RuneRuntime> for Vec<T> {
     fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
         self.into_iter()
             .map(|x| {
-                RuneValue(Arc::new(Mutex::new(
+                RuneValue::ConstValue(Arc::new(Mutex::new(
                     ConstValue::from_value(x.to_value().unwrap()).unwrap(),
                 )))
             })
@@ -271,7 +321,7 @@ macro_rules! impl_tuple {
         {
             fn parse(self, _engine: &RuneRuntime) -> Vec<RuneValue> {
                 vec![
-                    $(RuneValue(Arc::new(Mutex::new(ConstValue::from_value(self.$idx.to_value().unwrap()).unwrap()))), )+
+                    $(RuneValue::ConstValue(Arc::new(Mutex::new(ConstValue::from_value(self.$idx.to_value().unwrap()).unwrap()))), )+
                 ]
             }
         }
