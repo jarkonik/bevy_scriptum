@@ -31,9 +31,9 @@ impl<A: Asset + From<String> + GetExtensions> AssetLoader for ScriptLoader<A> {
 
     fn load<'a>(
         &'a self,
-        reader: &'a mut Reader,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext,
     ) -> impl ConditionalSendFuture<Output = Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();

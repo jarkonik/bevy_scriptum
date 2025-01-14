@@ -84,7 +84,7 @@
 //! ```
 //! It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
 //! This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-//! ```rust 
+//! ```rust
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -108,8 +108,8 @@
 //!     .add_plugins(MyPlugin)
 //!     .run();
 //! ```
-//! 
-//! 
+//!
+//!
 //! ## Usage
 //!
 //! Add the following to your `Cargo.toml`:
@@ -387,7 +387,10 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
         self,
         name: String,
         fun: impl IntoCallbackSystem<R, In, Out, Marker>,
-    ) -> Self {
+    ) -> Self
+    where
+        In: SystemInput,
+    {
         let system = fun.into_callback_system(self.world);
 
         let mut callbacks_resource = self.world.resource_mut::<Callbacks<R>>();
