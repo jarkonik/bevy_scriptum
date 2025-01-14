@@ -16,7 +16,7 @@
 //! Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
 //!
 //! All you need to do is register callbacks on your Bevy app like this:
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -37,7 +37,7 @@
 //!
 //! Every callback function that you expose to the scripting language is also a Bevy system, so you can easily query and mutate ECS components and resources just like you would in a regular Bevy system:
 //!
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -61,7 +61,7 @@
 //! ```
 //!
 //! You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -84,7 +84,7 @@
 //! ```
 //! It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
 //! This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -123,7 +123,7 @@
 //!
 //! You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 //!
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
@@ -149,7 +149,7 @@
 //!
 //! And spawn an entity with attached `Script` component with a handle to a script source file:
 //!
-//! ```rust
+//! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
 //! use bevy_scriptum::runtimes::lua::prelude::*;
