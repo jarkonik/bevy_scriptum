@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::{
-    asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
+    asset::{io::Reader, Asset, AssetLoader, LoadContext},
     utils::ConditionalSendFuture,
 };
 
