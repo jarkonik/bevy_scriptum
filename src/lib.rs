@@ -270,6 +270,7 @@ use self::{
     systems::{process_new_scripts, reload_scripts},
 };
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 const ENTITY_VAR_NAME: &str = "entity";
 
 /// An error that can occur when internal [ScriptingPlugin] systems are being executed

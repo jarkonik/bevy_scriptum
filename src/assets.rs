@@ -29,8 +29,8 @@ impl<A: Asset + From<String> + GetExtensions> AssetLoader for ScriptLoader<A> {
     type Settings = ();
     type Error = anyhow::Error;
 
-    fn load<'a>(
-        &'a self,
+    fn load(
+        &self,
         reader: &mut dyn Reader,
         _settings: &Self::Settings,
         _load_context: &mut LoadContext,

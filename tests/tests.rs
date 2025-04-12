@@ -1,12 +1,17 @@
+#[cfg(any(feature = "rhai", feature = "lua"))]
 use std::sync::OnceLock;
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 use bevy::ecs::system::RunSystemOnce as _;
+#[cfg(any(feature = "rhai", feature = "lua"))]
 use bevy::prelude::*;
+#[cfg(any(feature = "rhai", feature = "lua"))]
 use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
-use mlua::Table;
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 fn build_test_app() -> App {
     let mut app = App::new();
 
@@ -20,6 +25,7 @@ fn build_test_app() -> App {
     app
 }
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 fn run_script<R: Runtime, Out, Marker>(
     app: &mut App,
     path: String,
@@ -30,12 +36,13 @@ fn run_script<R: Runtime, Out, Marker>(
 
     let entity_id = app.world_mut().spawn(Script::new(asset)).id();
     app.update(); // let `ScriptData` resources be added to entities
-    app.world_mut().run_system_once(system);
+    app.world_mut().run_system_once(system).unwrap();
     app.update(); // let callbacks be executed
 
     entity_id
 }
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 fn call_script_on_update_from_rust<R: Runtime>(
     mut scripted_entities: Query<(Entity, &mut R::ScriptData)>,
     scripting_runtime: ResMut<R>,
@@ -48,6 +55,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
         .unwrap();
 }
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
@@ -55,6 +63,7 @@ trait AssertStateKeyValue {
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
+#[cfg(any(feature = "rhai", feature = "lua"))]
 macro_rules! scripting_tests {
     ($runtime:ty, $script:literal, $extension:literal) => {
         use super::*;
@@ -357,9 +366,11 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            app.world_mut().run_system_once(|tagged: Query<&MyTag>| {
-                tagged.single();
-            });
+            app.world_mut()
+                .run_system_once(|tagged: Query<&MyTag>| {
+                    tagged.single();
+                })
+                .unwrap();
         }
 
         #[test]
@@ -434,6 +445,7 @@ mod rhai_tests {
 mod lua_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::lua::prelude::*;
+    use mlua::Table;
 
     impl AssertStateKeyValue for LuaRuntime {
         type ScriptData = LuaScriptData;
