@@ -90,7 +90,7 @@ fun_with_string_param("Hello world!")
 
 It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
 This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-```rust 
+```rust
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -124,7 +124,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = { version = "0.6", features = ["lua"] }
+bevy_scriptum = { version = "0.7", features = ["lua"] }
 ```
 
 or execute `cargo add bevy_scriptum --features lua` from your project directory.
