@@ -1,7 +1,7 @@
 [package]
 name = "bevy_scriptum"
 authors = ["Jaroslaw Konik <konikjar@gmail.com>"]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -15,103 +15,131 @@ lua = ["mlua/luajit"]
 rhai = ["dep:rhai"]
 
 [dependencies]
-bevy = { default-features = false, version = "0.14", features = [
-    "bevy_asset",
-] }
+bevy = { default-features = false, version = "0.15", features = ["bevy_asset"] }
 serde = "1.0.162"
-rhai = { version = "1.14.0", features = ["sync", "internals", "unchecked"], optional = true }
+rhai = { version = "1.14.0", features = [
+    "sync",
+    "internals",
+    "unchecked",
+], optional = true }
 thiserror = "1.0.40"
 anyhow = "1.0.82"
 tracing = "0.1.40"
-mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"], optional = true }
+mlua = { version = "0.9.8", features = [
+    "luajit",
+    "vendored",
+    "send",
+], optional = true }
 
 [[example]]
 name = "call_function_from_rust_rhai"
 path = "examples/rhai/call_function_from_rust.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "current_entity_rhai"
 path = "examples/rhai/current_entity.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "custom_type_rhai"
 path = "examples/rhai/custom_type.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "ecs_rhai"
 path = "examples/rhai/ecs.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "entity_variable_rhai"
 path = "examples/rhai/entity_variable.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "function_params_rhai"
 path = "examples/rhai/function_params.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "hello_world_rhai"
 path = "examples/rhai/hello_world.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "multiple_plugins_rhai"
 path = "examples/rhai/multiple_plugins.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "non_closure_system_rhai"
 path = "examples/rhai/non_closure_system.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "promises_rhai"
 path = "examples/rhai/promises.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "side_effects_rhai"
 path = "examples/rhai/side_effects.rs"
+required-features = ["rhai"]
 
 [[example]]
 name = "call_function_from_rust_lua"
 path = "examples/lua/call_function_from_rust.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "current_entity_lua"
 path = "examples/lua/current_entity.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "custom_type_lua"
 path = "examples/lua/custom_type.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "ecs_lua"
 path = "examples/lua/ecs.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "entity_variable_lua"
 path = "examples/lua/entity_variable.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "function_params_lua"
 path = "examples/lua/function_params.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "hello_world_lua"
 path = "examples/lua/hello_world.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "multiple_plugins_lua"
 path = "examples/lua/multiple_plugins.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "non_closure_system_lua"
 path = "examples/lua/non_closure_system.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "promises_lua"
 path = "examples/lua/promises.rs"
+required-features = ["lua"]
 
 [[example]]
 name = "side_effects_lua"
 path = "examples/lua/side_effects.rs"
+required-features = ["lua"]
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"

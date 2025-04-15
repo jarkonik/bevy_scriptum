@@ -4,16 +4,6 @@ use bevy_scriptum::runtimes::rhai::prelude::*;
 
 fn main() {
     App::new()
-        // This is just needed for headless console app, not needed for a regular bevy game
-        // that uses a winit window
-        .set_runner(move |mut app: App| {
-            loop {
-                app.update();
-                if let Some(exit) = app.should_exit() {
-                    return exit;
-                }
-            }
-        })
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, startup)
         .add_systems(Update, call_rhai_on_update_from_rust)

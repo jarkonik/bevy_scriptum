@@ -58,6 +58,7 @@ impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     }
 
     /// Register a callback that will be called when the [Promise] is resolved.
+    #[cfg(any(feature = "rhai", feature = "lua"))]
     pub(crate) fn then(&mut self, callback: V) -> Self {
         let mut inner = self
             .inner

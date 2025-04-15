@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::{
-    asset::{io::Reader, Asset, AssetLoader, AsyncReadExt as _, LoadContext},
+    asset::{io::Reader, Asset, AssetLoader, LoadContext},
     utils::ConditionalSendFuture,
 };
 
@@ -29,11 +29,11 @@ impl<A: Asset + From<String> + GetExtensions> AssetLoader for ScriptLoader<A> {
     type Settings = ();
     type Error = anyhow::Error;
 
-    fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext,
+    fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext,
     ) -> impl ConditionalSendFuture<Output = Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();

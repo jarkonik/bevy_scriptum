@@ -6,7 +6,7 @@ use crate::{promise::Promise, Runtime};
 
 /// A system that can be used to call a script function.
 pub struct CallbackSystem<R: Runtime> {
-    pub(crate) system: Box<dyn System<In = Vec<R::Value>, Out = R::Value>>,
+    pub(crate) system: Box<dyn System<In = In<Vec<R::Value>>, Out = R::Value>>,
     pub(crate) arg_types: Vec<TypeId>,
 }
 
@@ -56,7 +56,10 @@ pub(crate) trait FromRuntimeValueWithEngine<'a, R: Runtime> {
 }
 
 /// Trait that alllows to convert a script callback function into a Bevy [`System`].
-pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker> {
+pub trait IntoCallbackSystem<R: Runtime, In, Out, Marker>: IntoSystem<In, Out, Marker>
+where
+    In: SystemInput,
+{
     /// Convert this function into a [CallbackSystem].
     #[must_use]
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
@@ -87,10 +90,10 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, ($($t,)+), Out, Marker>
+        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, In<($($t,)+)>, Out, Marker>
             for FN
         where
-            FN: IntoSystem<($($t,)+), Out, Marker>,
+            FN: IntoSystem<In<($($t,)+)>, Out, Marker>,
             Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
             $($t: 'static + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {

@@ -84,6 +84,33 @@ which you can then call in your script like this:
 ```lua
 fun_with_string_param("Hello world!")
 ```
+It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
+This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
+```rust
+use bevy::prelude::*;
+use bevy_scriptum::prelude::*;
+use bevy_scriptum::runtimes::lua::prelude::*;
+
+struct MyPlugin;
+impl Plugin for MyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_scripting_api::<LuaRuntime>(|runtime| {
+            runtime.add_function(String::from("hello_from_my_plugin"), || {
+                info!("Hello from MyPlugin");
+            });
+        });
+    }
+}
+
+App::new()
+    .add_plugins(DefaultPlugins)
+    .add_scripting::<LuaRuntime>(|_| {
+        // nice and clean
+    })
+    .add_plugins(MyPlugin)
+    .run();
+```
+
 
 ### Usage
 
@@ -91,7 +118,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = { version = "0.6", features = ["lua"] }
+bevy_scriptum = { version = "0.7", features = ["lua"] }
 ```
 
 or execute `cargo add bevy_scriptum --features lua` from your project directory.
@@ -164,6 +191,7 @@ The examples live in `examples` directory and their corresponding scripts live i
 
 | bevy version | bevy_scriptum version |
 |--------------|-----------------------|
+| 0.15         | 0.7                   |
 | 0.14         | 0.6                   |
 | 0.13         | 0.4-0.5               |
 | 0.12         | 0.3                   |
