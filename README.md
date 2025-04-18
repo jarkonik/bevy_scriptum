@@ -1,5 +1,7 @@
 # bevy_scriptum 📜
 
+![demo](demo.gif)
+
 bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
 Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 
@@ -173,10 +175,6 @@ App::new()
 ```
 
 You should then see `my_print: 'Hello world!'` printed in your console.
-
-### Demo
-
-![demo](demo.gif)
 
 ### Provided examples
 
