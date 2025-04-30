@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::tracing};
+use bevy::{prelude::*, log::tracing};
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},

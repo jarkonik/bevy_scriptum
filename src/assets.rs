@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     asset::{io::Reader, Asset, AssetLoader, LoadContext},
-    utils::ConditionalSendFuture,
+    tasks::ConditionalSendFuture,
 };
 
 /// A loader for script assets.

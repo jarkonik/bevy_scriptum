@@ -258,7 +258,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use bevy::{app::MainScheduleOrder, ecs::{component::Mutable, schedule::ScheduleLabel}, prelude::*};
 use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -290,7 +290,7 @@ pub enum ScriptingError {
 pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
-    type ScriptData: Component;
+    type ScriptData: Component<Mutability = Mutable>;
     type CallContext: Send + Clone;
     type Value: Send + Clone;
     type RawEngine;

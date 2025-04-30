@@ -11,7 +11,7 @@ fn main() {
         .add_scripting::<LuaRuntime>(|builder| {
             builder.add_function(
                 String::from("get_player_name"),
-                |player_names: Query<&Name, With<Player>>| player_names.single().to_string(),
+                |player_names: Query<&Name, With<Player>>| player_names.single().expect("Missing player_names").to_string(),
             );
         })
         .add_systems(Startup, startup)
