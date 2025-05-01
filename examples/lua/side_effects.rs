@@ -38,6 +38,6 @@ fn print_entity_names_and_quit(query: Query<&Name>, mut exit: EventWriter<AppExi
         for e in &query {
             println!("{}", e);
         }
-        exit.send(AppExit::Success);
+        exit.write(AppExit::Success);
     }
 }

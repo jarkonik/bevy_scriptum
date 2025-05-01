@@ -49,7 +49,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
 ) where
     (): for<'a> FuncArgs<'a, R::Value, R>,
 {
-    let (entity, mut script_data) = scripted_entities.single_mut();
+    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
     scripting_runtime
         .call_fn("test_func", &mut script_data, entity, ())
         .unwrap();
@@ -83,7 +83,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     scripting_runtime
                         .call_fn("test_func", &mut script_data, entity, vec![1])
                         .unwrap();
@@ -178,7 +178,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     scripting_runtime
                         .call_fn("test_func", &mut script_data, entity, vec![1])
                         .unwrap();
@@ -203,7 +203,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     scripting_runtime
                         .call_fn(
                             "test_func",
@@ -239,7 +239,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     scripting_runtime
                         .call_fn("test_func", &mut script_data, entity, vec![1, 2])
                         .unwrap();
@@ -265,7 +265,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     let result =
                         scripting_runtime.call_fn("test_func", &mut script_data, entity, ());
                     assert!(result.is_err());
@@ -288,7 +288,7 @@ macro_rules! scripting_tests {
                 .to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut();
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
                     let result =
                         scripting_runtime.call_fn("does_not_exist", &mut script_data, entity, ());
                     assert!(result.is_err());
@@ -368,7 +368,7 @@ macro_rules! scripting_tests {
 
             app.world_mut()
                 .run_system_once(|tagged: Query<&MyTag>| {
-                    tagged.single();
+                    tagged.single().unwrap();
                 })
                 .unwrap();
         }

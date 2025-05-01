@@ -9,7 +9,7 @@ fn main() {
         .add_systems(Update, call_rhai_on_update_from_rust)
         .add_scripting::<RhaiRuntime>(|runtime| {
             runtime.add_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
-                exit.send(AppExit::Success);
+                exit.write(AppExit::Success);
             });
         })
         .run();

@@ -6,7 +6,7 @@ To enable live reload it should be enough to enable `file-watcher` feature
 within bevy dependency in `Cargo.toml`
 
 ```
-bevy = { version = "0.15", features = ["file_watcher"] }
+bevy = { version = "0.16", features = ["file_watcher"] }
 ```
 
 ## Init-teardown pattern for game development

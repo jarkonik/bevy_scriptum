@@ -118,7 +118,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = { version = "0.7", features = ["lua"] }
+//! bevy_scriptum = { version = "0.8", features = ["lua"] }
 //! ```
 //!
 //! or execute `cargo add bevy_scriptum --features lua` from your project directory.
@@ -187,6 +187,7 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|-----------------------|
+//! | 0.16         | 0.8                   |
 //! | 0.15         | 0.7                   |
 //! | 0.14         | 0.6                   |
 //! | 0.13         | 0.4-0.5               |
@@ -258,7 +259,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::schedule::ScheduleLabel, prelude::*};
+use bevy::{app::MainScheduleOrder, ecs::{component::Mutable, schedule::ScheduleLabel}, prelude::*};
 use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -290,7 +291,7 @@ pub enum ScriptingError {
 pub trait Runtime: Resource + Default {
     type Schedule: ScheduleLabel + Debug + Clone + Eq + Hash + Default;
     type ScriptAsset: Asset + From<String> + GetExtensions;
-    type ScriptData: Component;
+    type ScriptData: Component<Mutability = Mutable>;
     type CallContext: Send + Clone;
     type Value: Send + Clone;
     type RawEngine;
