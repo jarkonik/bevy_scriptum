@@ -118,7 +118,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = { version = "0.7", features = ["lua"] }
+//! bevy_scriptum = { version = "0.8", features = ["lua"] }
 //! ```
 //!
 //! or execute `cargo add bevy_scriptum --features lua` from your project directory.
@@ -187,6 +187,7 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|-----------------------|
+//! | 0.16         | 0.8                   |
 //! | 0.15         | 0.7                   |
 //! | 0.14         | 0.6                   |
 //! | 0.13         | 0.4-0.5               |
