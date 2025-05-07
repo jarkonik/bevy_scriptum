@@ -87,6 +87,11 @@ path = "examples/rhai/side_effects.rs"
 required-features = ["rhai"]
 
 [[example]]
+name = "function_return_value_rhai"
+path = "examples/rhai/function_return_value.rs"
+required-features = ["rhai"]
+
+[[example]]
 name = "call_function_from_rust_lua"
 path = "examples/lua/call_function_from_rust.rs"
 required-features = ["lua"]
@@ -139,6 +144,11 @@ required-features = ["lua"]
 [[example]]
 name = "side_effects_lua"
 path = "examples/lua/side_effects.rs"
+required-features = ["lua"]
+
+[[example]]
+name = "function_return_value_lua"
+path = "examples/lua/function_return_value.rs"
 required-features = ["lua"]
 
 [dev-dependencies]
