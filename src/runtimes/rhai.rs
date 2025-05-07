@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, resource::Resource},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     math::Vec3,
     reflect::TypePath,
 };
@@ -48,7 +48,7 @@ pub struct RhaiScriptData {
 }
 
 #[derive(Debug, Clone)]
-pub struct RhaiValue(rhai::Dynamic);
+pub struct RhaiValue(pub rhai::Dynamic);
 
 impl Runtime for RhaiRuntime {
     type Schedule = RhaiSchedule;

@@ -1,6 +1,6 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, resource::Resource},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     math::Vec3,
     reflect::TypePath,
 };
@@ -21,7 +21,7 @@ use crate::{
 type LuaEngine = Arc<Mutex<Lua>>;
 
 #[derive(Clone)]
-pub struct LuaValue(Arc<RegistryKey>);
+pub struct LuaValue(pub Arc<RegistryKey>);
 
 impl LuaValue {
     fn new<'a, T: IntoLua<'a>>(engine: &'a Lua, value: T) -> Self {
