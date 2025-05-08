@@ -1,17 +1,17 @@
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use std::sync::OnceLock;
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::ecs::system::RunSystemOnce as _;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::prelude::*;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn build_test_app() -> App {
     let mut app = App::new();
 
@@ -25,7 +25,7 @@ fn build_test_app() -> App {
     app
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn run_script<R: Runtime, Out, Marker>(
     app: &mut App,
     path: String,
@@ -42,7 +42,7 @@ fn run_script<R: Runtime, Out, Marker>(
     entity_id
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn call_script_on_update_from_rust<R: Runtime>(
     mut scripted_entities: Query<(Entity, &mut R::ScriptData)>,
     scripting_runtime: ResMut<R>,
@@ -55,7 +55,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
         .unwrap();
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
@@ -63,7 +63,7 @@ trait AssertStateKeyValue {
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 macro_rules! scripting_tests {
     ($runtime:ty, $script:literal, $extension:literal) => {
         use super::*;

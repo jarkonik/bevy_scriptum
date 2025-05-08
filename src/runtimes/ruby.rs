@@ -1,6 +1,6 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, schedule::ScheduleLabel, system::Resource},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     reflect::TypePath,
 };
 use serde::Deserialize;
