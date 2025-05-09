@@ -1,7 +1,16 @@
+use std::{
+    cell::{LazyCell, OnceCell},
+    sync::{LazyLock, Mutex, OnceLock},
+};
+
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     reflect::TypePath,
+};
+use magnus::{
+    embed::{init, Cleanup},
+    prelude::*,
 };
 use serde::Deserialize;
 
@@ -25,18 +34,37 @@ pub struct RubyScriptData;
 
 impl GetExtensions for RubyScript {
     fn extensions() -> &'static [&'static str] {
-        todo!()
+        &["rb"]
     }
 }
 
 impl From<String> for RubyScript {
     fn from(value: String) -> Self {
-        todo!()
+        Self(value)
     }
 }
 
+fn hello(subject: String) -> String {
+    format!("hello, {}", subject)
+}
+
+struct RubyEngine(Cleanup);
+
+unsafe impl Send for RubyEngine {}
+
+static RUBY_ENGINE: OnceLock<Mutex<RubyEngine>> = OnceLock::new();
+
 impl Default for RubyRuntime {
     fn default() -> Self {
+        RUBY_ENGINE.get_or_init(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
+        // TODO: Add SAFETY?
+
+        // engine.define_global_function("hello", magnus::function!(hello, 1));
+        // engine
+        //     .eval::<magnus::value::Qnil>(r#"puts hello("world")"#)
+        //     .unwrap();
+        //
+        // Self { engine }
         Self {}
     }
 }
@@ -70,7 +98,11 @@ impl Runtime for RubyRuntime {
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        todo!()
+        let engine =
+            RUBY_ENGINE.get_or_init(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
+        let engine = engine.lock().unwrap();
+        engine.0.eval::<magnus::value::Qnil>(&script.0);
+        Ok(RubyScriptData)
     }
 
     fn register_fn(
@@ -97,7 +129,11 @@ impl Runtime for RubyRuntime {
         entity: bevy::prelude::Entity,
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        todo!()
+        let engine =
+            RUBY_ENGINE.get_or_init(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
+        let ruby = magnus::Ruby::get().unwrap();
+        let _: magnus::value::Value = ruby.class_object().funcall(name, ()).unwrap();
+        todo!();
     }
 
     fn call_fn_from_value(

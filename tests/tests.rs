@@ -297,7 +297,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust() {
+        fn test_script_function_gets_called_from_rust_without_params() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
