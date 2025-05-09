@@ -10,6 +10,7 @@ use bevy::{
 };
 use magnus::{
     embed::{init, Cleanup},
+    function,
     prelude::*,
 };
 use serde::Deserialize;
@@ -93,8 +94,6 @@ impl Runtime for RubyRuntime {
         script: &Self::ScriptAsset,
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
-        // let engine =
-        //     RUBY_ENGINE.get_or_init(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
         let ruby = magnus::Ruby::get().unwrap();
         ruby.eval::<magnus::value::Qnil>(&script.0);
         Ok(RubyScriptData)
@@ -114,7 +113,19 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        todo!()
+        let ruby = magnus::Ruby::get().unwrap();
+
+        unsafe extern "C" fn callback(val: magnus::Value) -> magnus::Value {
+            let ruby = magnus::Ruby::get().unwrap();
+            // f();
+            ruby.qnil().as_value()
+        }
+
+        ruby.define_global_function(
+            &name,
+            callback as unsafe extern "C" fn(magnus::Value) -> magnus::Value,
+        );
+        Ok(())
     }
 
     fn call_fn(
