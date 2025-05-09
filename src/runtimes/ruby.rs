@@ -1,6 +1,7 @@
 use std::{
     cell::{LazyCell, OnceCell},
     sync::{LazyLock, Mutex, OnceLock},
+    thread::{self, JoinHandle},
 };
 
 use bevy::{
@@ -22,7 +23,9 @@ use crate::{
 };
 
 #[derive(Resource)]
-pub struct RubyRuntime {}
+pub struct RubyRuntime {
+    ruby_thread: Option<JoinHandle<()>>,
+}
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct RubySchedule;
@@ -44,24 +47,30 @@ impl From<String> for RubyScript {
         Self(value)
     }
 }
-
-fn hello(subject: String) -> String {
-    format!("hello, {}", subject)
-}
-
 struct RubyEngine(Cleanup);
 
 // TODO: Add SAFETY?
 unsafe impl Send for RubyEngine {}
 
-// TODO: thread local
 static RUBY_ENGINE: LazyLock<Mutex<RubyEngine>> =
     LazyLock::new(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
 
 impl Default for RubyRuntime {
     fn default() -> Self {
-        LazyLock::force(&RUBY_ENGINE);
-        Self {}
+        let ruby_thread = thread::spawn(|| {
+            let _cleanup = LazyLock::force(&RUBY_ENGINE);
+            while true {}
+        });
+        Self {
+            ruby_thread: Some(ruby_thread),
+        }
+    }
+}
+
+impl Drop for RubyRuntime {
+    fn drop(&mut self) {
+        let ruby_thread = self.ruby_thread.take().unwrap();
+        ruby_thread.join().unwrap();
     }
 }
 
