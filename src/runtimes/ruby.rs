@@ -79,10 +79,10 @@ impl Runtime for RubyRuntime {
 
     type Value = RubyValue;
 
-    type RawEngine = ();
+    type RawEngine = magnus::Ruby;
 
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
-        todo!()
+        f(&mut magnus::Ruby::get().unwrap())
     }
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
@@ -115,16 +115,22 @@ impl Runtime for RubyRuntime {
     ) -> Result<(), crate::ScriptingError> {
         let ruby = magnus::Ruby::get().unwrap();
 
-        unsafe extern "C" fn callback(val: magnus::Value) -> magnus::Value {
+        static mut FUN: Vec<Box<dyn Fn()>> = Vec::new();
+        unsafe {
+            FUN.push(Box::new(move || {
+                f((), vec![]).unwrap();
+            }));
+        }
+
+        fn callback() -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
-            // f();
+            unsafe {
+                FUN.pop().unwrap()();
+            }
             ruby.qnil().as_value()
         }
 
-        ruby.define_global_function(
-            &name,
-            callback as unsafe extern "C" fn(magnus::Value) -> magnus::Value,
-        );
+        ruby.define_global_function(&name, function!(callback, 0));
         Ok(())
     }
 
@@ -155,25 +161,25 @@ pub mod prelude {
 }
 
 impl<T> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
-    fn from_runtime_value_with_engine(value: RubyValue, engine: &()) -> Self {
+    fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
         todo!();
     }
 }
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &()) -> RubyValue {
-        todo!();
+    fn into_runtime_value_with_engine(value: T, engine: &magnus::Ruby) -> RubyValue {
+        RubyValue(())
     }
 }
 
 impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
-    fn parse(self, _engine: &()) -> Vec<RubyValue> {
+    fn parse(self, _engine: &magnus::Ruby) -> Vec<RubyValue> {
         Vec::new()
     }
 }
 
 impl<T> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, engine: &()) -> Vec<RubyValue> {
+    fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
         self.into_iter().map(|x| RubyValue(())).collect()
     }
 }
@@ -183,7 +189,7 @@ macro_rules! impl_tuple {
         impl<'a, $($t,)+> FuncArgs<'a, RubyValue, RubyRuntime>
             for ($($t,)+)
         {
-            fn parse(self, engine: &'a ()) -> Vec<RubyValue> {
+            fn parse(self, engine: &'a magnus::Ruby) -> Vec<RubyValue> {
                 todo!();
             }
         }
