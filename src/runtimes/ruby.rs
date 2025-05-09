@@ -1,3 +1,4 @@
+use std::sync::mpsc::{Receiver, Sender};
 use std::{
     cell::{LazyCell, OnceCell},
     sync::{LazyLock, Mutex, OnceLock},
@@ -25,6 +26,7 @@ use crate::{
 #[derive(Resource)]
 pub struct RubyRuntime {
     ruby_thread: Option<JoinHandle<()>>,
+    ruby_thread_sender: Option<crossbeam_channel::Sender<()>>,
 }
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
@@ -57,18 +59,23 @@ static RUBY_ENGINE: LazyLock<Mutex<RubyEngine>> =
 
 impl Default for RubyRuntime {
     fn default() -> Self {
-        let ruby_thread = thread::spawn(|| {
+        let (ruby_thread_sender, ruby_thread_receiver) = crossbeam_channel::unbounded::<()>();
+        let ruby_thread = thread::spawn(move || {
             let _cleanup = LazyLock::force(&RUBY_ENGINE);
-            while true {}
+            while let Ok(val) = ruby_thread_receiver.recv() {
+                println!("received");
+            }
         });
         Self {
             ruby_thread: Some(ruby_thread),
+            ruby_thread_sender: Some(ruby_thread_sender),
         }
     }
 }
 
 impl Drop for RubyRuntime {
     fn drop(&mut self) {
+        drop(self.ruby_thread_sender.take().unwrap());
         let ruby_thread = self.ruby_thread.take().unwrap();
         ruby_thread.join().unwrap();
     }
@@ -131,7 +138,11 @@ impl Runtime for RubyRuntime {
             }));
         }
 
+        let sender = self.ruby_thread_sender.as_ref().clone();
+        let x = 5;
+
         fn callback() -> magnus::Value {
+            // sender.unwrap().send(());
             let ruby = magnus::Ruby::get().unwrap();
             unsafe {
                 FUN.pop().unwrap()();
