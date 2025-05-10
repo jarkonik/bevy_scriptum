@@ -177,7 +177,7 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
-            let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
+            let _: Result<magnus::Value, _> = ruby.class_object().funcall(name, ());
             RubyValue(())
         }));
 
