@@ -1,17 +1,17 @@
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use std::sync::OnceLock;
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::ecs::system::RunSystemOnce as _;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::prelude::*;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn build_test_app() -> App {
     let mut app = App::new();
 
@@ -25,7 +25,7 @@ fn build_test_app() -> App {
     app
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn run_script<R: Runtime, Out, Marker>(
     app: &mut App,
     path: String,
@@ -42,7 +42,7 @@ fn run_script<R: Runtime, Out, Marker>(
     entity_id
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn call_script_on_update_from_rust<R: Runtime>(
     mut scripted_entities: Query<(Entity, &mut R::ScriptData)>,
     scripting_runtime: ResMut<R>,
@@ -55,7 +55,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
         .unwrap();
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
@@ -63,7 +63,7 @@ trait AssertStateKeyValue {
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 macro_rules! scripting_tests {
     ($runtime:ty, $script:literal, $extension:literal) => {
         use super::*;
@@ -297,7 +297,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust() {
+        fn test_script_function_gets_called_from_rust_without_params() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -481,4 +481,40 @@ mod lua_tests {
     }
 
     scripting_tests!(LuaRuntime, "lua", "lua");
+}
+
+#[cfg(feature = "ruby")]
+mod ruby_tests {
+    use bevy::prelude::*;
+    use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
+    use magnus::{value::ReprValue, Module, Object, Ruby};
+
+    impl AssertStateKeyValue for RubyRuntime {
+        type ScriptData = RubyScriptData;
+
+        fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
+            // let state: magnus::value::Value = Ruby::get()
+            //     .unwrap()
+            //     .class_object()
+            //     .const_get("STATE")
+            //     .unwrap();
+            // let res: i64 = state.funcall_public("[]", (key.to_string(),)).unwrap();
+            // assert_eq!(res, value)
+        }
+
+        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
+            todo!();
+        }
+
+        fn assert_state_key_value_string(
+            world: &World,
+            _entity_id: Entity,
+            key: &str,
+            value: &str,
+        ) {
+            todo!();
+        }
+    }
+
+    scripting_tests!(RubyRuntime, "ruby", "rb");
 }

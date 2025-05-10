@@ -259,7 +259,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::{component::Mutable, schedule::ScheduleLabel}, prelude::*};
+use bevy::{
+    app::MainScheduleOrder,
+    ecs::{component::Mutable, schedule::ScheduleLabel},
+    prelude::*,
+};
 use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -269,7 +273,7 @@ use self::{
     systems::{process_new_scripts, reload_scripts},
 };
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 const ENTITY_VAR_NAME: &str = "entity";
 
 /// An error that can occur when internal [ScriptingPlugin] systems are being executed
