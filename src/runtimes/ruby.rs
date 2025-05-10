@@ -49,9 +49,6 @@ impl From<String> for RubyScript {
 }
 struct RubyEngine(Cleanup);
 
-// TODO: Add SAFETY?
-unsafe impl Send for RubyEngine {}
-
 struct RubyThread {
     sender: Option<crossbeam_channel::Sender<Box<dyn FnOnce(Ruby) + Send>>>,
     handle: Option<JoinHandle<()>>,
@@ -64,10 +61,10 @@ impl RubyThread {
         let (sender, receiver) = crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
 
         let handle = thread::spawn(move || {
-            unsafe { magnus::embed::init() };
-            while let Ok(val) = receiver.recv() {
+            let _cleanup = unsafe { magnus::embed::init() };
+            while let Ok(f) = receiver.recv() {
                 let ruby = Ruby::get().unwrap();
-                val(ruby);
+                f(ruby);
             }
         });
 
@@ -77,15 +74,19 @@ impl RubyThread {
         }
     }
 
-    fn execute_in(&self, f: Box<dyn FnOnce(Ruby) + Send>) {
+    fn execute_in(&self, f: Box<dyn FnOnce(Ruby) -> RubyValue + Send>) -> RubyValue {
+        let (return_sender, return_receiver) = crossbeam_channel::bounded(0);
         self.sender
             .as_ref()
             .unwrap()
             .send(Box::new(move |ruby| {
-                let result = f(ruby);
-                println!("{:?}", result);
+                return_sender.send(f(ruby)).unwrap();
+                // return_sender.send(f(ruby)).unwrap();
+                // drop(return_sender);
             }))
             .unwrap();
+        return_receiver.recv().unwrap();
+        RubyValue(())
     }
 }
 
@@ -135,6 +136,7 @@ impl Runtime for RubyRuntime {
         let script = script.0.clone();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
             ruby.eval::<magnus::value::Value>(&script).unwrap();
+            RubyValue(())
         }));
         Ok(RubyScriptData)
     }
@@ -153,28 +155,14 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        // let ruby = magnus::Ruby::get().unwrap();
-        //
-        // static mut FUN: Vec<Box<dyn Fn()>> = Vec::new();
-        // unsafe {
-        //     FUN.push(Box::new(move || {
-        //         f((), vec![]).unwrap();
-        //     }));
-        // }
-        //
-
         fn callback(val: magnus::Value) -> magnus::Value {
-            // println!("{:?}", val);
-            // sender.unwrap().send(());
             let ruby = magnus::Ruby::get().unwrap();
-            // unsafe {
-            //     FUN.pop().unwrap()();
-            // }
             ruby.qnil().as_value()
         }
 
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
             ruby.define_global_function(&name, function!(callback, 1));
+            RubyValue(())
         }));
 
         Ok(())
@@ -189,7 +177,8 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
-            let _: magnus::value::Value = ruby.class_object().funcall(name, ()).unwrap();
+            let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
+            RubyValue(())
         }));
 
         Ok(RubyValue(()))
