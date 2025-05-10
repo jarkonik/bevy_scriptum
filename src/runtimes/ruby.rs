@@ -25,10 +25,7 @@ use crate::{
 };
 
 #[derive(Resource)]
-pub struct RubyRuntime {
-    ruby_thread: Option<JoinHandle<()>>,
-    ruby_thread_sender: Option<crossbeam_channel::Sender<Box<dyn FnOnce(Ruby) + Send>>>,
-}
+pub struct RubyRuntime {}
 
 #[derive(ScheduleLabel, Clone, PartialEq, Eq, Debug, Hash, Default)]
 pub struct RubySchedule;
@@ -55,31 +52,54 @@ struct RubyEngine(Cleanup);
 // TODO: Add SAFETY?
 unsafe impl Send for RubyEngine {}
 
-impl Default for RubyRuntime {
-    fn default() -> Self {
-        let (ruby_thread_sender, ruby_thread_receiver) =
-            crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
-        let ruby_thread = thread::spawn(move || {
-            static RUBY_ENGINE: LazyLock<Mutex<RubyEngine>> =
-                LazyLock::new(|| Mutex::new(RubyEngine(unsafe { magnus::embed::init() })));
-            LazyLock::force(&RUBY_ENGINE);
-            while let Ok(val) = ruby_thread_receiver.recv() {
+struct RubyThread {
+    sender: Option<crossbeam_channel::Sender<Box<dyn FnOnce(Ruby) + Send>>>,
+    handle: Option<JoinHandle<()>>,
+}
+
+static RUBY_THREAD: LazyLock<RubyThread> = LazyLock::new(|| RubyThread::spawn());
+
+impl RubyThread {
+    fn spawn() -> Self {
+        let (sender, receiver) = crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
+
+        let handle = thread::spawn(move || {
+            unsafe { magnus::embed::init() };
+            while let Ok(val) = receiver.recv() {
                 let ruby = Ruby::get().unwrap();
                 val(ruby);
             }
         });
-        Self {
-            ruby_thread: Some(ruby_thread),
-            ruby_thread_sender: Some(ruby_thread_sender),
+
+        RubyThread {
+            sender: Some(sender),
+            handle: Some(handle),
         }
+    }
+
+    fn execute_in(&self, f: Box<dyn FnOnce(Ruby) + Send>) {
+        self.sender
+            .as_ref()
+            .unwrap()
+            .send(Box::new(move |ruby| {
+                let result = f(ruby);
+                println!("{:?}", result);
+            }))
+            .unwrap();
     }
 }
 
-impl Drop for RubyRuntime {
+impl Drop for RubyThread {
     fn drop(&mut self) {
-        drop(self.ruby_thread_sender.take().unwrap());
-        let ruby_thread = self.ruby_thread.take().unwrap();
-        ruby_thread.join().unwrap();
+        drop(self.sender.take().unwrap());
+        let handle = self.handle.take().unwrap();
+        handle.join().unwrap();
+    }
+}
+
+impl Default for RubyRuntime {
+    fn default() -> Self {
+        Self {}
     }
 }
 
@@ -113,14 +133,9 @@ impl Runtime for RubyRuntime {
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
-        self.ruby_thread_sender
-            .as_ref()
-            .unwrap()
-            .send(Box::new(move |ruby| {
-                ruby.eval::<magnus::value::Value>(&script).unwrap();
-            }))
-            .unwrap();
-
+        RUBY_THREAD.execute_in(Box::new(move |ruby| {
+            ruby.eval::<magnus::value::Value>(&script).unwrap();
+        }));
         Ok(RubyScriptData)
     }
 
@@ -158,13 +173,9 @@ impl Runtime for RubyRuntime {
             ruby.qnil().as_value()
         }
 
-        self.ruby_thread_sender
-            .as_ref()
-            .unwrap()
-            .send(Box::new(move |ruby| {
-                ruby.define_global_function(&name, function!(callback, 1));
-            }))
-            .unwrap();
+        RUBY_THREAD.execute_in(Box::new(move |ruby| {
+            ruby.define_global_function(&name, function!(callback, 1));
+        }));
 
         Ok(())
     }
@@ -177,13 +188,9 @@ impl Runtime for RubyRuntime {
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
-        self.ruby_thread_sender
-            .as_ref()
-            .unwrap()
-            .send(Box::new(move |ruby| {
-                let _: magnus::value::Value = ruby.class_object().funcall(name, ()).unwrap();
-            }))
-            .unwrap();
+        RUBY_THREAD.execute_in(Box::new(move |ruby| {
+            let _: magnus::value::Value = ruby.class_object().funcall(name, ()).unwrap();
+        }));
 
         Ok(RubyValue(()))
     }
