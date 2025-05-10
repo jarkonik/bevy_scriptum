@@ -1,21 +1,15 @@
-use std::sync::mpsc::{Receiver, Sender};
 use std::{
-    cell::{LazyCell, OnceCell},
-    sync::{LazyLock, Mutex, OnceLock},
+    sync::LazyLock,
     thread::{self, JoinHandle},
 };
 
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
+    ecs::{component::Component, resource::Resource, schedule::ScheduleLabel},
     reflect::TypePath,
 };
 use magnus::Ruby;
-use magnus::{
-    embed::{init, Cleanup},
-    function,
-    prelude::*,
-};
+use magnus::{embed::Cleanup, function, prelude::*};
 use serde::Deserialize;
 
 use crate::{
@@ -128,7 +122,7 @@ impl Runtime for RubyRuntime {
     fn eval(
         &self,
         script: &Self::ScriptAsset,
-        entity: bevy::prelude::Entity,
+        _entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
@@ -141,8 +135,8 @@ impl Runtime for RubyRuntime {
     fn register_fn(
         &mut self,
         name: String,
-        arg_types: Vec<std::any::TypeId>,
-        f: impl Fn(
+        _arg_types: Vec<std::any::TypeId>,
+        _f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
             ) -> Result<
@@ -152,7 +146,7 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        fn callback(val: magnus::Value) -> magnus::Value {
+        fn callback(_val: magnus::Value) -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
             ruby.qnil().as_value()
         }
@@ -168,9 +162,9 @@ impl Runtime for RubyRuntime {
     fn call_fn(
         &self,
         name: &str,
-        script_data: &mut Self::ScriptData,
-        entity: bevy::prelude::Entity,
-        args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
+        _script_data: &mut Self::ScriptData,
+        _entity: bevy::prelude::Entity,
+        _args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
@@ -183,9 +177,9 @@ impl Runtime for RubyRuntime {
 
     fn call_fn_from_value(
         &self,
-        value: &Self::Value,
-        context: &Self::CallContext,
-        args: Vec<Self::Value>,
+        _value: &Self::Value,
+        _context: &Self::CallContext,
+        _args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         todo!()
     }
@@ -196,13 +190,13 @@ pub mod prelude {
 }
 
 impl<T> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
-    fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
+    fn from_runtime_value_with_engine(_value: RubyValue, _engine: &magnus::Ruby) -> Self {
         todo!();
     }
 }
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &magnus::Ruby) -> RubyValue {
+    fn into_runtime_value_with_engine(_value: T, _engine: &magnus::Ruby) -> RubyValue {
         RubyValue(())
     }
 }
@@ -214,8 +208,8 @@ impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
 }
 
 impl<T> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
-        self.into_iter().map(|x| RubyValue(())).collect()
+    fn parse(self, _engine: &magnus::Ruby) -> Vec<RubyValue> {
+        self.into_iter().map(|_x| RubyValue(())).collect()
     }
 }
 
@@ -224,7 +218,7 @@ macro_rules! impl_tuple {
         impl<'a, $($t,)+> FuncArgs<'a, RubyValue, RubyRuntime>
             for ($($t,)+)
         {
-            fn parse(self, engine: &'a magnus::Ruby) -> Vec<RubyValue> {
+            fn parse(self, _engine: &'a magnus::Ruby) -> Vec<RubyValue> {
                 todo!();
             }
         }
