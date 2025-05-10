@@ -74,19 +74,16 @@ impl RubyThread {
         }
     }
 
-    fn execute_in(&self, f: Box<dyn FnOnce(Ruby) -> RubyValue + Send>) -> RubyValue {
+    fn execute_in<T: Send + 'static>(&self, f: Box<dyn FnOnce(Ruby) -> T + Send>) -> T {
         let (return_sender, return_receiver) = crossbeam_channel::bounded(0);
         self.sender
             .as_ref()
             .unwrap()
             .send(Box::new(move |ruby| {
                 return_sender.send(f(ruby)).unwrap();
-                // return_sender.send(f(ruby)).unwrap();
-                // drop(return_sender);
             }))
             .unwrap();
-        return_receiver.recv().unwrap();
-        RubyValue(())
+        return_receiver.recv().unwrap()
     }
 }
 
@@ -125,7 +122,7 @@ impl Runtime for RubyRuntime {
     }
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
-        todo!()
+        RUBY_THREAD.execute_in(Box::new(move |ruby| f(&ruby)))
     }
 
     fn eval(
