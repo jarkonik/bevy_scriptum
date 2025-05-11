@@ -1,3 +1,4 @@
+// TODO: make sure ruby is statically linked
 use std::{
     sync::LazyLock,
     thread::{self, JoinHandle},
@@ -115,7 +116,10 @@ impl Runtime for RubyRuntime {
         f(&mut magnus::Ruby::get().unwrap())
     }
 
-    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
+    fn with_engine<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
         RUBY_THREAD.execute_in(Box::new(move |ruby| f(&ruby)))
     }
 
@@ -136,7 +140,7 @@ impl Runtime for RubyRuntime {
         &mut self,
         name: String,
         _arg_types: Vec<std::any::TypeId>,
-        _f: impl Fn(
+        f: impl Fn(
                 Self::CallContext,
                 Vec<Self::Value>,
             ) -> Result<
@@ -146,13 +150,17 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        fn callback(_val: magnus::Value) -> magnus::Value {
+        fn callback() -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
+            let method_name: magnus::value::StaticSymbol =
+                ruby.class_object().funcall("__method__", ()).unwrap();
+            let method_name = method_name.to_string();
+            dbg!(method_name);
             ruby.qnil().as_value()
         }
 
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
-            ruby.define_global_function(&name, function!(callback, 1));
+            ruby.define_global_function(&name, function!(callback, 0));
             RubyValue(())
         }));
 
@@ -168,7 +176,7 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         RUBY_THREAD.execute_in(Box::new(move |ruby| {
-            let _: Result<magnus::Value, _> = ruby.class_object().funcall(name, ());
+            let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
             RubyValue(())
         }));
 

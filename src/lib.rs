@@ -308,7 +308,10 @@ pub trait Runtime: Resource + Default {
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
-    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
+    fn with_engine<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T;
 
     fn eval(
         &self,
