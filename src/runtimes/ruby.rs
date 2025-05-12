@@ -1,5 +1,6 @@
 // TODO: make sure ruby is statically linked
 use std::{
+    collections::HashMap,
     sync::{LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
@@ -156,7 +157,8 @@ impl Runtime for RubyRuntime {
     ) -> Result<(), crate::ScriptingError> {
         static RUBY_CALLBACKS: LazyLock<
             Mutex<
-                Vec<
+                HashMap<
+                    String,
                     Box<
                         dyn Fn(
                                 (),
@@ -170,17 +172,17 @@ impl Runtime for RubyRuntime {
                     >,
                 >,
             >,
-        > = LazyLock::new(|| Mutex::new(Vec::new()));
+        > = LazyLock::new(|| Mutex::new(HashMap::new()));
         let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
-        callbacks.push(Box::new(f));
+        callbacks.insert(name.clone(), Box::new(f));
 
         fn callback() -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
             let method_name = method_name.to_string();
-            let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
-            let f = callbacks.pop().unwrap();
+            let callbacks = RUBY_CALLBACKS.lock().unwrap();
+            let f = callbacks.get(&method_name).unwrap();
             f((), vec![]);
             ruby.qnil().as_value()
         }

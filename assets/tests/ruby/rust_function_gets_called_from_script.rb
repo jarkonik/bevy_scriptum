@@ -1,3 +1,3 @@
-def test_func()
+def test_func
   rust_func
 end
