@@ -493,13 +493,13 @@ mod ruby_tests {
         type ScriptData = RubyScriptData;
 
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
-            // let state: magnus::value::Value = Ruby::get()
-            //     .unwrap()
-            //     .class_object()
-            //     .const_get("STATE")
-            //     .unwrap();
-            // let res: i64 = state.funcall_public("[]", (key.to_string(),)).unwrap();
+            // let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            // let key = key.to_string();
+            // runtime.with_engine(move |engine| {
+            // let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+            // let res: i64 = state.funcall_public("[]", (key,)).unwrap();
             // assert_eq!(res, value)
+            // })
         }
 
         fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {

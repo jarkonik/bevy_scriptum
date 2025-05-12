@@ -1,6 +1,6 @@
 // TODO: make sure ruby is statically linked
 use std::{
-    sync::LazyLock,
+    sync::{LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
 
@@ -49,6 +49,7 @@ struct RubyThread {
     handle: Option<JoinHandle<()>>,
 }
 
+// TODO: Can we put references to those in runtime struct?
 static RUBY_THREAD: LazyLock<RubyThread> = LazyLock::new(|| RubyThread::spawn());
 
 impl RubyThread {
@@ -112,8 +113,11 @@ impl Runtime for RubyRuntime {
 
     type RawEngine = magnus::Ruby;
 
-    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
-        f(&mut magnus::Ruby::get().unwrap())
+    fn with_engine_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        RUBY_THREAD.execute_in(Box::new(move |mut ruby| f(&mut ruby)))
     }
 
     fn with_engine<T: Send + 'static>(
@@ -150,12 +154,34 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
+        static RUBY_CALLBACKS: LazyLock<
+            Mutex<
+                Vec<
+                    Box<
+                        dyn Fn(
+                                (),
+                                Vec<RubyValue>,
+                            ) -> Result<
+                                crate::promise::Promise<(), RubyValue>,
+                                crate::ScriptingError,
+                            > + Send
+                            + Sync
+                            + 'static,
+                    >,
+                >,
+            >,
+        > = LazyLock::new(|| Mutex::new(Vec::new()));
+        let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
+        callbacks.push(Box::new(f));
+
         fn callback() -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
             let method_name = method_name.to_string();
-            dbg!(method_name);
+            let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
+            let f = callbacks.pop().unwrap();
+            f((), vec![]);
             ruby.qnil().as_value()
         }
 
