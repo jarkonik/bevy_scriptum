@@ -1,5 +1,4 @@
 /target
 /Cargo.lock
 .vscode
-rust-analyzer.json
 .nvim.lua
