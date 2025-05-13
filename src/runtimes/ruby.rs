@@ -75,7 +75,7 @@ impl RubyThread {
         }
     }
 
-    fn execute_in<T: Send + 'static>(&self, f: Box<dyn FnOnce(Ruby) -> T + Send>) -> T {
+    fn execute<T: Send + 'static>(&self, f: Box<dyn FnOnce(Ruby) -> T + Send>) -> T {
         let (return_sender, return_receiver) = crossbeam_channel::bounded(0);
         self.sender
             .as_ref()
@@ -144,7 +144,7 @@ impl Runtime for RubyRuntime {
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute_in(Box::new(move |mut ruby| f(&mut ruby)))
+            .execute(Box::new(move |mut ruby| f(&mut ruby)))
     }
 
     fn with_engine_thread<T: Send + 'static>(
@@ -154,7 +154,7 @@ impl Runtime for RubyRuntime {
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute_in(Box::new(move |ruby| f(&ruby)))
+            .execute(Box::new(move |ruby| f(&ruby)))
     }
 
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
@@ -174,7 +174,7 @@ impl Runtime for RubyRuntime {
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute_in(Box::new(move |ruby| {
+            .execute(Box::new(move |ruby| {
                 ruby.eval::<magnus::value::Value>(&script).unwrap();
                 RubyValue(())
             }));
@@ -230,7 +230,7 @@ impl Runtime for RubyRuntime {
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute_in(Box::new(move |ruby| {
+            .execute(Box::new(move |ruby| {
                 ruby.define_global_function(&name, function!(callback, 0));
                 RubyValue(())
             }));
@@ -249,7 +249,7 @@ impl Runtime for RubyRuntime {
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute_in(Box::new(move |ruby| {
+            .execute(Box::new(move |ruby| {
                 let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
                 RubyValue(())
             }));
