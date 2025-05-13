@@ -136,7 +136,7 @@ impl Runtime for RubyRuntime {
 
     type RawEngine = magnus::Ruby;
 
-    fn with_engine_mut<T: Send + 'static>(
+    fn with_engine_thread_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
@@ -146,7 +146,7 @@ impl Runtime for RubyRuntime {
             .execute_in(Box::new(move |mut ruby| f(&mut ruby)))
     }
 
-    fn with_engine<T: Send + 'static>(
+    fn with_engine_thread<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {
@@ -154,6 +154,14 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute_in(Box::new(move |ruby| f(&ruby)))
+    }
+
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
+        unimplemented!();
+    }
+
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
+        unimplemented!();
     }
 
     fn eval(
@@ -255,6 +263,10 @@ impl Runtime for RubyRuntime {
         _args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         todo!()
+    }
+
+    fn is_current_thread() -> bool {
+        false
     }
 }
 

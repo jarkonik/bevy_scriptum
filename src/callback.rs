@@ -77,8 +77,16 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
-            runtime
-                .with_engine_mut(move |engine| Out::into_runtime_value_with_engine(result, engine))
+
+            if R::is_current_thread() {
+                runtime.with_engine_mut(move |engine| {
+                    Out::into_runtime_value_with_engine(result, engine)
+                })
+            } else {
+                runtime.with_engine_thread_mut(move |engine| {
+                    Out::into_runtime_value_with_engine(result, engine)
+                })
+            }
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -110,9 +118,15 @@ macro_rules! impl_tuple {
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
-                    runtime.with_engine_mut(move |engine| {
-                        Out::into_runtime_value_with_engine(result, engine)
-                    })
+                    if RN::is_current_thread() {
+                        runtime.with_engine_mut(move |engine| {
+                            Out::into_runtime_value_with_engine(result, engine)
+                        })
+                    } else {
+                        runtime.with_engine_thread_mut(move |engine| {
+                            Out::into_runtime_value_with_engine(result, engine)
+                        })
+                    }
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

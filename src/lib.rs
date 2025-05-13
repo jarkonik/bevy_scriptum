@@ -300,10 +300,12 @@ pub trait Runtime: Resource + Default {
     type Value: Send + Clone;
     type RawEngine;
 
+    fn is_current_thread() -> bool;
+
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
-    fn with_engine_mut<T: Send + 'static>(
+    fn with_engine_thread_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T;
@@ -311,10 +313,20 @@ pub trait Runtime: Resource + Default {
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
-    fn with_engine<T: Send + 'static>(
+    fn with_engine_thread<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T;
+
+    /// Provides mutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
+
+    /// Provides immutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn eval(
         &self,

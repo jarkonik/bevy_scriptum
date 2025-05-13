@@ -257,6 +257,24 @@ impl Runtime for LuaRuntime {
         let engine = self.engine.lock().unwrap();
         f(&engine)
     }
+
+    fn with_engine_thread_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        todo!()
+    }
+
+    fn with_engine_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        todo!()
+    }
+
+    fn is_current_thread() -> bool {
+        true
+    }
 }
 
 impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
