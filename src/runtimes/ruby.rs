@@ -2,6 +2,7 @@
 // TODO: make sure ruby is statically linked
 use std::{
     collections::HashMap,
+    ffi::{c_void, CString},
     sync::{Arc, Condvar, LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
@@ -13,6 +14,7 @@ use bevy::{
 };
 use magnus::Ruby;
 use magnus::{function, prelude::*};
+use rb_sys::rb_define_global_function;
 use serde::Deserialize;
 
 use crate::{
@@ -207,7 +209,7 @@ impl Runtime for RubyRuntime {
         let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
         callbacks.insert(name.clone(), Box::new(f));
 
-        fn callback() -> magnus::Value {
+        unsafe extern "C" fn callback(_rb_self: magnus::Value) -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
@@ -222,7 +224,14 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
-                ruby.define_global_function(&name, function!(callback, 0));
+                let name = CString::new(name).unwrap();
+                unsafe {
+                    rb_define_global_function(
+                        name.as_ptr(),
+                        std::mem::transmute(callback as *mut c_void),
+                        1,
+                    );
+                }
                 RubyValue(())
             }));
 
