@@ -50,7 +50,7 @@ impl From<String> for RubyScript {
 type RubyClosure = Box<dyn FnOnce(Ruby) + Send>;
 
 struct RubyThread {
-    sender: Option<crossbeam_channel::Sender<RubyClosure>>,
+    sender: crossbeam_channel::Sender<RubyClosure>,
     handle: Option<JoinHandle<()>>,
 }
 
@@ -70,7 +70,7 @@ impl RubyThread {
         });
 
         RubyThread {
-            sender: Some(sender),
+            sender,
             handle: Some(handle),
         }
     }
@@ -78,8 +78,6 @@ impl RubyThread {
     fn execute<T: Send + 'static>(&self, f: Box<dyn FnOnce(Ruby) -> T + Send>) -> T {
         let (return_sender, return_receiver) = crossbeam_channel::bounded(0);
         self.sender
-            .as_ref()
-            .unwrap()
             .send(Box::new(move |ruby| {
                 return_sender.send(f(ruby)).unwrap();
             }))
@@ -90,7 +88,6 @@ impl RubyThread {
 
 impl Drop for RubyThread {
     fn drop(&mut self) {
-        drop(self.sender.take().unwrap());
         let handle = self.handle.take().unwrap();
         handle.join().unwrap();
     }
