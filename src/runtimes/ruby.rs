@@ -2,7 +2,7 @@
 // TODO: make sure ruby is statically linked
 use std::{
     collections::HashMap,
-    sync::{Arc, Condvar, LazyLock, Mutex, MutexGuard},
+    sync::{Arc, Condvar, LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
 
@@ -12,13 +12,12 @@ use bevy::{
     reflect::TypePath,
 };
 use magnus::Ruby;
-use magnus::{embed::Cleanup, function, prelude::*};
+use magnus::{function, prelude::*};
 use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
-    runtimes::ruby,
     FuncArgs, Runtime,
 };
 
@@ -47,10 +46,11 @@ impl From<String> for RubyScript {
         Self(value)
     }
 }
-struct RubyEngine(Cleanup);
+
+type RubyClosure = Box<dyn FnOnce(Ruby) + Send>;
 
 struct RubyThread {
-    sender: Option<crossbeam_channel::Sender<Box<dyn FnOnce(Ruby) + Send>>>,
+    sender: Option<crossbeam_channel::Sender<RubyClosure>>,
     handle: Option<JoinHandle<()>>,
 }
 
@@ -157,11 +157,11 @@ impl Runtime for RubyRuntime {
             .execute(Box::new(move |ruby| f(&ruby)))
     }
 
-    fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
+    fn with_engine_mut<T>(&mut self, _f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
         unimplemented!();
     }
 
-    fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
+    fn with_engine<T>(&self, _f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         unimplemented!();
     }
 
@@ -195,24 +195,18 @@ impl Runtime for RubyRuntime {
             + Sync
             + 'static,
     ) -> Result<(), crate::ScriptingError> {
-        static RUBY_CALLBACKS: LazyLock<
-            Mutex<
-                HashMap<
-                    String,
-                    Box<
-                        dyn Fn(
-                                (),
-                                Vec<RubyValue>,
-                            ) -> Result<
-                                crate::promise::Promise<(), RubyValue>,
-                                crate::ScriptingError,
-                            > + Send
-                            + Sync
-                            + 'static,
-                    >,
-                >,
-            >,
-        > = LazyLock::new(|| Mutex::new(HashMap::new()));
+        type CallbackClosure = Box<
+            dyn Fn(
+                    (),
+                    Vec<RubyValue>,
+                )
+                    -> Result<crate::promise::Promise<(), RubyValue>, crate::ScriptingError>
+                + Send
+                + Sync
+                + 'static,
+        >;
+        static RUBY_CALLBACKS: LazyLock<Mutex<HashMap<String, CallbackClosure>>> =
+            LazyLock::new(|| Mutex::new(HashMap::new()));
         let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
         callbacks.insert(name.clone(), Box::new(f));
 
@@ -223,7 +217,7 @@ impl Runtime for RubyRuntime {
             let method_name = method_name.to_string();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
             let f = callbacks.get(&method_name).unwrap();
-            f((), vec![]);
+            f((), vec![]).unwrap();
             ruby.qnil().as_value()
         }
 

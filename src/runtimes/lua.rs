@@ -260,14 +260,14 @@ impl Runtime for LuaRuntime {
 
     fn with_engine_thread_mut<T: Send + 'static>(
         &mut self,
-        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+        _f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
         todo!()
     }
 
     fn with_engine_thread<T: Send + 'static>(
         &self,
-        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+        _f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {
         todo!()
     }

@@ -487,7 +487,7 @@ mod lua_tests {
 mod ruby_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
-    use magnus::{value::ReprValue, Module, Object, Ruby};
+    use magnus::{value::ReprValue, Module};
 
     impl AssertStateKeyValue for RubyRuntime {
         type ScriptData = RubyScriptData;
@@ -502,15 +502,15 @@ mod ruby_tests {
             })
         }
 
-        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
+        fn assert_state_key_value_i32(_world: &World, _entity_id: Entity, _key: &str, _value: i32) {
             todo!();
         }
 
         fn assert_state_key_value_string(
-            world: &World,
+            _world: &World,
             _entity_id: Entity,
-            key: &str,
-            value: &str,
+            _key: &str,
+            _value: &str,
         ) {
             todo!();
         }
