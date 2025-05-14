@@ -124,7 +124,13 @@ impl Drop for RubyRuntime {
 }
 
 #[derive(Clone)]
-pub struct RubyValue(());
+pub struct RubyValue(magnus::value::Opaque<magnus::Value>);
+
+impl RubyValue {
+    fn nil(ruby: &Ruby) -> Self {
+        Self(magnus::value::Opaque::from(ruby.qnil().as_value()))
+    }
+}
 
 impl Runtime for RubyRuntime {
     type Schedule = RubySchedule;
@@ -178,7 +184,7 @@ impl Runtime for RubyRuntime {
             .unwrap()
             .execute(Box::new(move |ruby| {
                 ruby.eval::<magnus::value::Value>(&script).unwrap();
-                RubyValue(())
+                RubyValue::nil(&ruby)
             }));
         Ok(RubyScriptData)
     }
@@ -212,48 +218,24 @@ impl Runtime for RubyRuntime {
         let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
         callbacks.insert(name.clone(), Box::new(f));
 
-        unsafe extern "C" fn callback(argc: i32, argv: *mut VALUE, r_self: VALUE) -> VALUE {
-            let fmt = CString::new("1").unwrap();
-            let x: VALUE = Default::default();
-            rb_scan_args(argc, argv, fmt.as_ptr(), &x);
-
+        fn callback(args: &[magnus::Value]) -> magnus::Value {
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
             let method_name = method_name.to_string();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
             let f = callbacks.get(&method_name).unwrap();
-
-            let args = magnus::RArray::from_value(magnus::Value::from_raw(*argv).into())
-                .unwrap()
-                .to_value_array::<1>()
-                .expect("failed to get args array");
-            for arg in args {
-                dbg!(arg);
-            }
-
-            // let args = args
-            //     .parse(&self.engine)
-            //     .into_iter()
-            //     .map(|a| a.0)
-            //     .collect::<Vec<Dynamic>>();
-            f((), vec![]).expect("failed to call callback");
-            todo!()
+            f((), args.iter().map(|_arg| RubyValue::nil(&ruby)).collect())
+                .expect("failed to call callback");
+            ruby.qnil().as_value()
         }
 
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute(Box::new(move |_ruby| {
-                let name = CString::new(name).unwrap();
-                unsafe {
-                    rb_define_global_function(
-                        name.as_ptr(),
-                        std::mem::transmute(callback as *mut c_void),
-                        -1,
-                    );
-                }
-                RubyValue(())
+            .execute(Box::new(move |ruby| {
+                ruby.define_global_function(&name, function!(callback, -1));
+                RubyValue::nil(&ruby)
             }));
 
         Ok(())
@@ -267,15 +249,14 @@ impl Runtime for RubyRuntime {
         _args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
-        self.ruby_thread
+        Ok(self
+            .ruby_thread
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
                 let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
-                RubyValue(())
-            }));
-
-        Ok(RubyValue(()))
+                RubyValue::nil(&ruby)
+            })))
     }
 
     fn call_fn_from_value(
@@ -296,15 +277,16 @@ pub mod prelude {
     pub use super::RubyRuntime;
 }
 
-impl<T> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
+// TODO: remove this default
+impl<T: Default> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
     fn from_runtime_value_with_engine(_value: RubyValue, _engine: &magnus::Ruby) -> Self {
-        todo!();
+        T::default()
     }
 }
 
 impl<T> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(_value: T, _engine: &magnus::Ruby) -> RubyValue {
-        RubyValue(())
+    fn into_runtime_value_with_engine(_value: T, engine: &magnus::Ruby) -> RubyValue {
+        RubyValue::nil(engine)
     }
 }
 
@@ -315,8 +297,8 @@ impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
 }
 
 impl<T> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, _engine: &magnus::Ruby) -> Vec<RubyValue> {
-        self.into_iter().map(|_x| RubyValue(())).collect()
+    fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
+        self.into_iter().map(|_x| RubyValue::nil(engine)).collect()
     }
 }
 
