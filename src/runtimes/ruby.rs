@@ -12,10 +12,13 @@ use std::{
 
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, resource::Resource, schedule::ScheduleLabel},
+    ecs::{
+        component::Component, query::QueryParManyUniqueIter, resource::Resource,
+        schedule::ScheduleLabel,
+    },
     reflect::TypePath,
 };
-use magnus::{function, Ruby};
+use magnus::{function, method::ReturnValue, IntoValue, Ruby, TryConvert};
 use magnus::{prelude::*, rb_sys::FromRawValue};
 use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
 use serde::Deserialize;
@@ -128,7 +131,11 @@ pub struct RubyValue(magnus::value::Opaque<magnus::Value>);
 
 impl RubyValue {
     fn nil(ruby: &Ruby) -> Self {
-        Self(magnus::value::Opaque::from(ruby.qnil().as_value()))
+        Self::new(ruby.qnil().as_value(), ruby)
+    }
+
+    fn new(value: magnus::Value, ruby: &Ruby) -> Self {
+        Self(magnus::value::Opaque::from(value))
     }
 }
 
@@ -183,8 +190,8 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
-                ruby.eval::<magnus::value::Value>(&script).unwrap();
-                RubyValue::nil(&ruby)
+                let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
+                RubyValue::new(value, &ruby)
             }));
         Ok(RubyScriptData)
     }
@@ -225,8 +232,13 @@ impl Runtime for RubyRuntime {
             let method_name = method_name.to_string();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
             let f = callbacks.get(&method_name).unwrap();
-            f((), args.iter().map(|_arg| RubyValue::nil(&ruby)).collect())
-                .expect("failed to call callback");
+            f(
+                (),
+                args.iter()
+                    .map(|arg| RubyValue::new(arg.into_value(), &ruby))
+                    .collect(),
+            )
+            .expect("failed to call callback");
             ruby.qnil().as_value()
         }
 
@@ -277,16 +289,16 @@ pub mod prelude {
     pub use super::RubyRuntime;
 }
 
-// TODO: remove this default
-impl<T: Default> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
-    fn from_runtime_value_with_engine(_value: RubyValue, _engine: &magnus::Ruby) -> Self {
-        T::default()
+impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
+    fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
+        let inner = engine.get_inner(value.0);
+        T::try_convert(inner).unwrap()
     }
 }
 
-impl<T> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(_value: T, engine: &magnus::Ruby) -> RubyValue {
-        RubyValue::nil(engine)
+impl<T: IntoValue> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
+    fn into_runtime_value_with_engine(value: T, engine: &magnus::Ruby) -> RubyValue {
+        RubyValue::new(value.into_value(), engine)
     }
 }
 
