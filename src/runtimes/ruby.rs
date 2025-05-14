@@ -24,7 +24,7 @@ use bevy::{
 };
 use magnus::{
     data_type_builder, function, method::ReturnValue, try_convert, value::Lazy, DataType,
-    DataTypeFunctions, IntoValue, RClass, Ruby, TryConvert, TypedData,
+    DataTypeFunctions, IntoValue, RClass, RObject, Ruby, TryConvert, TypedData,
 };
 use magnus::{prelude::*, rb_sys::FromRawValue};
 use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
@@ -127,11 +127,10 @@ unsafe impl TypedData for Promise<(), RubyValue> {
     }
 }
 
-fn then(r_self: magnus::Value) -> magnus::Value {
-    dbg!(r_self);
-    panic!();
+fn then(r_self: magnus::Value, callback: magnus::Value) -> magnus::Value {
+    let promise: &Promise<(), RubyValue> = TryConvert::try_convert(r_self).unwrap();
     let ruby = Ruby::get().unwrap();
-    ruby.qnil().as_value()
+    promise.clone().then(RubyValue::new(callback)).into_value()
 }
 
 impl Default for RubyRuntime {
@@ -149,7 +148,7 @@ impl Default for RubyRuntime {
             // TODO: maybe put promise in a module , maybe do so for other runtimes too
             let promise = ruby.define_class("Promise", ruby.class_object()).unwrap();
             promise
-                .define_method("and_then", magnus::method!(then, 0))
+                .define_method("and_then", magnus::method!(then, 1))
                 .unwrap();
         }));
         // engine
@@ -350,14 +349,24 @@ impl Runtime for RubyRuntime {
             }))
     }
 
-    // TODO: does this have a test?
+    // TODO: add test
     fn call_fn_from_value(
         &self,
-        _value: &Self::Value,
+        value: &Self::Value,
         _context: &Self::CallContext,
-        _args: Vec<Self::Value>,
+        args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        todo!()
+        let ruby = Ruby::get().unwrap();
+
+        let f: RObject = TryConvert::try_convert(ruby.get_inner(value.0)).unwrap();
+        let result: magnus::Value = f.funcall("call", ()).unwrap();
+        Ok(RubyValue::new(result))
+        // self.ruby_thread
+        //     .as_ref()
+        //     .unwrap()
+        //     .execute(Box::new(move |ruby| {
+        //         todo!();
+        //     }))
     }
 
     fn is_current_thread() -> bool {
