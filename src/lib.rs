@@ -358,7 +358,7 @@ pub trait Runtime: Resource + Default {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, ScriptingError>;
 
     /// Calls a function by value defined within the runtime in the context of the

@@ -3,6 +3,7 @@
 // TODO: add tests for every runtime for return value
 // TODO: consider dropping magnus
 // TODO: unwinding https://doc.rust-lang.org/nomicon/ffi.html#variadic-functions
+// TODO: maybe unify api and call non thread methods non_send
 use std::{
     collections::HashMap,
     ffi::{c_void, CString},
@@ -131,10 +132,10 @@ pub struct RubyValue(magnus::value::Opaque<magnus::Value>);
 
 impl RubyValue {
     fn nil(ruby: &Ruby) -> Self {
-        Self::new(ruby.qnil().as_value(), ruby)
+        Self::new(ruby.qnil().as_value())
     }
 
-    fn new(value: magnus::Value, ruby: &Ruby) -> Self {
+    fn new(value: magnus::Value) -> Self {
         Self(magnus::value::Opaque::from(value))
     }
 }
@@ -191,7 +192,7 @@ impl Runtime for RubyRuntime {
             .unwrap()
             .execute(Box::new(move |ruby| {
                 let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
-                RubyValue::new(value, &ruby)
+                RubyValue::new(value)
             }));
         Ok(RubyScriptData)
     }
@@ -235,7 +236,7 @@ impl Runtime for RubyRuntime {
             f(
                 (),
                 args.iter()
-                    .map(|arg| RubyValue::new(arg.into_value(), &ruby))
+                    .map(|arg| RubyValue::new(arg.into_value()))
                     .collect(),
             )
             .expect("failed to call callback");
@@ -258,7 +259,7 @@ impl Runtime for RubyRuntime {
         name: &str,
         _script_data: &mut Self::ScriptData,
         _entity: bevy::prelude::Entity,
-        _args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self>,
+        args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         Ok(self
@@ -266,7 +267,12 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
-                let _: magnus::Value = ruby.class_object().funcall(name, ()).unwrap();
+                let args: Vec<_> = args
+                    .parse(&ruby)
+                    .into_iter()
+                    .map(|a| ruby.get_inner(a.0))
+                    .collect();
+                let _: magnus::Value = ruby.class_object().funcall(name, args.as_slice()).unwrap();
                 RubyValue::nil(&ruby)
             })))
     }
@@ -297,8 +303,8 @@ impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
 }
 
 impl<T: IntoValue> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, engine: &magnus::Ruby) -> RubyValue {
-        RubyValue::new(value.into_value(), engine)
+    fn into_runtime_value_with_engine(value: T, _engine: &magnus::Ruby) -> RubyValue {
+        RubyValue::new(value.into_value())
     }
 }
 
@@ -308,9 +314,11 @@ impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
     }
 }
 
-impl<T> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
+impl<T: IntoValue> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
     fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
-        self.into_iter().map(|_x| RubyValue::nil(engine)).collect()
+        self.into_iter()
+            .map(|x| RubyValue::new(x.into_value()))
+            .collect()
     }
 }
 

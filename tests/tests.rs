@@ -502,17 +502,28 @@ mod ruby_tests {
             })
         }
 
-        fn assert_state_key_value_i32(_world: &World, _entity_id: Entity, _key: &str, _value: i32) {
-            todo!();
+        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
+            let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            let key = key.to_string();
+            runtime.with_engine_thread(move |engine| {
+                let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+                let res: i32 = state.funcall_public("[]", (key,)).unwrap();
+                assert_eq!(res, value)
+            })
         }
 
         fn assert_state_key_value_string(
-            _world: &World,
+            world: &World,
             _entity_id: Entity,
-            _key: &str,
-            _value: &str,
+            key: &str,
+            value: &str,
         ) {
-            todo!();
+            let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            runtime.with_engine(|engine| {
+                let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+                let res: String = state.funcall_public("[]", (key,)).unwrap();
+                assert_eq!(res, value);
+            });
         }
     }
 
