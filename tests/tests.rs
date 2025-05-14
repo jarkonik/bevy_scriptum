@@ -189,7 +189,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust_with_heterogenous_params() {
+        fn test_script_function_gets_called_from_rust_with_multiple_params() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -225,33 +225,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust_with_multiple_params() {
-            let mut app = build_test_app();
-
-            app.add_scripting::<$runtime>(|_| {});
-
-            let entity_id = run_script::<$runtime, _, _>(
-                &mut app,
-                format!(
-                    "tests/{}/script_function_gets_called_from_rust_with_multiple_params.{}",
-                    $script, $extension
-                )
-                .to_string(),
-                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
-                 scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
-                    scripting_runtime
-                        .call_fn("test_func", &mut script_data, entity, vec![1, 2])
-                        .unwrap();
-                },
-            );
-
-            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "a_value", 1i32);
-            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "b_value", 2i32);
-        }
-
-        #[test]
-        fn test_call_script_function_that_casues_runtime_error() {
+        fn call_script_function_that_casues_runtime_error() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -274,18 +248,14 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_call_script_function_that_causes_runtime_error() {
+        fn call_script_function_that_does_not_exist() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
 
             run_script::<$runtime, _, _>(
                 &mut app,
-                format!(
-                    "tests/{}/call_script_function_that_causes_runtime_error.{}",
-                    $script, $extension
-                )
-                .to_string(),
+                format!("tests/{}/side_effects.{}", $script, $extension).to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
                     let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
@@ -297,7 +267,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust() {
+        fn script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -316,7 +286,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_return_via_promise() {
+        fn return_via_promise() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|runtime| {
@@ -333,7 +303,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_promise_runtime_error_does_not_panic() {
+        fn promise_runtime_error() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|runtime| {
@@ -348,7 +318,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_side_effects() {
+        fn side_effects() {
             let mut app = build_test_app();
 
             #[derive(Component)]
@@ -374,7 +344,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_rust_function_gets_called_from_script() {
+        fn rust_function_gets_called_from_script() {
             let mut app = build_test_app();
 
             #[derive(Default, Resource)]
@@ -519,7 +489,9 @@ mod ruby_tests {
             value: &str,
         ) {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
-            runtime.with_engine(|engine| {
+            let key = key.to_string();
+            let value = value.to_string();
+            runtime.with_engine_thread(move |engine| {
                 let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: String = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value);

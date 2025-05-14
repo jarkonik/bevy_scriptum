@@ -331,11 +331,13 @@ impl<T: IntoValue> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<'a, $($t,)+> FuncArgs<'a, RubyValue, RubyRuntime>
+        impl<'a, $($t: IntoValue,)+> FuncArgs<'a, RubyValue, RubyRuntime>
             for ($($t,)+)
         {
             fn parse(self, _engine: &'a magnus::Ruby) -> Vec<RubyValue> {
-                todo!();
+                vec![
+                    $(RubyValue::new(self.$idx.into_value()), )+
+                ]
             }
         }
     };
