@@ -1,7 +1,6 @@
 // TODO: maybe make all runtime engines not send and spawn threads for them like Ruby
 // TODO: make sure ruby is statically linked
 // TODO: add tests for every runtime for return value
-// TODO: consider dropping magnus
 // TODO: unwinding https://doc.rust-lang.org/nomicon/ffi.html#variadic-functions
 // TODO: maybe unify api and call non thread methods non_send
 // TODO: use ruby arena to rewind state
