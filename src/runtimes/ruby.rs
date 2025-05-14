@@ -23,8 +23,8 @@ use bevy::{
     tasks::futures_lite::io,
 };
 use magnus::{
-    data_type_builder, function, method::ReturnValue, try_convert, value::Lazy, DataType,
-    DataTypeFunctions, IntoValue, RClass, RObject, Ruby, TryConvert, TypedData,
+    block::Proc, data_type_builder, function, method::ReturnValue, try_convert, value::Lazy,
+    DataType, DataTypeFunctions, IntoValue, RClass, RObject, Ruby, TryConvert, TypedData,
 };
 use magnus::{prelude::*, rb_sys::FromRawValue};
 use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
@@ -129,7 +129,6 @@ unsafe impl TypedData for Promise<(), RubyValue> {
 
 fn then(r_self: magnus::Value, callback: magnus::Value) -> magnus::Value {
     let promise: &Promise<(), RubyValue> = TryConvert::try_convert(r_self).unwrap();
-    let ruby = Ruby::get().unwrap();
     promise.clone().then(RubyValue::new(callback)).into_value()
 }
 
@@ -356,17 +355,21 @@ impl Runtime for RubyRuntime {
         _context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        let ruby = Ruby::get().unwrap();
+        let value = value.clone(); // TODO: maybe just clone/wrap where we added Send + static
+                                   // currently?>
+        self.ruby_thread
+            .as_ref()
+            .unwrap()
+            .execute(Box::new(move |ruby| {
+                let f: Proc = TryConvert::try_convert(ruby.get_inner(value.0)).unwrap();
 
-        let f: RObject = TryConvert::try_convert(ruby.get_inner(value.0)).unwrap();
-        let result: magnus::Value = f.funcall("call", ()).unwrap();
-        Ok(RubyValue::new(result))
-        // self.ruby_thread
-        //     .as_ref()
-        //     .unwrap()
-        //     .execute(Box::new(move |ruby| {
-        //         todo!();
-        //     }))
+                let args: Vec<_> = args
+                    .into_iter()
+                    .map(|x| ruby.get_inner(x.0).as_value())
+                    .collect();
+                let result: magnus::Value = f.funcall("call", args.as_slice()).unwrap();
+                Ok(RubyValue::new(result))
+            }))
     }
 
     fn is_current_thread() -> bool {
