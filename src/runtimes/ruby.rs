@@ -1,5 +1,8 @@
 // TODO: maybe make all runtime engines not send and spawn threads for them like Ruby
 // TODO: make sure ruby is statically linked
+// TODO: add tests for every runtime for return value
+// TODO: consider dropping magnus
+// TODO: unwinding https://doc.rust-lang.org/nomicon/ffi.html#variadic-functions
 use std::{
     collections::HashMap,
     ffi::{c_void, CString},
@@ -12,9 +15,9 @@ use bevy::{
     ecs::{component::Component, resource::Resource, schedule::ScheduleLabel},
     reflect::TypePath,
 };
-use magnus::Ruby;
-use magnus::{function, prelude::*};
-use rb_sys::rb_define_global_function;
+use magnus::{function, Ruby};
+use magnus::{prelude::*, rb_sys::FromRawValue};
+use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
 use serde::Deserialize;
 
 use crate::{
@@ -209,27 +212,45 @@ impl Runtime for RubyRuntime {
         let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
         callbacks.insert(name.clone(), Box::new(f));
 
-        unsafe extern "C" fn callback(_rb_self: magnus::Value) -> magnus::Value {
+        unsafe extern "C" fn callback(argc: i32, argv: *mut VALUE, r_self: VALUE) -> VALUE {
+            let fmt = CString::new("1").unwrap();
+            let x: VALUE = Default::default();
+            rb_scan_args(argc, argv, fmt.as_ptr(), &x);
+
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
             let method_name = method_name.to_string();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
             let f = callbacks.get(&method_name).unwrap();
-            f((), vec![]).unwrap();
-            ruby.qnil().as_value()
+
+            let args = magnus::RArray::from_value(magnus::Value::from_raw(*argv).into())
+                .unwrap()
+                .to_value_array::<1>()
+                .expect("failed to get args array");
+            for arg in args {
+                dbg!(arg);
+            }
+
+            // let args = args
+            //     .parse(&self.engine)
+            //     .into_iter()
+            //     .map(|a| a.0)
+            //     .collect::<Vec<Dynamic>>();
+            f((), vec![]).expect("failed to call callback");
+            todo!()
         }
 
         self.ruby_thread
             .as_ref()
             .unwrap()
-            .execute(Box::new(move |ruby| {
+            .execute(Box::new(move |_ruby| {
                 let name = CString::new(name).unwrap();
                 unsafe {
                     rb_define_global_function(
                         name.as_ptr(),
                         std::mem::transmute(callback as *mut c_void),
-                        1,
+                        -1,
                     );
                 }
                 RubyValue(())

@@ -31,7 +31,7 @@ mlua = { version = "0.9.8", features = [
     "vendored",
     "send",
 ], optional = true }
-magnus = { version = "0.7.1", optional = true, features = ["embed"] }
+magnus = { version = "0.7.1", optional = true, features = ["embed", "rb-sys"] }
 crossbeam-channel = "0.5.15"
 rb-sys = "0.9.114"
 
