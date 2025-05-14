@@ -4,6 +4,8 @@
 // TODO: consider dropping magnus
 // TODO: unwinding https://doc.rust-lang.org/nomicon/ffi.html#variadic-functions
 // TODO: maybe unify api and call non thread methods non_send
+// TODO: use ruby arena to rewind state
+
 use std::{
     collections::HashMap,
     ffi::{c_void, CString},
