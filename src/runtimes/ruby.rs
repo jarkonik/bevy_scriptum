@@ -150,6 +150,7 @@ impl Default for RubyRuntime {
                 .define_method("and_then", magnus::method!(then, 1))
                 .unwrap();
         }));
+        // TODO: add test for those types for every runtime
         // engine
         //     .register_userdata_type::<BevyEntity>(|typ| {
         //         typ.add_field_method_get("index", |_, entity| Ok(entity.0.index()));
