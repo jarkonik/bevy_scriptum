@@ -22,7 +22,10 @@ use bevy::{
     reflect::TypePath,
     tasks::futures_lite::io,
 };
-use magnus::{function, method::ReturnValue, IntoValue, Ruby, TryConvert};
+use magnus::{
+    data_type_builder, function, method::ReturnValue, try_convert, value::Lazy, DataType,
+    DataTypeFunctions, IntoValue, RClass, Ruby, TryConvert, TypedData,
+};
 use magnus::{prelude::*, rb_sys::FromRawValue};
 use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
 use serde::Deserialize;
@@ -30,6 +33,7 @@ use serde::Deserialize;
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
+    promise::Promise,
     FuncArgs, Runtime, ScriptingError,
 };
 
@@ -105,6 +109,31 @@ impl Drop for RubyThread {
     }
 }
 
+impl DataTypeFunctions for Promise<(), RubyValue> {}
+
+unsafe impl TypedData for Promise<(), RubyValue> {
+    fn class(ruby: &Ruby) -> magnus::RClass {
+        static CLASS: Lazy<RClass> = Lazy::new(|ruby| {
+            let class = ruby.define_class("Promise", ruby.class_object()).unwrap();
+            class.undef_default_alloc_func();
+            class
+        });
+        ruby.get_inner(&CLASS)
+    }
+
+    fn data_type() -> &'static magnus::DataType {
+        static DATA_TYPE: DataType = data_type_builder!(Promise<(), RubyValue>, "promise").build();
+        &DATA_TYPE
+    }
+}
+
+fn then(r_self: magnus::Value) -> magnus::Value {
+    dbg!(r_self);
+    panic!();
+    let ruby = Ruby::get().unwrap();
+    ruby.qnil().as_value()
+}
+
 impl Default for RubyRuntime {
     fn default() -> Self {
         let (lock, cvar) = &*Arc::clone(&RUBY_THREAD);
@@ -115,6 +144,43 @@ impl Default for RubyRuntime {
         }
         let ruby_thread = ruby_thread.take().unwrap();
         cvar.notify_all();
+
+        ruby_thread.execute(Box::new(|ruby| {
+            // TODO: maybe put promise in a module , maybe do so for other runtimes too
+            let promise = ruby.define_class("Promise", ruby.class_object()).unwrap();
+            promise
+                .define_method("and_then", magnus::method!(then, 0))
+                .unwrap();
+        }));
+        // engine
+        //     .register_userdata_type::<BevyEntity>(|typ| {
+        //         typ.add_field_method_get("index", |_, entity| Ok(entity.0.index()));
+        //     })
+        //     .expect("Failed to register BevyEntity userdata type");
+        //
+        // engine
+        //     .register_userdata_type::<Promise<(), LuaValue>>(|typ| {
+        //         typ.add_method_mut("and_then", |engine, promise, callback: Function| {
+        //             Ok(Promise::then(promise, LuaValue::new(engine, callback)))
+        //         });
+        //     })
+        //     .expect("Failed to register Promise userdata type");
+        //
+        // engine
+        //     .register_userdata_type::<BevyVec3>(|typ| {
+        //         typ.add_field_method_get("x", |_engine, vec| Ok(vec.0.x));
+        //         typ.add_field_method_get("y", |_engine, vec| Ok(vec.0.y));
+        //         typ.add_field_method_get("z", |_engine, vec| Ok(vec.0.z));
+        //     })
+        //     .expect("Failed to register BevyVec3 userdata type");
+        // let vec3_constructor = engine
+        //     .create_function(|_, (x, y, z)| Ok(BevyVec3(Vec3::new(x, y, z))))
+        //     .expect("Failed to create Vec3 constructor");
+        // engine
+        //     .globals()
+        //     .set("Vec3", vec3_constructor)
+        //     .expect("Failed to set Vec3 global");
+        //
         Self {
             ruby_thread: Some(ruby_thread),
         }
@@ -236,14 +302,14 @@ impl Runtime for RubyRuntime {
             let method_name = method_name.to_string();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
             let f = callbacks.get(&method_name).unwrap();
-            f(
+            let result = f(
                 (),
                 args.iter()
                     .map(|arg| RubyValue::new(arg.into_value()))
                     .collect(),
             )
             .expect("failed to call callback");
-            ruby.qnil().as_value()
+            result.into_value()
         }
 
         self.ruby_thread
@@ -284,6 +350,7 @@ impl Runtime for RubyRuntime {
             }))
     }
 
+    // TODO: does this have a test?
     fn call_fn_from_value(
         &self,
         _value: &Self::Value,
