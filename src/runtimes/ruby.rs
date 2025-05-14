@@ -12,6 +12,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use anyhow::anyhow;
 use bevy::{
     asset::Asset,
     ecs::{
@@ -19,6 +20,7 @@ use bevy::{
         schedule::ScheduleLabel,
     },
     reflect::TypePath,
+    tasks::futures_lite::io,
 };
 use magnus::{function, method::ReturnValue, IntoValue, Ruby, TryConvert};
 use magnus::{prelude::*, rb_sys::FromRawValue};
@@ -28,7 +30,7 @@ use serde::Deserialize;
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
-    FuncArgs, Runtime,
+    FuncArgs, Runtime, ScriptingError,
 };
 
 #[derive(Resource)]
@@ -263,8 +265,7 @@ impl Runtime for RubyRuntime {
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
-        Ok(self
-            .ruby_thread
+        self.ruby_thread
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
@@ -273,9 +274,14 @@ impl Runtime for RubyRuntime {
                     .into_iter()
                     .map(|a| ruby.get_inner(a.0))
                     .collect();
-                let _: magnus::Value = ruby.class_object().funcall(name, args.as_slice()).unwrap();
-                RubyValue::nil(&ruby)
-            })))
+                let return_value: magnus::Value = ruby
+                    .class_object()
+                    .funcall(name, args.as_slice())
+                    .map_err(|e| {
+                        ScriptingError::RuntimeError(Box::new(io::Error::other(e.to_string())))
+                    })?;
+                Ok(RubyValue::new(return_value))
+            }))
     }
 
     fn call_fn_from_value(

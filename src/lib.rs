@@ -280,9 +280,9 @@ const ENTITY_VAR_NAME: &str = "entity";
 #[derive(Error, Debug)]
 pub enum ScriptingError {
     #[error("script runtime error: {0}")]
-    RuntimeError(Box<dyn std::error::Error>),
+    RuntimeError(Box<dyn std::error::Error + Send>),
     #[error("script compilation error: {0}")]
-    CompileError(Box<dyn std::error::Error>),
+    CompileError(Box<dyn std::error::Error + Send>),
     #[error("no runtime resource present")]
     NoRuntimeResource,
     #[error("no settings resource present")]

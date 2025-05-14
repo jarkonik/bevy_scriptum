@@ -274,7 +274,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_call_script_function_that_does_not_exist() {
+        fn test_call_script_function_that_causes_runtime_error() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -297,7 +297,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust_without_params() {
+        fn test_script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -316,7 +316,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_promise() {
+        fn test_return_via_promise() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|runtime| {
