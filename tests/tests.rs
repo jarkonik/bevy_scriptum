@@ -487,7 +487,7 @@ mod lua_tests {
 mod ruby_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
-    use magnus::{value::ReprValue, Module};
+    use magnus::{value::ReprValue, Module, Object};
 
     impl AssertStateKeyValue for RubyRuntime {
         type ScriptData = RubyScriptData;
@@ -496,7 +496,7 @@ mod ruby_tests {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             let key = key.to_string();
             runtime.with_engine_thread(move |engine| {
-                let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: i64 = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value)
             })
@@ -506,7 +506,7 @@ mod ruby_tests {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             let key = key.to_string();
             runtime.with_engine_thread(move |engine| {
-                let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: i32 = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value)
             })
@@ -520,7 +520,7 @@ mod ruby_tests {
         ) {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             runtime.with_engine(|engine| {
-                let state: magnus::value::Value = engine.class_object().const_get("STATE").unwrap();
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: String = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value);
             });

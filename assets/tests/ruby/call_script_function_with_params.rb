@@ -1,7 +1,7 @@
-STATE = {
-	"called_with" => nil
+$state = {
+  'called_with' => nil
 }
 
-def test_func(x)
-  called_with = x
+def test_func(val)
+  $state['called_with'] = val
 end

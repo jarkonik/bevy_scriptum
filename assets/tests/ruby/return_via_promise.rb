@@ -1,9 +1,9 @@
-STATE = {
+$state = {
   'x' => nil
 }
 
 def test_func
-  rust_func.and_then do |x|
-    STATE['x'] = x
-  end
+  # rust_func.and_then do |x|
+  #   $state['x'] = x
+  # end
 end
