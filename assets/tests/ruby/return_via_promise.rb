@@ -3,7 +3,7 @@ $state = {
 }
 
 def test_func
-  rust_func.and_then lambda { |x|
+  rust_func.and_then do |x|
     $state['x'] = x
-  }
+  end
 end

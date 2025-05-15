@@ -1,5 +1,5 @@
 def test_func
-  rust_func.and_then lambda { |x|
+  rust_func.and_then do |x|
     print('abc' + 5)
-  }
+  end
 end

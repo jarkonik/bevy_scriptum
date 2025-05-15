@@ -127,9 +127,13 @@ unsafe impl TypedData for Promise<(), RubyValue> {
     }
 }
 
-fn then(r_self: magnus::Value, callback: magnus::Value) -> magnus::Value {
+fn then(r_self: magnus::Value) -> magnus::Value {
     let promise: &Promise<(), RubyValue> = TryConvert::try_convert(r_self).unwrap();
-    promise.clone().then(RubyValue::new(callback)).into_value()
+    let ruby = Ruby::get().unwrap();
+    promise
+        .clone()
+        .then(RubyValue::new(ruby.block_proc().unwrap().as_value()))
+        .into_value()
 }
 
 impl Default for RubyRuntime {
@@ -147,7 +151,7 @@ impl Default for RubyRuntime {
             // TODO: maybe put promise in a module , maybe do so for other runtimes too
             let promise = ruby.define_class("Promise", ruby.class_object()).unwrap();
             promise
-                .define_method("and_then", magnus::method!(then, 1))
+                .define_method("and_then", magnus::method!(then, 0))
                 .unwrap();
         }));
         // TODO: add test for those types for every runtime
