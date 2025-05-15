@@ -131,12 +131,14 @@ fn then(r_self: magnus::Value) -> magnus::Value {
     let ruby = Ruby::get().unwrap();
     promise
         .clone()
-        .then(RubyValue::new(if ruby.block_given() {
-            ruby.block_proc().expect("Failed to create Proc").as_value()
-        } else {
-            ruby.proc_new(|ruby, _, _| ruby.qnil().as_value())
-                .as_value()
-        }))
+        .then(RubyValue::new(
+            if ruby.block_given() {
+                ruby.block_proc().expect("Failed to create Proc")
+            } else {
+                ruby.proc_new(|ruby, _, _| ruby.qnil().as_value())
+            }
+            .as_value(),
+        ))
         .into_value()
 }
 
