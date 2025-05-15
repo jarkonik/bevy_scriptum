@@ -2,6 +2,7 @@
 // TODO: make sure ruby is statically linked
 // TODO: add tests for every runtime for return value
 // TODO: maybe unify api and call non thread methods non_send
+// TODO: add tests for entity variable and buitin types for every runtime
 
 use std::{
     collections::HashMap,
@@ -110,7 +111,9 @@ impl DataTypeFunctions for Promise<(), RubyValue> {}
 unsafe impl TypedData for Promise<(), RubyValue> {
     fn class(ruby: &Ruby) -> magnus::RClass {
         static CLASS: Lazy<RClass> = Lazy::new(|ruby| {
-            let class = ruby.define_class("Promise", ruby.class_object()).unwrap();
+            let class = ruby
+                .define_class("Promise", ruby.class_object())
+                .expect("Failed to define Promise class in Ruby");
             class.undef_default_alloc_func();
             class
         });
@@ -128,7 +131,12 @@ fn then(r_self: magnus::Value) -> magnus::Value {
     let ruby = Ruby::get().unwrap();
     promise
         .clone()
-        .then(RubyValue::new(ruby.block_proc().unwrap().as_value()))
+        .then(RubyValue::new(if ruby.block_given() {
+            ruby.block_proc().expect("Failed to create Proc").as_value()
+        } else {
+            ruby.proc_new(|ruby, _, _| ruby.qnil().as_value())
+                .as_value()
+        }))
         .into_value()
 }
 
@@ -315,6 +323,7 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
+                // TODO: use ruby.proc_from_fn instead
                 ruby.define_global_function(&name, function!(callback, -1));
                 RubyValue::nil(&ruby)
             }));
