@@ -72,7 +72,7 @@ impl RubyThread {
         let handle = thread::spawn(move || {
             let _cleanup = unsafe { magnus::embed::init() };
             while let Ok(f) = receiver.recv() {
-                let ruby = Ruby::get().unwrap();
+                let ruby = Ruby::get().expect("Failed to get a handle to Ruby API");
                 f(ruby);
             }
         });
@@ -87,17 +87,21 @@ impl RubyThread {
         let (return_sender, return_receiver) = crossbeam_channel::bounded(0);
         self.sender
             .send(Box::new(move |ruby| {
-                return_sender.send(f(ruby)).unwrap();
+                return_sender
+                    .send(f(ruby))
+                    .expect("Failed to send callback return value");
             }))
             .unwrap();
-        return_receiver.recv().unwrap()
+        return_receiver
+            .recv()
+            .expect("Faild to send execution unit to Ruby thread")
     }
 }
 
 impl Drop for RubyThread {
     fn drop(&mut self) {
         let handle = self.handle.take().unwrap();
-        handle.join().unwrap();
+        handle.join().expect("Failed to join Ruby thread");
     }
 }
 
@@ -377,7 +381,7 @@ impl Runtime for RubyRuntime {
 }
 
 pub mod prelude {
-    pub use super::RubyRuntime;
+    pub use super::{RubyRuntime, RubyScript, RubyScriptData};
 }
 
 impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
