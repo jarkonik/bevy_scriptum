@@ -7,27 +7,21 @@
 
 use std::{
     collections::HashMap,
-    ffi::{c_void, CString},
     sync::{Arc, Condvar, LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
 
-use anyhow::anyhow;
 use bevy::{
     asset::Asset,
-    ecs::{
-        component::Component, query::QueryParManyUniqueIter, resource::Resource,
-        schedule::ScheduleLabel,
-    },
+    ecs::{component::Component, resource::Resource, schedule::ScheduleLabel},
     reflect::TypePath,
     tasks::futures_lite::io,
 };
+use magnus::prelude::*;
 use magnus::{
-    block::Proc, data_type_builder, function, method::ReturnValue, try_convert, value::Lazy,
-    DataType, DataTypeFunctions, IntoValue, RClass, RObject, Ruby, TryConvert, TypedData,
+    block::Proc, data_type_builder, function, value::Lazy, DataType, DataTypeFunctions, IntoValue,
+    RClass, Ruby, TryConvert, TypedData,
 };
-use magnus::{prelude::*, rb_sys::FromRawValue};
-use rb_sys::{rb_define_global_function, rb_scan_args, VALUE};
 use serde::Deserialize;
 
 use crate::{
@@ -408,7 +402,7 @@ impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
 }
 
 impl<T: IntoValue> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
+    fn parse(self, _engine: &magnus::Ruby) -> Vec<RubyValue> {
         self.into_iter()
             .map(|x| RubyValue::new(x.into_value()))
             .collect()

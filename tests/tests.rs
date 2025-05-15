@@ -457,7 +457,7 @@ mod lua_tests {
 mod ruby_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
-    use magnus::{value::ReprValue, Module, Object};
+    use magnus::value::ReprValue;
 
     impl AssertStateKeyValue for RubyRuntime {
         type ScriptData = RubyScriptData;
