@@ -323,7 +323,6 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
-                // TODO: use ruby.proc_from_fn instead
                 ruby.define_global_function(&name, function!(callback, -1));
                 RubyValue::nil(&ruby)
             }));
