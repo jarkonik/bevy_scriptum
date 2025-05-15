@@ -368,7 +368,9 @@ impl Runtime for RubyRuntime {
                     .into_iter()
                     .map(|x| ruby.get_inner(x.0).as_value())
                     .collect();
-                let result: magnus::Value = f.funcall("call", args.as_slice()).unwrap();
+                let result: magnus::Value = f.funcall("call", args.as_slice()).map_err(|e| {
+                    ScriptingError::RuntimeError(Box::new(io::Error::other(e.to_string())))
+                })?;
                 Ok(RubyValue::new(result))
             }))
     }
