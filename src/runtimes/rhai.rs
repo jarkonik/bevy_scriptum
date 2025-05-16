@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
+    log,
     math::Vec3,
     reflect::TypePath,
 };
@@ -159,6 +160,26 @@ impl Runtime for RhaiRuntime {
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         f(&self.engine)
+    }
+
+    fn with_engine_thread_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        log::warn!("runtime can be used on current thread, wil run on current thread");
+        self.with_engine_mut(f)
+    }
+
+    fn with_engine_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        log::warn!("runtime can be used on current thread, wil run on current thread");
+        self.with_engine(f)
+    }
+
+    fn is_current_thread() -> bool {
+        true
     }
 }
 
