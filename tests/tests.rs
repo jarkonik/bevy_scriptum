@@ -65,7 +65,7 @@ trait AssertStateKeyValue {
 
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 macro_rules! scripting_tests {
-    ($runtime:ty, $script:literal, $extension:literal) => {
+    ($runtime:ty, $script:literal, $extension:literal, $entity_type: ty) => {
         use super::*;
 
         #[test]
@@ -380,7 +380,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn entity_variable_is_available_in_callback() {
+        fn entity_variable_index_is_available_in_callback() {
             let mut app = build_test_app();
 
             #[derive(Default, Resource)]
@@ -412,12 +412,12 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn entity_variable_is_available_in_eval() {
+        fn entity_variable_index_is_available_in_eval() {
             let mut app = build_test_app();
 
             #[derive(Default, Resource)]
             struct State {
-                index: u32,
+                index: Option<u32>,
             }
 
             app.world_mut().init_resource::<State>();
@@ -426,7 +426,7 @@ macro_rules! scripting_tests {
                 runtime.add_function(
                     String::from("rust_func"),
                     |In((index,)): In<(u32,)>, mut res: ResMut<State>| {
-                        res.index = index;
+                        res.index = Some(index);
                     },
                 );
             });
@@ -439,7 +439,39 @@ macro_rules! scripting_tests {
 
             assert_eq!(
                 app.world().get_resource::<State>().unwrap().index,
-                entity.index()
+                Some(entity.index())
+            );
+        }
+
+        #[test]
+        fn pass_entity_from_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: Option<u32>,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((entity,)): In<($entity_type,)>, mut res: ResMut<State>| {
+                        res.index = Some(entity.0.index());
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_entity_from_script.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                Some(entity.index())
             );
         }
     };
@@ -449,6 +481,9 @@ macro_rules! scripting_tests {
 mod rhai_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::rhai::prelude::*;
+
+    #[derive(Clone)]
+    struct BevyEntity(Entity);
 
     impl AssertStateKeyValue for RhaiRuntime {
         type ScriptData = RhaiScriptData;
@@ -472,7 +507,7 @@ mod rhai_tests {
         }
     }
 
-    scripting_tests!(RhaiRuntime, "rhai", "rhai");
+    scripting_tests!(RhaiRuntime, "rhai", "rhai", BevyEntity);
 }
 
 #[cfg(feature = "lua")]
@@ -514,7 +549,7 @@ mod lua_tests {
         }
     }
 
-    scripting_tests!(LuaRuntime, "lua", "lua");
+    scripting_tests!(LuaRuntime, "lua", "lua", BevyEntity);
 }
 
 #[cfg(feature = "ruby")]
@@ -563,5 +598,5 @@ mod ruby_tests {
         }
     }
 
-    scripting_tests!(RubyRuntime, "ruby", "rb");
+    scripting_tests!(RubyRuntime, "ruby", "rb", BevyEntity);
 }

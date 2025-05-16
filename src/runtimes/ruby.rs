@@ -127,6 +127,12 @@ unsafe impl TypedData for Promise<(), RubyValue> {
     }
 }
 
+impl TryConvert for Promise<(), RubyValue> {
+    fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
+        TryConvert::try_convert(val).map(|p: &Self| p.clone())
+    }
+}
+
 fn then(r_self: magnus::Value) -> magnus::Value {
     let promise: &Promise<(), RubyValue> = TryConvert::try_convert(r_self).unwrap();
     let ruby = Ruby::get().unwrap();
@@ -143,6 +149,7 @@ fn then(r_self: magnus::Value) -> magnus::Value {
         .into_value()
 }
 
+#[derive(Clone)]
 #[magnus::wrap(class = "BevyEntity")]
 pub struct BevyEntity(pub Entity);
 
@@ -152,6 +159,13 @@ impl BevyEntity {
     }
 }
 
+impl TryConvert for BevyEntity {
+    fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
+        TryConvert::try_convert(val).map(|p: &Self| p.clone())
+    }
+}
+
+#[derive(Clone)]
 #[magnus::wrap(class = "BevyVec3")]
 pub struct BevyVec3(pub Vec3);
 
@@ -166,6 +180,12 @@ impl BevyVec3 {
 
     fn z(&self) -> f32 {
         self.0.z
+    }
+}
+
+impl TryConvert for BevyVec3 {
+    fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
+        TryConvert::try_convert(val).map(|p: &Self| p.clone())
     }
 }
 
