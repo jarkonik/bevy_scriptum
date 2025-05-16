@@ -378,6 +378,70 @@ macro_rules! scripting_tests {
                 1
             );
         }
+
+        #[test]
+        fn entity_variable_is_available_in_callback() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: u32,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((index,)): In<(u32,)>, mut res: ResMut<State>| {
+                        res.index = index;
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/entity_variable.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                entity.index()
+            );
+        }
+
+        #[test]
+        fn entity_variable_is_available_in_eval() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: u32,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((index,)): In<(u32,)>, mut res: ResMut<State>| {
+                        res.index = index;
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/entity_variable_eval.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                entity.index()
+            );
+        }
     };
 }
 

@@ -12,22 +12,23 @@ use std::{
 
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, resource::Resource, schedule::ScheduleLabel},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
+    math::Vec3,
     reflect::TypePath,
     tasks::futures_lite::io,
 };
-use magnus::prelude::*;
 use magnus::{
     block::Proc, data_type_builder, function, value::Lazy, DataType, DataTypeFunctions, IntoValue,
     RClass, Ruby, TryConvert, TypedData,
 };
+use magnus::{method, prelude::*};
 use serde::Deserialize;
 
 use crate::{
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ScriptingError,
+    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 #[derive(Resource)]
@@ -142,6 +143,32 @@ fn then(r_self: magnus::Value) -> magnus::Value {
         .into_value()
 }
 
+#[magnus::wrap(class = "BevyEntity")]
+pub struct BevyEntity(pub Entity);
+
+impl BevyEntity {
+    fn index(&self) -> u32 {
+        self.0.index()
+    }
+}
+
+#[magnus::wrap(class = "BevyVec3")]
+pub struct BevyVec3(pub Vec3);
+
+impl BevyVec3 {
+    fn x(&self) -> f32 {
+        self.0.x
+    }
+
+    fn y(&self) -> f32 {
+        self.0.y
+    }
+
+    fn z(&self) -> f32 {
+        self.0.z
+    }
+}
+
 impl Default for RubyRuntime {
     fn default() -> Self {
         let (lock, cvar) = &*Arc::clone(&RUBY_THREAD);
@@ -159,29 +186,20 @@ impl Default for RubyRuntime {
             promise
                 .define_method("and_then", magnus::method!(then, 0))
                 .unwrap();
+
+            let entity = ruby
+                .define_class("BevyEntity", ruby.class_object())
+                .unwrap();
+            entity
+                .define_method("index", method!(BevyEntity::index, 0))
+                .unwrap();
+
+            let vec3 = ruby.define_class("BevyVec3", ruby.class_object()).unwrap();
+            vec3.define_method("x", method!(BevyVec3::x, 0)).unwrap();
+            vec3.define_method("y", method!(BevyVec3::y, 0)).unwrap();
+            vec3.define_method("z", method!(BevyVec3::z, 0)).unwrap();
         }));
         // TODO: add test for those types for every runtime
-        // engine
-        //     .register_userdata_type::<BevyEntity>(|typ| {
-        //         typ.add_field_method_get("index", |_, entity| Ok(entity.0.index()));
-        //     })
-        //     .expect("Failed to register BevyEntity userdata type");
-        //
-        // engine
-        //     .register_userdata_type::<Promise<(), LuaValue>>(|typ| {
-        //         typ.add_method_mut("and_then", |engine, promise, callback: Function| {
-        //             Ok(Promise::then(promise, LuaValue::new(engine, callback)))
-        //         });
-        //     })
-        //     .expect("Failed to register Promise userdata type");
-        //
-        // engine
-        //     .register_userdata_type::<BevyVec3>(|typ| {
-        //         typ.add_field_method_get("x", |_engine, vec| Ok(vec.0.x));
-        //         typ.add_field_method_get("y", |_engine, vec| Ok(vec.0.y));
-        //         typ.add_field_method_get("z", |_engine, vec| Ok(vec.0.z));
-        //     })
-        //     .expect("Failed to register BevyVec3 userdata type");
         // let vec3_constructor = engine
         //     .create_function(|_, (x, y, z)| Ok(BevyVec3(Vec3::new(x, y, z))))
         //     .expect("Failed to create Vec3 constructor");
@@ -262,14 +280,23 @@ impl Runtime for RubyRuntime {
     fn eval(
         &self,
         script: &Self::ScriptAsset,
-        _entity: bevy::prelude::Entity,
+        entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
         self.ruby_thread
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
+                let var = ruby
+                    .define_variable(ENTITY_VAR_NAME, BevyEntity(entity))
+                    .unwrap();
+
                 let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
+
+                // SAFETY: this is guaranteed to be executed on a single thread
+                // so should be safe according to Magnus documentation
+                unsafe { *var = ruby.qnil().as_value() };
+
                 RubyValue::new(value)
             }));
         Ok(RubyScriptData)
@@ -336,7 +363,7 @@ impl Runtime for RubyRuntime {
         &self,
         name: &str,
         _script_data: &mut Self::ScriptData,
-        _entity: bevy::prelude::Entity,
+        entity: bevy::prelude::Entity,
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
@@ -344,6 +371,10 @@ impl Runtime for RubyRuntime {
             .as_ref()
             .unwrap()
             .execute(Box::new(move |ruby| {
+                let var = ruby
+                    .define_variable(ENTITY_VAR_NAME, BevyEntity(entity))
+                    .unwrap();
+
                 let args: Vec<_> = args
                     .parse(&ruby)
                     .into_iter()
@@ -355,6 +386,11 @@ impl Runtime for RubyRuntime {
                     .map_err(|e| {
                         ScriptingError::RuntimeError(Box::new(io::Error::other(e.to_string())))
                     })?;
+
+                // SAFETY: this is guaranteed to be executed on a single thread
+                // so should be safe according to Magnus documentation
+                unsafe { *var = ruby.qnil().as_value() };
+
                 Ok(RubyValue::new(return_value))
             }))
     }
@@ -391,7 +427,7 @@ impl Runtime for RubyRuntime {
 }
 
 pub mod prelude {
-    pub use super::{RubyRuntime, RubyScript, RubyScriptData};
+    pub use super::{BevyEntity, BevyVec3, RubyRuntime, RubyScript, RubyScriptData};
 }
 
 impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
