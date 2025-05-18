@@ -154,6 +154,11 @@ name = "function_return_value_lua"
 path = "examples/lua/function_return_value.rs"
 required-features = ["lua"]
 
+[[example]]
+name = "call_function_from_rust_ruby"
+path = "examples/ruby/call_function_from_rust.rs"
+required-features = ["ruby"]
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
