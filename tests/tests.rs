@@ -65,7 +65,7 @@ trait AssertStateKeyValue {
 
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 macro_rules! scripting_tests {
-    ($runtime:ty, $script:literal, $extension:literal, $entity_type: ty) => {
+    ($runtime:ty, $script:literal, $extension:literal, $entity_type: ty, $vec_type: ty) => {
         use super::*;
 
         #[test]
@@ -474,6 +474,75 @@ macro_rules! scripting_tests {
                 Some(entity.index())
             );
         }
+
+        #[test]
+        fn pass_vec3_from_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                success: bool,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((v,)): In<($vec_type,)>, mut res: ResMut<State>| {
+                        assert_eq!(v.0.x, 1.5);
+                        assert_eq!(v.0.y, 2.5);
+                        assert_eq!(v.0.z, -3.5);
+                        res.success = true
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_vec3_from_script.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert!(app.world().get_resource::<State>().unwrap().success);
+        }
+
+        #[test]
+        fn pass_vec3_to_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                success: bool,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(String::from("mark_success"), |mut res: ResMut<State>| {
+                    res.success = true
+                });
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_vec3_to_script.{}", $script, $extension).to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
+                    scripting_runtime
+                        .call_fn(
+                            "test_func",
+                            &mut script_data,
+                            entity,
+                            (<$vec_type>::new(1.5, 2.5, -3.5),),
+                        )
+                        .unwrap();
+                },
+            );
+
+            assert!(app.world().get_resource::<State>().unwrap().success);
+        }
     };
 }
 
@@ -598,5 +667,5 @@ mod ruby_tests {
         }
     }
 
-    scripting_tests!(RubyRuntime, "ruby", "rb", BevyEntity);
+    scripting_tests!(RubyRuntime, "ruby", "rb", BevyEntity, BevyVec3);
 }

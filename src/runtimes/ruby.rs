@@ -166,19 +166,23 @@ impl TryConvert for BevyEntity {
 }
 
 #[derive(Clone)]
-#[magnus::wrap(class = "BevyVec3")]
+#[magnus::wrap(class = "Vec3")]
 pub struct BevyVec3(pub Vec3);
 
 impl BevyVec3 {
-    fn x(&self) -> f32 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self(Vec3::new(x, y, z))
+    }
+
+    pub fn x(&self) -> f32 {
         self.0.x
     }
 
-    fn y(&self) -> f32 {
+    pub fn y(&self) -> f32 {
         self.0.y
     }
 
-    fn z(&self) -> f32 {
+    pub fn z(&self) -> f32 {
         self.0.z
     }
 }
@@ -214,20 +218,13 @@ impl Default for RubyRuntime {
                 .define_method("index", method!(BevyEntity::index, 0))
                 .unwrap();
 
-            let vec3 = ruby.define_class("BevyVec3", ruby.class_object()).unwrap();
+            let vec3 = ruby.define_class("Vec3", ruby.class_object()).unwrap();
+            vec3.define_singleton_method("new", function!(BevyVec3::new, 3))
+                .unwrap();
             vec3.define_method("x", method!(BevyVec3::x, 0)).unwrap();
             vec3.define_method("y", method!(BevyVec3::y, 0)).unwrap();
             vec3.define_method("z", method!(BevyVec3::z, 0)).unwrap();
         }));
-        // TODO: add test for those types for every runtime
-        // let vec3_constructor = engine
-        //     .create_function(|_, (x, y, z)| Ok(BevyVec3(Vec3::new(x, y, z))))
-        //     .expect("Failed to create Vec3 constructor");
-        // engine
-        //     .globals()
-        //     .set("Vec3", vec3_constructor)
-        //     .expect("Failed to set Vec3 global");
-        //
         Self {
             ruby_thread: Some(ruby_thread),
         }
