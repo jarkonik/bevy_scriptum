@@ -1,3 +1,3 @@
 def test_func
-  rust_func($entity.index)
+  rust_func(Bevy::Entity.current.index)
 end

@@ -1,11 +1,3 @@
-// TODO: maybe make all runtime engines not send and spawn threads for them like Ruby, benchmark?
-// TODO: make sure ruby is statically linked
-// TODO: add tests for every runtime for return value
-// TODO: maybe unify api and call non thread methods non_send
-// TODO: add tests for entity variable and buitin types for every runtime
-// TODO: line numbers for errors
-// TODO: caan rhai have Vec3 constructor instead of vec3_new
-
 use std::{
     collections::HashMap,
     sync::{Arc, Condvar, LazyLock, Mutex},
@@ -21,7 +13,7 @@ use bevy::{
 };
 use magnus::{
     block::Proc, data_type_builder, function, value::Lazy, DataType, DataTypeFunctions, IntoValue,
-    RClass, Ruby, TryConvert, TypedData,
+    Object, RClass, RModule, Ruby, TryConvert, TypedData,
 };
 use magnus::{method, prelude::*};
 use serde::Deserialize;
@@ -115,8 +107,10 @@ unsafe impl TypedData for Promise<(), RubyValue> {
     fn class(ruby: &Ruby) -> magnus::RClass {
         static CLASS: Lazy<RClass> = Lazy::new(|ruby| {
             let class = ruby
+                .define_module("Bevy")
+                .unwrap()
                 .define_class("Promise", ruby.class_object())
-                .expect("Failed to define Promise class in Ruby");
+                .expect("Failed to define Bevy::Promise class in Ruby");
             class.undef_default_alloc_func();
             class
         });
@@ -124,7 +118,8 @@ unsafe impl TypedData for Promise<(), RubyValue> {
     }
 
     fn data_type() -> &'static magnus::DataType {
-        static DATA_TYPE: DataType = data_type_builder!(Promise<(), RubyValue>, "promise").build();
+        static DATA_TYPE: DataType =
+            data_type_builder!(Promise<(), RubyValue>, "Bevy::Promise").build();
         &DATA_TYPE
     }
 }
@@ -155,7 +150,7 @@ fn then(r_self: magnus::Value) -> magnus::Value {
 }
 
 #[derive(Clone)]
-#[magnus::wrap(class = "BevyEntity")]
+#[magnus::wrap(class = "Bevy::Entity")]
 pub struct BevyEntity(pub Entity);
 
 impl BevyEntity {
@@ -219,12 +214,20 @@ impl Default for RubyRuntime {
 
         ruby_thread
             .execute(Box::new(|ruby| {
-                // TODO: maybe put promise in a module , maybe do so for other runtimes too
-                let promise = ruby.define_class("Promise", ruby.class_object())?;
-                promise.define_method("and_then", magnus::method!(then, 0))?;
+                let module = ruby.define_module("Bevy")?;
 
-                let entity = ruby.define_class("BevyEntity", ruby.class_object())?;
+                let entity = module.define_class("Entity", ruby.class_object())?;
+                entity.class().define_method(
+                    "current",
+                    method!(
+                        |r_self: RClass| { r_self.ivar_get::<_, BevyEntity>("_current") },
+                        0
+                    ),
+                )?;
                 entity.define_method("index", method!(BevyEntity::index, 0))?;
+
+                let promise = module.define_class("Promise", ruby.class_object())?;
+                promise.define_method("and_then", magnus::method!(then, 0))?;
 
                 let vec3 = ruby.define_class("Vec3", ruby.class_object())?;
                 vec3.define_singleton_method("new", function!(BevyVec3::new, 3))?;
@@ -314,14 +317,14 @@ impl Runtime for RubyRuntime {
             .unwrap()
             .execute(Box::new(move |ruby| {
                 let var = ruby
-                    .define_variable(ENTITY_VAR_NAME, BevyEntity(entity))
+                    .class_object()
+                    .const_get::<_, RModule>("Bevy")
+                    .unwrap()
+                    .const_get::<_, RClass>("Entity")
                     .unwrap();
-
+                var.ivar_set("_current", BevyEntity(entity)).unwrap();
                 let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
-
-                // SAFETY: this is guaranteed to be executed on a single thread
-                // so should be safe according to Magnus documentation
-                unsafe { *var = ruby.qnil().as_value() };
+                var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
 
                 RubyValue::new(value)
             }));
@@ -398,8 +401,12 @@ impl Runtime for RubyRuntime {
             .unwrap()
             .execute(Box::new(move |ruby| {
                 let var = ruby
-                    .define_variable(ENTITY_VAR_NAME, BevyEntity(entity))
+                    .class_object()
+                    .const_get::<_, RModule>("Bevy")
+                    .unwrap()
+                    .const_get::<_, RClass>("Entity")
                     .unwrap();
+                var.ivar_set("_current", BevyEntity(entity)).unwrap();
 
                 let args: Vec<_> = args
                     .parse(&ruby)
@@ -409,9 +416,7 @@ impl Runtime for RubyRuntime {
                 let return_value: magnus::Value =
                     ruby.class_object().funcall(name, args.as_slice())?;
 
-                // SAFETY: this is guaranteed to be executed on a single thread
-                // so should be safe according to Magnus documentation
-                unsafe { *var = ruby.qnil().as_value() };
+                var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
 
                 Ok(RubyValue::new(return_value))
             }))
