@@ -166,7 +166,7 @@ impl TryConvert for BevyEntity {
 }
 
 #[derive(Clone)]
-#[magnus::wrap(class = "Vec3")]
+#[magnus::wrap(class = "Bevy::Vec3")]
 pub struct BevyVec3(pub Vec3);
 
 impl BevyVec3 {
@@ -229,7 +229,7 @@ impl Default for RubyRuntime {
                 let promise = module.define_class("Promise", ruby.class_object())?;
                 promise.define_method("and_then", magnus::method!(then, 0))?;
 
-                let vec3 = ruby.define_class("Vec3", ruby.class_object())?;
+                let vec3 = module.define_class("Vec3", ruby.class_object())?;
                 vec3.define_singleton_method("new", function!(BevyVec3::new, 3))?;
                 vec3.define_method("x", method!(BevyVec3::x, 0))?;
                 vec3.define_method("y", method!(BevyVec3::y, 0))?;
