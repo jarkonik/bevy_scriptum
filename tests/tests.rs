@@ -554,6 +554,15 @@ mod rhai_tests {
     #[derive(Clone)]
     struct BevyEntity(Entity);
 
+    #[derive(Clone)]
+    struct BevyVec3(Vec3);
+
+    impl BevyVec3 {
+        fn new(x: f32, y: f32, z: f32) -> Self {
+            Self(Vec3 { x, y, z })
+        }
+    }
+
     impl AssertStateKeyValue for RhaiRuntime {
         type ScriptData = RhaiScriptData;
 
@@ -576,7 +585,7 @@ mod rhai_tests {
         }
     }
 
-    scripting_tests!(RhaiRuntime, "rhai", "rhai", BevyEntity);
+    scripting_tests!(RhaiRuntime, "rhai", "rhai", BevyEntity, BevyVec3);
 }
 
 #[cfg(feature = "lua")]
@@ -618,7 +627,7 @@ mod lua_tests {
         }
     }
 
-    scripting_tests!(LuaRuntime, "lua", "lua", BevyEntity);
+    scripting_tests!(LuaRuntime, "lua", "lua", BevyEntity, BevyVec3);
 }
 
 #[cfg(feature = "ruby")]

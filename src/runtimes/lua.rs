@@ -59,6 +59,12 @@ impl FromLua<'_> for BevyEntity {
 #[derive(Debug, Clone, Copy)]
 pub struct BevyVec3(pub Vec3);
 
+impl BevyVec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        BevyVec3(Vec3 { x, y, z })
+    }
+}
+
 impl UserData for BevyVec3 {}
 
 impl FromLua<'_> for BevyVec3 {
