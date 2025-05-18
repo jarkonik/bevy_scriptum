@@ -95,16 +95,16 @@ impl RubyThread {
                     .send(f(ruby))
                     .expect("Failed to send callback return value");
             }))
-            .unwrap();
+            .expect("Faild to send execution unit to Ruby thread");
         return_receiver
             .recv()
-            .expect("Faild to send execution unit to Ruby thread")
+            .expect("Failed to receive callback return value")
     }
 }
 
 impl Drop for RubyThread {
     fn drop(&mut self) {
-        let handle = self.handle.take().unwrap();
+        let handle = self.handle.take().expect("No Ruby thread to join");
         handle.join().expect("Failed to join Ruby thread");
     }
 }
@@ -136,13 +136,16 @@ impl TryConvert for Promise<(), RubyValue> {
 }
 
 fn then(r_self: magnus::Value) -> magnus::Value {
-    let promise: &Promise<(), RubyValue> = TryConvert::try_convert(r_self).unwrap();
-    let ruby = Ruby::get().unwrap();
+    let promise: &Promise<(), RubyValue> =
+        TryConvert::try_convert(r_self).expect("Couldn't convert self to Promise");
+    let ruby =
+        Ruby::get().expect("Failed to get a handle to Ruby API when registering Promise callback");
     promise
         .clone()
         .then(RubyValue::new(
             if ruby.block_given() {
-                ruby.block_proc().expect("Failed to create Proc")
+                ruby.block_proc()
+                    .expect("Failed to create Proc for Promise")
             } else {
                 ruby.proc_new(|ruby, _, _| ruby.qnil().as_value())
             }
@@ -195,38 +198,42 @@ impl TryConvert for BevyVec3 {
     }
 }
 
+impl From<magnus::Error> for ScriptingError {
+    fn from(value: magnus::Error) -> Self {
+        ScriptingError::RuntimeError(Box::new(io::Error::other(value.to_string())))
+    }
+}
+
 impl Default for RubyRuntime {
     fn default() -> Self {
         let (lock, cvar) = &*Arc::clone(&RUBY_THREAD);
-        let mut ruby_thread = lock.lock().unwrap();
+        let mut ruby_thread = lock.lock().expect("Failed to acquire lock on Ruby thread");
 
         while ruby_thread.is_none() {
-            ruby_thread = cvar.wait(ruby_thread).unwrap();
+            ruby_thread = cvar
+                .wait(ruby_thread)
+                .expect("Failed to acquire lock on Ruby thread after waiting");
         }
-        let ruby_thread = ruby_thread.take().unwrap();
+        let ruby_thread = ruby_thread.take().expect("Ruby thread is not available");
         cvar.notify_all();
 
-        ruby_thread.execute(Box::new(|ruby| {
-            // TODO: maybe put promise in a module , maybe do so for other runtimes too
-            let promise = ruby.define_class("Promise", ruby.class_object()).unwrap();
-            promise
-                .define_method("and_then", magnus::method!(then, 0))
-                .unwrap();
+        ruby_thread
+            .execute(Box::new(|ruby| {
+                // TODO: maybe put promise in a module , maybe do so for other runtimes too
+                let promise = ruby.define_class("Promise", ruby.class_object())?;
+                promise.define_method("and_then", magnus::method!(then, 0))?;
 
-            let entity = ruby
-                .define_class("BevyEntity", ruby.class_object())
-                .unwrap();
-            entity
-                .define_method("index", method!(BevyEntity::index, 0))
-                .unwrap();
+                let entity = ruby.define_class("BevyEntity", ruby.class_object())?;
+                entity.define_method("index", method!(BevyEntity::index, 0))?;
 
-            let vec3 = ruby.define_class("Vec3", ruby.class_object()).unwrap();
-            vec3.define_singleton_method("new", function!(BevyVec3::new, 3))
-                .unwrap();
-            vec3.define_method("x", method!(BevyVec3::x, 0)).unwrap();
-            vec3.define_method("y", method!(BevyVec3::y, 0)).unwrap();
-            vec3.define_method("z", method!(BevyVec3::z, 0)).unwrap();
-        }));
+                let vec3 = ruby.define_class("Vec3", ruby.class_object())?;
+                vec3.define_singleton_method("new", function!(BevyVec3::new, 3))?;
+                vec3.define_method("x", method!(BevyVec3::x, 0))?;
+                vec3.define_method("y", method!(BevyVec3::y, 0))?;
+                vec3.define_method("z", method!(BevyVec3::z, 0))?;
+                Ok::<(), ScriptingError>(())
+            }))
+            .unwrap();
         Self {
             ruby_thread: Some(ruby_thread),
         }
@@ -399,12 +406,8 @@ impl Runtime for RubyRuntime {
                     .into_iter()
                     .map(|a| ruby.get_inner(a.0))
                     .collect();
-                let return_value: magnus::Value = ruby
-                    .class_object()
-                    .funcall(name, args.as_slice())
-                    .map_err(|e| {
-                        ScriptingError::RuntimeError(Box::new(io::Error::other(e.to_string())))
-                    })?;
+                let return_value: magnus::Value =
+                    ruby.class_object().funcall(name, args.as_slice())?;
 
                 // SAFETY: this is guaranteed to be executed on a single thread
                 // so should be safe according to Magnus documentation
@@ -433,9 +436,7 @@ impl Runtime for RubyRuntime {
                     .into_iter()
                     .map(|x| ruby.get_inner(x.0).as_value())
                     .collect();
-                let result: magnus::Value = f.funcall("call", args.as_slice()).map_err(|e| {
-                    ScriptingError::RuntimeError(Box::new(io::Error::other(e.to_string())))
-                })?;
+                let result: magnus::Value = f.funcall("call", args.as_slice())?;
                 Ok(RubyValue::new(result))
             }))
     }
