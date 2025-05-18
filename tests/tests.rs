@@ -498,7 +498,7 @@ macro_rules! scripting_tests {
                 );
             });
 
-            let entity = run_script::<$runtime, _, _>(
+            run_script::<$runtime, _, _>(
                 &mut app,
                 format!("tests/{}/pass_vec3_from_script.{}", $script, $extension).to_string(),
                 call_script_on_update_from_rust::<$runtime>,
