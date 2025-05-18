@@ -3,6 +3,7 @@
 // TODO: add tests for every runtime for return value
 // TODO: maybe unify api and call non thread methods non_send
 // TODO: add tests for entity variable and buitin types for every runtime
+// TODO: line numbers for errors
 
 use std::{
     collections::HashMap,
