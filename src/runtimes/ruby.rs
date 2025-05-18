@@ -4,6 +4,7 @@
 // TODO: maybe unify api and call non thread methods non_send
 // TODO: add tests for entity variable and buitin types for every runtime
 // TODO: line numbers for errors
+// TODO: caan rhai have Vec3 constructor instead of vec3_new
 
 use std::{
     collections::HashMap,
