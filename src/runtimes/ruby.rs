@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    ffi::CString,
     sync::{Arc, Condvar, LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
@@ -18,7 +19,9 @@ use magnus::{
     DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
 };
 use magnus::{method, prelude::*};
-use rb_sys::{ruby_finalize, ruby_init_stack, VALUE};
+use rb_sys::{
+    ruby_exec_node, ruby_finalize, ruby_init_stack, ruby_options, ruby_process_options, VALUE,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -72,7 +75,15 @@ impl RubyThread {
             unsafe {
                 let mut variable_in_this_stack_frame: VALUE = 0;
                 ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
-                rb_sys::ruby_init()
+                rb_sys::ruby_init();
+                let opts = ["-e", ""];
+                let mut argv = vec![];
+                argv.extend(opts.iter().map(|s| CString::new(*s).unwrap()));
+                let mut argv = argv
+                    .iter()
+                    .map(|cs| cs.as_ptr() as *mut _)
+                    .collect::<Vec<_>>();
+                ruby_options(argv.len() as i32, argv.as_mut_ptr());
             };
             while let Ok(f) = receiver.recv() {
                 let ruby = Ruby::get().expect("Failed to get a handle to Ruby API");
