@@ -159,6 +159,11 @@ name = "call_function_from_rust_ruby"
 path = "examples/ruby/call_function_from_rust.rs"
 required-features = ["ruby"]
 
+[[example]]
+name = "current_entity_ruby"
+path = "examples/ruby/current_entity.rs"
+required-features = ["ruby"]
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
