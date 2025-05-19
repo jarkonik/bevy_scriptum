@@ -1,4 +1,5 @@
 fn test_func(vec3) {
-  // TODO: asser vec3 correctness
-  mark_success()
+  if type_of(vec3) != "tests::rhai_tests::BevyVec3" { throw() }
+  // TODO: assert x,y,z
+  mark_success();
 }

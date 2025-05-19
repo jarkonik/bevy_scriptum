@@ -12,10 +12,13 @@ use bevy::{
     tasks::futures_lite::io,
 };
 use magnus::{
-    block::Proc, data_type_builder, function, value::Lazy, DataType, DataTypeFunctions, IntoValue,
-    Object, RClass, RModule, Ruby, TryConvert, TypedData,
+    block::Proc,
+    data_type_builder, function,
+    value::{Lazy, ReprValue},
+    DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
 };
 use magnus::{method, prelude::*};
+use rb_sys::{ruby_finalize, ruby_init_stack, VALUE};
 use serde::Deserialize;
 
 use crate::{
@@ -66,10 +69,17 @@ impl RubyThread {
         let (sender, receiver) = crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
 
         let handle = thread::spawn(move || {
-            let _cleanup = unsafe { magnus::embed::init() };
+            unsafe {
+                let mut variable_in_this_stack_frame: VALUE = 0;
+                ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
+                rb_sys::ruby_init()
+            };
             while let Ok(f) = receiver.recv() {
                 let ruby = Ruby::get().expect("Failed to get a handle to Ruby API");
                 f(ruby);
+            }
+            unsafe {
+                ruby_finalize();
             }
         });
 
@@ -364,9 +374,9 @@ impl Runtime for RubyRuntime {
             let ruby = magnus::Ruby::get().unwrap();
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
-            let method_name = method_name.to_string();
+            let method_name = method_name.name().unwrap();
             let callbacks = RUBY_CALLBACKS.lock().unwrap();
-            let f = callbacks.get(&method_name).unwrap();
+            let f = callbacks.get(method_name).unwrap();
             let result = f(
                 (),
                 args.iter()
@@ -422,7 +432,6 @@ impl Runtime for RubyRuntime {
             }))
     }
 
-    // TODO: add test
     fn call_fn_from_value(
         &self,
         value: &Self::Value,
