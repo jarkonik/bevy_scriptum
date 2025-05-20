@@ -33,7 +33,6 @@ mlua = { version = "0.9.8", features = [
 ], optional = true }
 magnus = { version = "0.7.1", optional = true }
 rb-sys = { version = "*", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
-openssl-sys = { version = "0.9", features = ["vendored"] }
 crossbeam-channel = "0.5.15"
 
 [[example]]
