@@ -1,3 +1,5 @@
+// TODO: install with CC=clang rbenv install 3.4.3
+
 use std::{
     collections::HashMap,
     ffi::CString,
