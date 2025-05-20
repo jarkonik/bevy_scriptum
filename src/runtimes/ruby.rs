@@ -76,14 +76,6 @@ impl RubyThread {
                 let mut variable_in_this_stack_frame: VALUE = 0;
                 ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
                 rb_sys::ruby_init();
-                let opts = ["-e", ""];
-                let mut argv = vec![];
-                argv.extend(opts.iter().map(|s| CString::new(*s).unwrap()));
-                let mut argv = argv
-                    .iter()
-                    .map(|cs| cs.as_ptr() as *mut _)
-                    .collect::<Vec<_>>();
-                ruby_options(argv.len() as i32, argv.as_mut_ptr());
             };
             while let Ok(f) = receiver.recv() {
                 let ruby = Ruby::get().expect("Failed to get a handle to Ruby API");
