@@ -72,7 +72,6 @@ impl RubyThread {
         let (sender, receiver) = crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
 
         let handle = thread::spawn(move || {
-            let argc: i32 = 3;
             let mut argv = vec![
                 CString::new("ruby").unwrap().into_raw(),
                 CString::new("-e").unwrap().into_raw(),
@@ -84,7 +83,7 @@ impl RubyThread {
                 ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
                 rb_sys::ruby_init();
                 rb_sys::ruby_init_loadpath();
-                rb_sys::ruby_options(argc, argv.as_mut_ptr());
+                rb_sys::ruby_options(argv.len() as i32, argv.as_mut_ptr());
             };
             while let Ok(f) = receiver.recv() {
                 let ruby = Ruby::get().expect("Failed to get a handle to Ruby API");
