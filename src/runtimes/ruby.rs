@@ -478,7 +478,7 @@ impl Runtime for RubyRuntime {
     }
 
     fn needs_own_thread() -> bool {
-        false
+        true
     }
 }
 

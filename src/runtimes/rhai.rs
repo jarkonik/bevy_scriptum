@@ -209,7 +209,7 @@ impl Runtime for RhaiRuntime {
     }
 
     fn needs_own_thread() -> bool {
-        true
+        false
     }
 }
 

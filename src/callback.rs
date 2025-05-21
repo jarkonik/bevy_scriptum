@@ -79,11 +79,11 @@ where
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
 
             if R::needs_own_thread() {
-                runtime.with_engine_mut(move |engine| {
+                runtime.with_engine_thread_mut(move |engine| {
                     Out::into_runtime_value_with_engine(result, engine)
                 })
             } else {
-                runtime.with_engine_thread_mut(move |engine| {
+                runtime.with_engine_mut(move |engine| {
                     Out::into_runtime_value_with_engine(result, engine)
                 })
             }
@@ -128,11 +128,11 @@ macro_rules! impl_tuple {
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
                     if RN::needs_own_thread() {
-                        runtime.with_engine_mut(move |engine| {
+                        runtime.with_engine_thread_mut(move |engine| {
                             Out::into_runtime_value_with_engine(result, engine)
                         })
                     } else {
-                        runtime.with_engine_thread_mut(move |engine| {
+                        runtime.with_engine_mut(move |engine| {
                             Out::into_runtime_value_with_engine(result, engine)
                         })
                     }

@@ -300,7 +300,7 @@ impl Runtime for LuaRuntime {
     }
 
     fn needs_own_thread() -> bool {
-        true
+        false
     }
 }
 
