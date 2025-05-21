@@ -21,7 +21,7 @@ use magnus::{
     DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
 };
 use magnus::{method, prelude::*};
-use rb_sys::{ruby_finalize, ruby_init_stack, VALUE};
+use rb_sys::{ruby_init_stack, VALUE};
 use serde::Deserialize;
 
 use crate::{
@@ -147,7 +147,8 @@ unsafe impl TypedData for Promise<(), RubyValue> {
 
 impl TryConvert for Promise<(), RubyValue> {
     fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
-        TryConvert::try_convert(val).map(|p: &Self| p.clone())
+        let result: Result<&Self, _> = TryConvert::try_convert(val);
+        result.cloned()
     }
 }
 
@@ -182,7 +183,8 @@ impl BevyEntity {
 
 impl TryConvert for BevyEntity {
     fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
-        TryConvert::try_convert(val).map(|p: &Self| p.clone())
+        let result: Result<&Self, _> = TryConvert::try_convert(val);
+        result.cloned()
     }
 }
 
@@ -210,7 +212,8 @@ impl BevyVec3 {
 
 impl TryConvert for BevyVec3 {
     fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
-        TryConvert::try_convert(val).map(|p: &Self| p.clone())
+        let result: Result<&Self, _> = TryConvert::try_convert(val);
+        result.cloned()
     }
 }
 
