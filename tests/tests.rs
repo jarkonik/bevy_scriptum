@@ -676,5 +676,17 @@ mod ruby_tests {
         }
     }
 
+    #[test]
+    fn test_symbol_inspection() {
+        let mut app = build_test_app();
+
+        app.add_scripting::<RubyRuntime>(|_| {});
+        let runtime = app.world().get_resource::<RubyRuntime>().unwrap();
+        runtime.with_engine_thread(|engine| {
+            let symbol_string: String = engine.eval(":test_symbol.inspect").unwrap();
+            assert_eq!(symbol_string, ":test_symbol")
+        });
+    }
+
     scripting_tests!(RubyRuntime, "ruby", "rb", BevyEntity, BevyVec3);
 }

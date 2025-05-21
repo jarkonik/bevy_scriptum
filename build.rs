@@ -1,6 +1,8 @@
-use std::{env, path::PathBuf, process::Command};
-
 fn main() {
-    println!("cargo:rustc-link-arg=-rdynamic");
-    println!("cargo:rustc-link-lib=z"); // TODO: if features Ruby
+    #[cfg(feature = "ruby")]
+    {
+        println!("cargo:rustc-link-arg=-rdynamic");
+        println!("cargo:rustc-link-arg=-lz");
+        println!("cargo:rustc-link-lib=z");
+    }
 }
