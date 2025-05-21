@@ -1,5 +1,6 @@
 // TODO: install with CC=clang rbenv install 3.4.3
-// TODO: adjust rhai examples and docs or maybe more rhai changes to different PR
+// TODO: adjust rhai examples and docs or maybe more rhai changes to different PR or even better
+// find a better way to test them(dont wrap, generic bevy etc)
 
 use std::{
     collections::HashMap,

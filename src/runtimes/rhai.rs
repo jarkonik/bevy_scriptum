@@ -236,9 +236,9 @@ impl Default for RhaiRuntime {
             .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
                 BevyVec3(Vec3::new(x as f32, y as f32, z as f32))
             })
-            .register_get("x", |vec: &mut Vec3| vec.x as f64)
-            .register_get("y", |vec: &mut Vec3| vec.y as f64)
-            .register_get("z", |vec: &mut Vec3| vec.z as f64);
+            .register_get("x", |vec: &mut BevyVec3| vec.x() as f64)
+            .register_get("y", |vec: &mut BevyVec3| vec.y() as f64)
+            .register_get("z", |vec: &mut BevyVec3| vec.z() as f64);
         #[allow(deprecated)]
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
