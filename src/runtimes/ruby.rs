@@ -291,6 +291,28 @@ impl RubyValue {
     }
 }
 
+impl RubyRuntime {
+    fn execute_in_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&magnus::Ruby) -> T + Send + 'static,
+    ) -> T {
+        self.ruby_thread
+            .as_ref()
+            .unwrap()
+            .execute(Box::new(move |ruby| f(&ruby)))
+    }
+
+    fn execute_in_thread_mut<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&mut magnus::Ruby) -> T + Send + 'static,
+    ) -> T {
+        self.ruby_thread
+            .as_ref()
+            .unwrap()
+            .execute(Box::new(move |mut ruby| f(&mut ruby)))
+    }
+}
+
 impl Runtime for RubyRuntime {
     type Schedule = RubySchedule;
 
@@ -308,20 +330,14 @@ impl Runtime for RubyRuntime {
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |mut ruby| f(&mut ruby)))
+        self.execute_in_thread_mut(f)
     }
 
     fn with_engine_thread<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |ruby| f(&ruby)))
+        self.execute_in_thread(f)
     }
 
     fn with_engine_mut<T>(&mut self, _f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
@@ -338,22 +354,19 @@ impl Runtime for RubyRuntime {
         entity: bevy::prelude::Entity,
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |ruby| {
-                let var = ruby
-                    .class_object()
-                    .const_get::<_, RModule>("Bevy")
-                    .unwrap()
-                    .const_get::<_, RClass>("Entity")
-                    .unwrap();
-                var.ivar_set("_current", BevyEntity(entity)).unwrap();
-                let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
-                var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
+        self.execute_in_thread(Box::new(move |ruby: &Ruby| {
+            let var = ruby
+                .class_object()
+                .const_get::<_, RModule>("Bevy")
+                .unwrap()
+                .const_get::<_, RClass>("Entity")
+                .unwrap();
+            var.ivar_set("_current", BevyEntity(entity)).unwrap();
+            let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
+            var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
 
-                RubyValue::new(value)
-            }));
+            RubyValue::new(value)
+        }));
         Ok(RubyScriptData)
     }
 
@@ -403,13 +416,10 @@ impl Runtime for RubyRuntime {
             result.into_value()
         }
 
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |ruby| {
-                ruby.define_global_function(&name, function!(callback, -1));
-                RubyValue::nil(&ruby)
-            }));
+        self.execute_in_thread(Box::new(move |ruby: &Ruby| {
+            ruby.define_global_function(&name, function!(callback, -1));
+            RubyValue::nil(&ruby)
+        }));
 
         Ok(())
     }
@@ -422,30 +432,26 @@ impl Runtime for RubyRuntime {
         args: impl for<'a> crate::FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |ruby| {
-                let var = ruby
-                    .class_object()
-                    .const_get::<_, RModule>("Bevy")
-                    .unwrap()
-                    .const_get::<_, RClass>("Entity")
-                    .unwrap();
-                var.ivar_set("_current", BevyEntity(entity)).unwrap();
+        self.execute_in_thread(Box::new(move |ruby: &Ruby| {
+            let var = ruby
+                .class_object()
+                .const_get::<_, RModule>("Bevy")
+                .unwrap()
+                .const_get::<_, RClass>("Entity")
+                .unwrap();
+            var.ivar_set("_current", BevyEntity(entity)).unwrap();
 
-                let args: Vec<_> = args
-                    .parse(&ruby)
-                    .into_iter()
-                    .map(|a| ruby.get_inner(a.0))
-                    .collect();
-                let return_value: magnus::Value =
-                    ruby.class_object().funcall(name, args.as_slice())?;
+            let args: Vec<_> = args
+                .parse(&ruby)
+                .into_iter()
+                .map(|a| ruby.get_inner(a.0))
+                .collect();
+            let return_value: magnus::Value = ruby.class_object().funcall(name, args.as_slice())?;
 
-                var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
+            var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
 
-                Ok(RubyValue::new(return_value))
-            }))
+            Ok(RubyValue::new(return_value))
+        }))
     }
 
     fn call_fn_from_value(
@@ -471,7 +477,7 @@ impl Runtime for RubyRuntime {
             }))
     }
 
-    fn is_current_thread() -> bool {
+    fn needs_own_thread() -> bool {
         false
     }
 }

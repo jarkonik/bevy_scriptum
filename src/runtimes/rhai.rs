@@ -208,7 +208,7 @@ impl Runtime for RhaiRuntime {
         self.with_engine(f)
     }
 
-    fn is_current_thread() -> bool {
+    fn needs_own_thread() -> bool {
         true
     }
 }

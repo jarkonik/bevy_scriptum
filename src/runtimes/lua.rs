@@ -299,7 +299,7 @@ impl Runtime for LuaRuntime {
         self.with_engine(f)
     }
 
-    fn is_current_thread() -> bool {
+    fn needs_own_thread() -> bool {
         true
     }
 }
