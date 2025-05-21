@@ -458,7 +458,7 @@ macro_rules! scripting_tests {
                 runtime.add_function(
                     String::from("rust_func"),
                     |In((entity,)): In<($entity_type,)>, mut res: ResMut<State>| {
-                        res.index = Some(entity.0.index());
+                        res.index = Some(entity.index());
                     },
                 );
             });
@@ -490,9 +490,9 @@ macro_rules! scripting_tests {
                 runtime.add_function(
                     String::from("rust_func"),
                     |In((v,)): In<($vec_type,)>, mut res: ResMut<State>| {
-                        assert_eq!(v.0.x, 1.5);
-                        assert_eq!(v.0.y, 2.5);
-                        assert_eq!(v.0.z, -3.5);
+                        assert_eq!(v.x(), 1.5);
+                        assert_eq!(v.y(), 2.5);
+                        assert_eq!(v.z(), -3.5);
                         res.success = true
                     },
                 );
@@ -550,18 +550,6 @@ macro_rules! scripting_tests {
 mod rhai_tests {
     use bevy::prelude::*;
     use bevy_scriptum::runtimes::rhai::prelude::*;
-
-    #[derive(Clone)]
-    struct BevyEntity(Entity);
-
-    #[derive(Clone)]
-    struct BevyVec3(Vec3);
-
-    impl BevyVec3 {
-        fn new(x: f32, y: f32, z: f32) -> Self {
-            Self(Vec3 { x, y, z })
-        }
-    }
 
     impl AssertStateKeyValue for RhaiRuntime {
         type ScriptData = RhaiScriptData;

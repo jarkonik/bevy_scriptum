@@ -176,7 +176,7 @@ fn then(r_self: magnus::Value) -> magnus::Value {
 pub struct BevyEntity(pub Entity);
 
 impl BevyEntity {
-    fn index(&self) -> u32 {
+    pub fn index(&self) -> u32 {
         self.0.index()
     }
 }
