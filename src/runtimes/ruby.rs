@@ -2,6 +2,7 @@
 // TODO: adjust rhai examples and docs or maybe more rhai changes to different PR or even better
 // find a better way to test them(dont wrap, generic bevy etc)
 // TODO: Move with_engine_thread and with_engine to 2 separate traits
+// TODO: add modules to lua and rhai for entity and vec3
 
 use std::{
     collections::HashMap,
