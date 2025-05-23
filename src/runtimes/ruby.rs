@@ -456,8 +456,8 @@ impl Runtime for RubyRuntime {
         _context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, crate::ScriptingError> {
-        let value = value.clone(); // TODO: maybe just clone/wrap where we added Send + static
-                                   // currently?>
+        let value = value.clone();
+
         self.ruby_thread
             .as_ref()
             .unwrap()
