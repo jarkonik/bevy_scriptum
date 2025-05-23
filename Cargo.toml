@@ -170,6 +170,10 @@ name = "custom_type_ruby"
 path = "examples/ruby/custom_type.rs"
 required-features = ["ruby"]
 
+[[example]]
+name = "ecs_ruby"
+path = "examples/ruby/ecs.rs"
+required-features = ["ruby"]
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
