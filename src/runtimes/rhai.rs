@@ -196,7 +196,6 @@ impl Runtime for RhaiRuntime {
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
-        log::warn!("runtime can be used on current thread, wil run on current thread");
         self.with_engine_mut(f)
     }
 
@@ -204,7 +203,6 @@ impl Runtime for RhaiRuntime {
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {
-        log::warn!("runtime can be used on current thread, wil run on current thread");
         self.with_engine(f)
     }
 

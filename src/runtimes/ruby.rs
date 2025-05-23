@@ -322,6 +322,7 @@ impl Runtime for RubyRuntime {
 
     type RawEngine = magnus::Ruby;
 
+    // TODO: it should be somehow possible to remove 'static here
     fn with_engine_thread_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
@@ -329,6 +330,7 @@ impl Runtime for RubyRuntime {
         self.execute_in_thread_mut(f)
     }
 
+    // TODO: it should be somehow possible to remove 'static here
     fn with_engine_thread<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
@@ -474,6 +476,10 @@ impl Runtime for RubyRuntime {
     fn needs_own_thread() -> bool {
         true
     }
+}
+
+pub mod magnus {
+    pub use magnus::*;
 }
 
 pub mod prelude {
