@@ -386,9 +386,7 @@ impl Runtime for RubyRuntime {
                     Vec<RubyValue>,
                 )
                     -> Result<crate::promise::Promise<(), RubyValue>, crate::ScriptingError>
-                + Send
-                + Sync
-                + 'static,
+                + Send,
         >;
         static RUBY_CALLBACKS: LazyLock<Mutex<HashMap<String, CallbackClosure>>> =
             LazyLock::new(|| Mutex::new(HashMap::new()));
