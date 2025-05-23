@@ -9,7 +9,6 @@ categories = ["game-development"]
 description = "Plugin for Bevy engine that allows you to write some of your game logic in a scripting language"
 repository = "https://github.com/jarkonik/bevy_scriptum"
 keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
-links = "lz" # TODO: conditional, probably will need a crate for ruby
 
 [features]
 lua = ["dep:mlua", "mlua/luajit"]
@@ -34,7 +33,6 @@ mlua = { version = "0.9.8", features = [
 ], optional = true }
 magnus = { version = "0.7.1", optional = true }
 rb-sys = { version = "*", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
-libz-sys = { version = "1.1", default-features = false, features = ["static"] }
 crossbeam-channel = "0.5.15"
 
 [[example]]
