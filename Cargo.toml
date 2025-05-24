@@ -205,6 +205,11 @@ name = "promises_ruby"
 path = "examples/ruby/promises.rs"
 required-features = ["ruby"]
 
+[[example]]
+name = "side_effects_ruby"
+path = "examples/ruby/side_effects.rs"
+required-features = ["ruby"]
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }
