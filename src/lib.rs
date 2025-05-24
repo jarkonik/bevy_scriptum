@@ -259,7 +259,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::{component::Mutable, schedule::ScheduleLabel}, prelude::*};
+use bevy::{
+    app::MainScheduleOrder,
+    ecs::{component::Mutable, schedule::ScheduleLabel},
+    prelude::*,
+};
 use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -276,9 +280,9 @@ const ENTITY_VAR_NAME: &str = "entity";
 #[derive(Error, Debug)]
 pub enum ScriptingError {
     #[error("script runtime error: {0}")]
-    RuntimeError(Box<dyn std::error::Error>),
+    RuntimeError(Box<dyn std::error::Error + Send>),
     #[error("script compilation error: {0}")]
-    CompileError(Box<dyn std::error::Error>),
+    CompileError(Box<dyn std::error::Error + Send>),
     #[error("no runtime resource present")]
     NoRuntimeResource,
     #[error("no settings resource present")]
@@ -295,6 +299,24 @@ pub trait Runtime: Resource + Default {
     type CallContext: Send + Clone;
     type Value: Send + Clone;
     type RawEngine;
+
+    fn needs_own_thread() -> bool;
+
+    /// Provides mutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine_thread_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T;
+
+    /// Provides immutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    fn with_engine_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T;
 
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
@@ -336,7 +358,7 @@ pub trait Runtime: Resource + Default {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, ScriptingError>;
 
     /// Calls a function by value defined within the runtime in the context of the

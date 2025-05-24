@@ -1,6 +1,7 @@
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
+    log,
     math::Vec3,
     reflect::TypePath,
 };
@@ -41,6 +42,12 @@ pub struct LuaRuntime {
 #[derive(Debug, Clone, Copy)]
 pub struct BevyEntity(pub Entity);
 
+impl BevyEntity {
+    pub fn index(&self) -> u32 {
+        self.0.index()
+    }
+}
+
 impl UserData for BevyEntity {}
 
 impl FromLua<'_> for BevyEntity {
@@ -57,6 +64,24 @@ impl FromLua<'_> for BevyEntity {
 
 #[derive(Debug, Clone, Copy)]
 pub struct BevyVec3(pub Vec3);
+
+impl BevyVec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        BevyVec3(Vec3 { x, y, z })
+    }
+
+    pub fn x(&self) -> f32 {
+        self.0.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.0.y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.0.z
+    }
+}
 
 impl UserData for BevyVec3 {}
 
@@ -256,6 +281,24 @@ impl Runtime for LuaRuntime {
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         let engine = self.engine.lock().unwrap();
         f(&engine)
+    }
+
+    fn with_engine_thread_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine_mut(f)
+    }
+
+    fn with_engine_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine(f)
+    }
+
+    fn needs_own_thread() -> bool {
+        false
     }
 }
 

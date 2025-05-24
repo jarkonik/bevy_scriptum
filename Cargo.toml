@@ -11,8 +11,9 @@ repository = "https://github.com/jarkonik/bevy_scriptum"
 keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
 
 [features]
-lua = ["mlua/luajit"]
+lua = ["dep:mlua", "mlua/luajit"]
 rhai = ["dep:rhai"]
+ruby = ["dep:magnus", "dep:rb-sys"]
 
 [dependencies]
 bevy = { default-features = false, version = "0.16", features = ["bevy_asset", "bevy_log"] }
@@ -30,6 +31,9 @@ mlua = { version = "0.9.8", features = [
     "vendored",
     "send",
 ], optional = true }
+magnus = { version = "0.7.1", optional = true }
+rb-sys = { version = "*", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
+crossbeam-channel = "0.5.15"
 
 [[example]]
 name = "call_function_from_rust_rhai"
@@ -150,6 +154,61 @@ required-features = ["lua"]
 name = "function_return_value_lua"
 path = "examples/lua/function_return_value.rs"
 required-features = ["lua"]
+
+[[example]]
+name = "call_function_from_rust_ruby"
+path = "examples/ruby/call_function_from_rust.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "current_entity_ruby"
+path = "examples/ruby/current_entity.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "custom_type_ruby"
+path = "examples/ruby/custom_type.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "ecs_ruby"
+path = "examples/ruby/ecs.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "entity_variable_ruby"
+path = "examples/ruby/entity_variable.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "function_params_ruby"
+path = "examples/ruby/function_params.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "function_return_value_ruby"
+path = "examples/ruby/function_return_value.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "hello_world_ruby"
+path = "examples/ruby/hello_world.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "multiple_plugins_ruby"
+path = "examples/ruby/multiple_plugins.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "promises_ruby"
+path = "examples/ruby/promises.rs"
+required-features = ["ruby"]
+
+[[example]]
+name = "side_effects_ruby"
+path = "examples/ruby/side_effects.rs"
+required-features = ["ruby"]
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"

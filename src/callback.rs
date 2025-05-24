@@ -65,7 +65,7 @@ where
     fn into_callback_system(self, world: &mut World) -> CallbackSystem<R>;
 }
 
-impl<R: Runtime, Out, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
+impl<R: Runtime, Out: Send + 'static, FN, Marker> IntoCallbackSystem<R, (), Out, Marker> for FN
 where
     FN: IntoSystem<(), Out, Marker>,
     Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, R>,
@@ -77,8 +77,16 @@ where
             let result = inner_system.run((), world);
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
-            runtime
-                .with_engine_mut(move |engine| Out::into_runtime_value_with_engine(result, engine))
+
+            if R::needs_own_thread() {
+                runtime.with_engine_thread_mut(move |engine| {
+                    Out::into_runtime_value_with_engine(result, engine)
+                })
+            } else {
+                runtime.with_engine_mut(move |engine| {
+                    Out::into_runtime_value_with_engine(result, engine)
+                })
+            }
         };
         let system = IntoSystem::into_system(system_fn);
         CallbackSystem {
@@ -90,29 +98,44 @@ where
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<RN: Runtime, $($t,)+ Out, FN, Marker> IntoCallbackSystem<RN, In<($($t,)+)>, Out, Marker>
+        impl<RN: Runtime, $($t,)+ Out: Send + 'static, FN, Marker> IntoCallbackSystem<RN, In<($($t,)+)>, Out, Marker>
             for FN
         where
             FN: IntoSystem<In<($($t,)+)>, Out, Marker>,
             Out: for<'a> IntoRuntimeValueWithEngine<'a, Out, RN>,
-            $($t: 'static + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
+            $($t: Send + 'static + for<'a> FromRuntimeValueWithEngine<'a, RN>,)+
         {
             fn into_callback_system(self, world: &mut World) -> CallbackSystem<RN> {
                 let mut inner_system = IntoSystem::into_system(self);
                 inner_system.initialize(world);
                 let system_fn = move |args: In<Vec<RN::Value>>, world: &mut World| {
                     let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
-                    let args  = runtime.with_engine_mut(move |engine| {
-                        (
-                            $($t::from_runtime_value_with_engine(args.get($idx).expect(&format!("Failed to get function argument for index {}", $idx)).clone(), engine), )+
-                        )
-                    });
+                    let args  = if RN::needs_own_thread() {
+                        runtime.with_engine_thread_mut(move |engine| {
+                            (
+                                $($t::from_runtime_value_with_engine(args.get($idx).expect(&format!("Failed to get function argument for index {}", $idx)).clone(), engine), )+
+                            )
+                        })
+                    } else {
+                        runtime.with_engine_mut(move |engine| {
+                            (
+                                $($t::from_runtime_value_with_engine(args.get($idx).expect(&format!("Failed to get function argument for index {}", $idx)).clone(), engine), )+
+                            )
+                        })
+                    };
+
                     let result = inner_system.run(args, world);
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
-                    runtime.with_engine_mut(move |engine| {
-                        Out::into_runtime_value_with_engine(result, engine)
-                    })
+                    if RN::needs_own_thread() {
+                        runtime.with_engine_thread_mut(move |engine| {
+                            Out::into_runtime_value_with_engine(result, engine)
+                        })
+                    } else {
+                        runtime.with_engine_mut(move |engine| {
+                            Out::into_runtime_value_with_engine(result, engine)
+                        })
+                    }
                 };
                 let system = IntoSystem::into_system(system_fn);
                 CallbackSystem {

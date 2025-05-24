@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
+    log,
     math::Vec3,
     reflect::TypePath,
 };
@@ -50,6 +51,36 @@ pub struct RhaiScriptData {
 #[derive(Debug, Clone)]
 pub struct RhaiValue(pub rhai::Dynamic);
 
+#[derive(Clone)]
+pub struct BevyEntity(pub Entity);
+
+impl BevyEntity {
+    pub fn index(&self) -> u32 {
+        self.0.index()
+    }
+}
+
+#[derive(Clone)]
+pub struct BevyVec3(pub Vec3);
+
+impl BevyVec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self(Vec3::new(x, y, z))
+    }
+
+    pub fn x(&self) -> f32 {
+        self.0.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.0.y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.0.z
+    }
+}
+
 impl Runtime for RhaiRuntime {
     type Schedule = RhaiSchedule;
     type ScriptAsset = RhaiScript;
@@ -65,7 +96,7 @@ impl Runtime for RhaiRuntime {
         entity: Entity,
     ) -> Result<Self::ScriptData, ScriptingError> {
         let mut scope = Scope::new();
-        scope.push(ENTITY_VAR_NAME, entity);
+        scope.push(ENTITY_VAR_NAME, BevyEntity(entity));
 
         let engine = &self.engine;
 
@@ -77,7 +108,7 @@ impl Runtime for RhaiRuntime {
             .run_ast_with_scope(&mut scope, &ast)
             .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
 
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        scope.remove::<BevyEntity>(ENTITY_VAR_NAME).unwrap();
 
         Ok(Self::ScriptData { ast, scope })
     }
@@ -113,7 +144,7 @@ impl Runtime for RhaiRuntime {
     ) -> Result<RhaiValue, ScriptingError> {
         let ast = script_data.ast.clone();
         let scope = &mut script_data.scope;
-        scope.push(ENTITY_VAR_NAME, entity);
+        scope.push(ENTITY_VAR_NAME, BevyEntity(entity));
         let options = CallFnOptions::new().eval_ast(false);
         let args = args
             .parse(&self.engine)
@@ -123,7 +154,7 @@ impl Runtime for RhaiRuntime {
         let result = self
             .engine
             .call_fn_with_options::<Dynamic>(options, scope, &ast, name, args);
-        scope.remove::<Entity>(ENTITY_VAR_NAME).unwrap();
+        scope.remove::<BevyEntity>(ENTITY_VAR_NAME).unwrap();
         match result {
             Ok(val) => Ok(RhaiValue(val)),
             Err(e) => Err(ScriptingError::RuntimeError(Box::new(e))),
@@ -160,6 +191,24 @@ impl Runtime for RhaiRuntime {
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         f(&self.engine)
     }
+
+    fn with_engine_thread_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine_mut(f)
+    }
+
+    fn with_engine_thread<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine(f)
+    }
+
+    fn needs_own_thread() -> bool {
+        false
+    }
 }
 
 impl Default for RhaiRuntime {
@@ -167,8 +216,8 @@ impl Default for RhaiRuntime {
         let mut engine = Engine::new();
 
         engine
-            .register_type_with_name::<Entity>("Entity")
-            .register_get("index", |entity: &mut Entity| entity.index());
+            .register_type_with_name::<BevyEntity>("Entity")
+            .register_get("index", |entity: &mut BevyEntity| entity.index());
         #[allow(deprecated)]
         engine
             .register_type_with_name::<Promise<rhai::NativeCallContextStore, RhaiValue>>("Promise")
@@ -181,13 +230,13 @@ impl Default for RhaiRuntime {
             );
 
         engine
-            .register_type_with_name::<Vec3>("Vec3")
+            .register_type_with_name::<BevyVec3>("Vec3")
             .register_fn("new_vec3", |x: f64, y: f64, z: f64| {
-                Vec3::new(x as f32, y as f32, z as f32)
+                BevyVec3(Vec3::new(x as f32, y as f32, z as f32))
             })
-            .register_get("x", |vec: &mut Vec3| vec.x as f64)
-            .register_get("y", |vec: &mut Vec3| vec.y as f64)
-            .register_get("z", |vec: &mut Vec3| vec.z as f64);
+            .register_get("x", |vec: &mut BevyVec3| vec.x() as f64)
+            .register_get("y", |vec: &mut BevyVec3| vec.y() as f64)
+            .register_get("z", |vec: &mut BevyVec3| vec.z() as f64);
         #[allow(deprecated)]
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
@@ -221,7 +270,7 @@ impl<T: Clone + 'static> FromRuntimeValueWithEngine<'_, RhaiRuntime> for T {
 }
 
 pub mod prelude {
-    pub use super::{RhaiRuntime, RhaiScript, RhaiScriptData};
+    pub use super::{BevyEntity, BevyVec3, RhaiRuntime, RhaiScript, RhaiScriptData};
 }
 
 macro_rules! impl_tuple {

@@ -1,17 +1,17 @@
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use std::sync::OnceLock;
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::ecs::system::RunSystemOnce as _;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::prelude::*;
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn build_test_app() -> App {
     let mut app = App::new();
 
@@ -25,7 +25,7 @@ fn build_test_app() -> App {
     app
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn run_script<R: Runtime, Out, Marker>(
     app: &mut App,
     path: String,
@@ -42,7 +42,7 @@ fn run_script<R: Runtime, Out, Marker>(
     entity_id
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn call_script_on_update_from_rust<R: Runtime>(
     mut scripted_entities: Query<(Entity, &mut R::ScriptData)>,
     scripting_runtime: ResMut<R>,
@@ -55,7 +55,7 @@ fn call_script_on_update_from_rust<R: Runtime>(
         .unwrap();
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 trait AssertStateKeyValue {
     type ScriptData;
     fn assert_state_key_value_i64(world: &World, entity_id: Entity, key: &str, value: i64);
@@ -63,9 +63,9 @@ trait AssertStateKeyValue {
     fn assert_state_key_value_string(world: &World, entity_id: Entity, key: &str, value: &str);
 }
 
-#[cfg(any(feature = "rhai", feature = "lua"))]
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 macro_rules! scripting_tests {
-    ($runtime:ty, $script:literal, $extension:literal) => {
+    ($runtime:ty, $script:literal, $extension:literal, $entity_type: ty, $vec_type: ty) => {
         use super::*;
 
         #[test]
@@ -189,7 +189,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust_with_heterogenous_params() {
+        fn test_script_function_gets_called_from_rust_with_multiple_params() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -225,33 +225,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust_with_multiple_params() {
-            let mut app = build_test_app();
-
-            app.add_scripting::<$runtime>(|_| {});
-
-            let entity_id = run_script::<$runtime, _, _>(
-                &mut app,
-                format!(
-                    "tests/{}/script_function_gets_called_from_rust_with_multiple_params.{}",
-                    $script, $extension
-                )
-                .to_string(),
-                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
-                 scripting_runtime: ResMut<$runtime>| {
-                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
-                    scripting_runtime
-                        .call_fn("test_func", &mut script_data, entity, vec![1, 2])
-                        .unwrap();
-                },
-            );
-
-            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "a_value", 1i32);
-            <$runtime>::assert_state_key_value_i32(&app.world(), entity_id, "b_value", 2i32);
-        }
-
-        #[test]
-        fn test_call_script_function_that_casues_runtime_error() {
+        fn call_script_function_that_casues_runtime_error() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -274,18 +248,14 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_call_script_function_that_does_not_exist() {
+        fn call_script_function_that_does_not_exist() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
 
             run_script::<$runtime, _, _>(
                 &mut app,
-                format!(
-                    "tests/{}/call_script_function_that_causes_runtime_error.{}",
-                    $script, $extension
-                )
-                .to_string(),
+                format!("tests/{}/side_effects.{}", $script, $extension).to_string(),
                 |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
                  scripting_runtime: ResMut<$runtime>| {
                     let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
@@ -297,7 +267,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_script_function_gets_called_from_rust() {
+        fn script_function_gets_called_from_rust() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|_| {});
@@ -316,7 +286,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_promise() {
+        fn return_via_promise() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|runtime| {
@@ -333,7 +303,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_promise_runtime_error_does_not_panic() {
+        fn promise_runtime_error() {
             let mut app = build_test_app();
 
             app.add_scripting::<$runtime>(|runtime| {
@@ -348,7 +318,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_side_effects() {
+        fn side_effects() {
             let mut app = build_test_app();
 
             #[derive(Component)]
@@ -374,7 +344,7 @@ macro_rules! scripting_tests {
         }
 
         #[test]
-        fn test_rust_function_gets_called_from_script() {
+        fn rust_function_gets_called_from_script() {
             let mut app = build_test_app();
 
             #[derive(Default, Resource)]
@@ -408,6 +378,171 @@ macro_rules! scripting_tests {
                 1
             );
         }
+
+        #[test]
+        fn entity_variable_index_is_available_in_callback() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: u32,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((index,)): In<(u32,)>, mut res: ResMut<State>| {
+                        res.index = index;
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/entity_variable.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                entity.index()
+            );
+        }
+
+        #[test]
+        fn entity_variable_index_is_available_in_eval() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: Option<u32>,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((index,)): In<(u32,)>, mut res: ResMut<State>| {
+                        res.index = Some(index);
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/entity_variable_eval.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                Some(entity.index())
+            );
+        }
+
+        #[test]
+        fn pass_entity_from_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                index: Option<u32>,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((entity,)): In<($entity_type,)>, mut res: ResMut<State>| {
+                        res.index = Some(entity.index());
+                    },
+                );
+            });
+
+            let entity = run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_entity_from_script.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert_eq!(
+                app.world().get_resource::<State>().unwrap().index,
+                Some(entity.index())
+            );
+        }
+
+        #[test]
+        fn pass_vec3_from_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                success: bool,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(
+                    String::from("rust_func"),
+                    |In((v,)): In<($vec_type,)>, mut res: ResMut<State>| {
+                        assert_eq!(v.x(), 1.5);
+                        assert_eq!(v.y(), 2.5);
+                        assert_eq!(v.z(), -3.5);
+                        res.success = true
+                    },
+                );
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_vec3_from_script.{}", $script, $extension).to_string(),
+                call_script_on_update_from_rust::<$runtime>,
+            );
+
+            assert!(app.world().get_resource::<State>().unwrap().success);
+        }
+
+        #[test]
+        fn pass_vec3_to_script() {
+            let mut app = build_test_app();
+
+            #[derive(Default, Resource)]
+            struct State {
+                success: bool,
+            }
+
+            app.world_mut().init_resource::<State>();
+
+            app.add_scripting::<$runtime>(|runtime| {
+                runtime.add_function(String::from("mark_success"), |mut res: ResMut<State>| {
+                    res.success = true
+                });
+            });
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!("tests/{}/pass_vec3_to_script.{}", $script, $extension).to_string(),
+                |mut scripted_entities: Query<(Entity, &mut <$runtime as Runtime>::ScriptData)>,
+                 scripting_runtime: ResMut<$runtime>| {
+                    let (entity, mut script_data) = scripted_entities.single_mut().unwrap();
+                    scripting_runtime
+                        .call_fn(
+                            "test_func",
+                            &mut script_data,
+                            entity,
+                            (<$vec_type>::new(1.5, 2.5, -3.5),),
+                        )
+                        .unwrap();
+                },
+            );
+
+            assert!(app.world().get_resource::<State>().unwrap().success);
+        }
     };
 }
 
@@ -438,7 +573,7 @@ mod rhai_tests {
         }
     }
 
-    scripting_tests!(RhaiRuntime, "rhai", "rhai");
+    scripting_tests!(RhaiRuntime, "rhai", "rhai", BevyEntity, BevyVec3);
 }
 
 #[cfg(feature = "lua")]
@@ -480,5 +615,66 @@ mod lua_tests {
         }
     }
 
-    scripting_tests!(LuaRuntime, "lua", "lua");
+    scripting_tests!(LuaRuntime, "lua", "lua", BevyEntity, BevyVec3);
+}
+
+#[cfg(feature = "ruby")]
+mod ruby_tests {
+    use bevy::prelude::*;
+    use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
+    use magnus::value::ReprValue;
+
+    impl AssertStateKeyValue for RubyRuntime {
+        type ScriptData = RubyScriptData;
+
+        fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
+            let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            let key = key.to_string();
+            runtime.with_engine_thread(move |engine| {
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
+                let res: i64 = state.funcall_public("[]", (key,)).unwrap();
+                assert_eq!(res, value)
+            })
+        }
+
+        fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
+            let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            let key = key.to_string();
+            runtime.with_engine_thread(move |engine| {
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
+                let res: i32 = state.funcall_public("[]", (key,)).unwrap();
+                assert_eq!(res, value)
+            })
+        }
+
+        fn assert_state_key_value_string(
+            world: &World,
+            _entity_id: Entity,
+            key: &str,
+            value: &str,
+        ) {
+            let runtime = world.get_resource::<RubyRuntime>().unwrap();
+            let key = key.to_string();
+            let value = value.to_string();
+            runtime.with_engine_thread(move |engine| {
+                let state: magnus::value::Value = engine.eval("$state").unwrap();
+                let res: String = state.funcall_public("[]", (key,)).unwrap();
+                assert_eq!(res, value);
+            });
+        }
+    }
+
+    #[test]
+    fn test_symbol_inspection() {
+        let mut app = build_test_app();
+
+        app.add_scripting::<RubyRuntime>(|_| {});
+        let runtime = app.world().get_resource::<RubyRuntime>().unwrap();
+        runtime.with_engine_thread(|engine| {
+            let symbol_string: String = engine.eval(":test_symbol.inspect").unwrap();
+            assert_eq!(symbol_string, ":test_symbol")
+        });
+    }
+
+    scripting_tests!(RubyRuntime, "ruby", "rb", BevyEntity, BevyVec3);
 }
