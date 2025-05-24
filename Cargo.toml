@@ -200,6 +200,11 @@ name = "multiple_plugins_ruby"
 path = "examples/ruby/multiple_plugins.rs"
 required-features = ["ruby"]
 
+[[example]]
+name = "promises_ruby"
+path = "examples/ruby/promises.rs"
+required-features = ["ruby"]
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }

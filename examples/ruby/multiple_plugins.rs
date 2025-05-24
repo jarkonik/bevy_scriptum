@@ -17,7 +17,7 @@ impl Plugin for PluginA {
 
 fn plugin_a_startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     commands.spawn(Script::<RubyScript>::new(
-        assets_server.load("examples/lua/multiple_plugins_plugin_a.lua"),
+        assets_server.load("examples/ruby/multiple_plugins_plugin_a.rb"),
     ));
 }
 
