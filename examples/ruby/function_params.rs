@@ -33,7 +33,7 @@ fn main() {
                     |In((x, y)): In<(i64, RArray)>, runtime: Res<RubyRuntime>| {
                         runtime.with_engine_thread(move |ruby| {
                             println!(
-                                "called with i64: {} and dynamically typed array: [{:?}]",
+                                "called with i64: {} and dynamically typed array: {:?}",
                                 x,
                                 ruby.get_inner(y.0)
                             );
