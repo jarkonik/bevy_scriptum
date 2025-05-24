@@ -5,6 +5,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use ::magnus::value::Opaque;
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
@@ -510,6 +511,16 @@ impl<T: IntoValue> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
         self.into_iter()
             .map(|x| RubyValue::new(x.into_value()))
             .collect()
+    }
+}
+
+pub struct RArray(pub Opaque<magnus::RArray>);
+
+impl FromRuntimeValueWithEngine<'_, RubyRuntime> for RArray {
+    fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
+        let inner = engine.get_inner(value.0);
+        let array = magnus::RArray::try_convert(inner).unwrap();
+        RArray(Opaque::from(array))
     }
 }
 

@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::ruby::magnus;
-use bevy_scriptum::runtimes::ruby::prelude::*;
+use bevy_scriptum::runtimes::ruby::{prelude::*, RArray};
 
 fn main() {
     App::new()
@@ -28,26 +27,19 @@ fn main() {
                     |In((x, y)): In<(i64, String)>| {
                         println!("called with i64: {} and string: '{}'", x, y);
                     },
+                )
+                .add_function(
+                    String::from("fun_with_i64_and_array_param"),
+                    |In((x, y)): In<(i64, RArray)>, runtime: Res<RubyRuntime>| {
+                        runtime.with_engine_thread(move |ruby| {
+                            println!(
+                                "called with i64: {} and dynamically typed array: [{:?}]",
+                                x,
+                                ruby.get_inner(y.0)
+                            );
+                        });
+                    },
                 );
-            // .add_function(
-            //     String::from("fun_with_i64_and_array_param"),
-            //     |In((x, y)): In<(i64, magnus::value::RArray)>, runtime: Res<RubyRuntime>| {
-            //         runtime.with_engine(|engine| {
-            //             println!(
-            //                 "called with i64: {} and dynamically typed array: [{:?}]",
-            //                 x,
-            //                 engine
-            //                     .registry_value::<mlua::Table>(&y)
-            //                     .unwrap()
-            //                     .pairs::<usize, mlua::Value>()
-            //                     .map(|pair| pair.unwrap())
-            //                     .map(|(_, v)| format!("{:?}", v))
-            //                     .collect::<Vec<String>>()
-            //                     .join(",")
-            //             );
-            //         });
-            //     },
-            // );
         })
         .add_systems(Startup, startup)
         .run();
