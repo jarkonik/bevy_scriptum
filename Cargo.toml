@@ -185,6 +185,12 @@ name = "function_params_ruby"
 path = "examples/ruby/function_params.rs"
 required-features = ["ruby"]
 
+[[example]]
+name = "function_return_value_ruby"
+path = "examples/ruby/function_return_value.rs"
+required-features = ["ruby"]
+
+
 [dev-dependencies]
 tracing-subscriber = "0.3.18"
 mlua = { version = "0.9.8", features = ["luajit", "vendored", "send"] }

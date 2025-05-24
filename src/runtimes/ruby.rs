@@ -275,7 +275,7 @@ impl Drop for RubyRuntime {
 }
 
 #[derive(Clone)]
-pub struct RubyValue(magnus::value::Opaque<magnus::Value>);
+pub struct RubyValue(pub magnus::value::Opaque<magnus::Value>);
 
 impl RubyValue {
     fn nil(ruby: &Ruby) -> Self {
@@ -339,11 +339,11 @@ impl Runtime for RubyRuntime {
     }
 
     fn with_engine_mut<T>(&mut self, _f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
-        unimplemented!();
+        unimplemented!("Ruby requires single threaded execution, use `with_engine_thread`");
     }
 
     fn with_engine<T>(&self, _f: impl FnOnce(&Self::RawEngine) -> T) -> T {
-        unimplemented!();
+        unimplemented!("Ruby requires single threaded execution, use `with_engine_thread`");
     }
 
     fn eval(
