@@ -1,7 +1,6 @@
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
-    log,
     math::Vec3,
     reflect::TypePath,
 };
