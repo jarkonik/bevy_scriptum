@@ -81,7 +81,6 @@ impl RubyThread {
                 let mut variable_in_this_stack_frame: VALUE = 0;
                 ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
                 rb_sys::ruby_init();
-                rb_sys::ruby_init_loadpath();
                 rb_sys::ruby_options(argv.len() as i32, argv.as_mut_ptr());
             };
             while let Ok(f) = receiver.recv() {
