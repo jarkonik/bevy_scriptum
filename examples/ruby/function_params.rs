@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::ruby::{prelude::*, RArray};
+use bevy_scriptum::runtimes::ruby::{RArray, prelude::*};
 
 fn main() {
     App::new()
@@ -31,7 +31,7 @@ fn main() {
                 .add_function(
                     String::from("fun_with_i64_and_array_param"),
                     |In((x, y)): In<(i64, RArray)>, runtime: Res<RubyRuntime>| {
-                        runtime.with_engine_thread(move |ruby| {
+                        runtime.with_engine_send(move |ruby| {
                             println!(
                                 "called with i64: {} and dynamically typed array: {:?}",
                                 x,

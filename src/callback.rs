@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use core::any::TypeId;
 use std::sync::{Arc, Mutex};
 
-use crate::{promise::Promise, Runtime};
+use crate::{Runtime, promise::Promise};
 
 /// A system that can be used to call a script function.
 pub struct CallbackSystem<R: Runtime> {
@@ -79,7 +79,7 @@ where
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
 
             if R::needs_own_thread() {
-                runtime.with_engine_thread_mut(move |engine| {
+                runtime.with_engine_send_mut(move |engine| {
                     Out::into_runtime_value_with_engine(result, engine)
                 })
             } else {

@@ -13,10 +13,10 @@ use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
 use crate::{
+    ENTITY_VAR_NAME, FuncArgs, Runtime, ScriptingError,
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
@@ -197,14 +197,14 @@ impl Runtime for LuaRuntime {
         name: String,
         _arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<
-                crate::promise::Promise<Self::CallContext, Self::Value>,
-                crate::ScriptingError,
-            > + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<
+            crate::promise::Promise<Self::CallContext, Self::Value>,
+            crate::ScriptingError,
+        > + Send
+        + Sync
+        + 'static,
     ) -> Result<(), crate::ScriptingError> {
         self.with_engine(|engine| {
             let func = engine
@@ -283,14 +283,14 @@ impl Runtime for LuaRuntime {
         f(&engine)
     }
 
-    fn with_engine_thread_mut<T: Send + 'static>(
+    fn with_engine_send_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
         self.with_engine_mut(f)
     }
 
-    fn with_engine_thread<T: Send + 'static>(
+    fn with_engine_send<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {

@@ -305,7 +305,7 @@ pub trait Runtime: Resource + Default {
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
-    fn with_engine_thread_mut<T: Send + 'static>(
+    fn with_engine_send_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T;
@@ -313,7 +313,7 @@ pub trait Runtime: Resource + Default {
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
-    fn with_engine_thread<T: Send + 'static>(
+    fn with_engine_send<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T;
@@ -342,12 +342,12 @@ pub trait Runtime: Resource + Default {
         name: String,
         arg_types: Vec<TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
-            + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+        + Send
+        + Sync
+        + 'static,
     ) -> Result<(), ScriptingError>;
 
     /// Calls a function by name defined within the runtime in the context of the

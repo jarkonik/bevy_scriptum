@@ -1,8 +1,8 @@
 use bevy::{app::AppExit, prelude::*};
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::ruby::prelude::*;
-use magnus::value::InnerValue;
 use magnus::TryConvert;
+use magnus::value::InnerValue;
 
 fn main() {
     App::new()
@@ -33,7 +33,7 @@ fn call_lua_on_update_from_rust(
             .call_fn("get_value", &mut script_data, entity, ())
             .unwrap()
             .0;
-        scripting_runtime.with_engine_thread(move |ruby| {
+        scripting_runtime.with_engine(|ruby| {
             let val: i32 = TryConvert::try_convert(val.get_inner_with(&ruby)).unwrap();
             println!("script returned: {}", val);
         });

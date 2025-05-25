@@ -14,20 +14,20 @@ use bevy::{
     tasks::futures_lite::io,
 };
 use magnus::{
+    DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
     block::Proc,
     data_type_builder, function,
     value::{Lazy, ReprValue},
-    DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
 };
 use magnus::{method, prelude::*};
-use rb_sys::{ruby_init_stack, VALUE};
+use rb_sys::{VALUE, ruby_init_stack};
 use serde::Deserialize;
 
 use crate::{
+    FuncArgs, Runtime, ScriptingError,
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ScriptingError,
 };
 
 #[derive(Resource)]
@@ -323,16 +323,14 @@ impl Runtime for RubyRuntime {
 
     type RawEngine = magnus::Ruby;
 
-    // TODO: it should be somehow possible to remove 'static here
-    fn with_engine_thread_mut<T: Send + 'static>(
+    fn with_engine_send_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
         self.execute_in_thread_mut(f)
     }
 
-    // TODO: it should be somehow possible to remove 'static here
-    fn with_engine_thread<T: Send + 'static>(
+    fn with_engine_send<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {
@@ -374,14 +372,14 @@ impl Runtime for RubyRuntime {
         name: String,
         _arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<
-                crate::promise::Promise<Self::CallContext, Self::Value>,
-                crate::ScriptingError,
-            > + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<
+            crate::promise::Promise<Self::CallContext, Self::Value>,
+            crate::ScriptingError,
+        > + Send
+        + Sync
+        + 'static,
     ) -> Result<(), crate::ScriptingError> {
         type CallbackClosure = Box<
             dyn Fn(

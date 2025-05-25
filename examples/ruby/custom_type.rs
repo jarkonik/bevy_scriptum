@@ -1,10 +1,10 @@
 use bevy::prelude::*;
+use bevy_scriptum::ScriptingError;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::ruby::magnus;
 use bevy_scriptum::runtimes::ruby::magnus::Module as _;
 use bevy_scriptum::runtimes::ruby::magnus::Object as _;
 use bevy_scriptum::runtimes::ruby::prelude::*;
-use bevy_scriptum::ScriptingError;
 
 fn main() {
     App::new()
@@ -39,7 +39,7 @@ fn startup(
     assets_server: Res<AssetServer>,
 ) {
     scripting_runtime
-        .with_engine_thread(|ruby| {
+        .with_engine_send(|ruby| {
             let my_type = ruby.define_class("MyType", ruby.class_object())?;
             my_type.define_singleton_method("new", magnus::function!(MyType::new, 0))?;
             my_type.define_method("my_method", magnus::method!(MyType::my_method, 0))?;

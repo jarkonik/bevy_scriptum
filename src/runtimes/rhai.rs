@@ -11,10 +11,10 @@ use rhai::{CallFnOptions, Dynamic, Engine, FnPtr, Scope, Variant};
 use serde::Deserialize;
 
 use crate::{
+    ENTITY_VAR_NAME, FuncArgs, Runtime, ScriptingError,
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 #[derive(Asset, Debug, Deserialize, TypePath)]
@@ -118,12 +118,12 @@ impl Runtime for RhaiRuntime {
         name: String,
         arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
-            + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+        + Send
+        + Sync
+        + 'static,
     ) -> Result<(), ScriptingError> {
         self.engine
             .register_raw_fn(name, arg_types, move |context, args| {
@@ -192,14 +192,14 @@ impl Runtime for RhaiRuntime {
         f(&self.engine)
     }
 
-    fn with_engine_thread_mut<T: Send + 'static>(
+    fn with_engine_send_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
     ) -> T {
         self.with_engine_mut(f)
     }
 
-    fn with_engine_thread<T: Send + 'static>(
+    fn with_engine_send<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
     ) -> T {

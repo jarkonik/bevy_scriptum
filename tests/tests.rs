@@ -6,7 +6,7 @@ use bevy::ecs::system::RunSystemOnce as _;
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 use bevy::prelude::*;
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
-use bevy_scriptum::{prelude::*, FuncArgs, Runtime};
+use bevy_scriptum::{FuncArgs, Runtime, prelude::*};
 
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
@@ -621,7 +621,7 @@ mod lua_tests {
 #[cfg(feature = "ruby")]
 mod ruby_tests {
     use bevy::prelude::*;
-    use bevy_scriptum::runtimes::ruby::{prelude::*, RubyScriptData};
+    use bevy_scriptum::runtimes::ruby::{RubyScriptData, prelude::*};
     use magnus::value::ReprValue;
 
     impl AssertStateKeyValue for RubyRuntime {
@@ -630,7 +630,7 @@ mod ruby_tests {
         fn assert_state_key_value_i64(world: &World, _entity_id: Entity, key: &str, value: i64) {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             let key = key.to_string();
-            runtime.with_engine_thread(move |engine| {
+            runtime.with_engine_send(move |engine| {
                 let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: i64 = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value)
@@ -640,7 +640,7 @@ mod ruby_tests {
         fn assert_state_key_value_i32(world: &World, _entity_id: Entity, key: &str, value: i32) {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             let key = key.to_string();
-            runtime.with_engine_thread(move |engine| {
+            runtime.with_engine_send(move |engine| {
                 let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: i32 = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value)
@@ -656,7 +656,7 @@ mod ruby_tests {
             let runtime = world.get_resource::<RubyRuntime>().unwrap();
             let key = key.to_string();
             let value = value.to_string();
-            runtime.with_engine_thread(move |engine| {
+            runtime.with_engine_send(move |engine| {
                 let state: magnus::value::Value = engine.eval("$state").unwrap();
                 let res: String = state.funcall_public("[]", (key,)).unwrap();
                 assert_eq!(res, value);
@@ -670,7 +670,7 @@ mod ruby_tests {
 
         app.add_scripting::<RubyRuntime>(|_| {});
         let runtime = app.world().get_resource::<RubyRuntime>().unwrap();
-        runtime.with_engine_thread(|engine| {
+        runtime.with_engine_send(|engine| {
             let symbol_string: String = engine.eval(":test_symbol.inspect").unwrap();
             assert_eq!(symbol_string, ":test_symbol")
         });
