@@ -338,11 +338,15 @@ impl Runtime for RubyRuntime {
     }
 
     fn with_engine_mut<T>(&mut self, _f: impl FnOnce(&mut Self::RawEngine) -> T) -> T {
-        unimplemented!("Ruby requires single threaded execution, use `with_engine_thread`");
+        unimplemented!(
+            "Ruby runtime requires sending execution to another thread, use `with_engine_mut_send`"
+        );
     }
 
     fn with_engine<T>(&self, _f: impl FnOnce(&Self::RawEngine) -> T) -> T {
-        unimplemented!("Ruby requires single threaded execution, use `with_engine_thread`");
+        unimplemented!(
+            "Ruby runtime requires sending execution to another thread, use `with_engine_send`"
+        );
     }
 
     fn eval(
