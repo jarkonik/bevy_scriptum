@@ -34,7 +34,7 @@ fn call_lua_on_update_from_rust(
             .unwrap()
             .0;
         scripting_runtime.with_engine(|ruby| {
-            let val: i32 = TryConvert::try_convert(val.get_inner_with(&ruby)).unwrap();
+            let val: i32 = TryConvert::try_convert(val.get_inner_with(ruby)).unwrap();
             println!("script returned: {}", val);
         });
         exit.write(AppExit::Success);

@@ -431,7 +431,7 @@ impl Runtime for RubyRuntime {
 
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
             ruby.define_global_function(&name, function!(callback, -1));
-            RubyValue::nil(&ruby)
+            RubyValue::nil(ruby)
         }));
 
         Ok(())
@@ -456,7 +456,7 @@ impl Runtime for RubyRuntime {
             var.ivar_set("_current", BevyEntity(entity)).unwrap();
 
             let args: Vec<_> = args
-                .parse(&ruby)
+                .parse(ruby)
                 .into_iter()
                 .map(|a| ruby.get_inner(a.0))
                 .collect();
