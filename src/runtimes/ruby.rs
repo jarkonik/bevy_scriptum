@@ -363,6 +363,7 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
+            // TODO: refactor
             let var = ruby
                 .class_object()
                 .const_get::<_, RModule>("Bevy")
@@ -445,6 +446,7 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
+            // TOOD: refactor
             let var = ruby
                 .class_object()
                 .const_get::<_, RModule>("Bevy")
