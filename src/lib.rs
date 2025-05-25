@@ -305,6 +305,10 @@ pub trait Runtime: Resource + Default {
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// Using this function make the closure be executed on another thread for
+    /// some runtimes. If you need to operate on non-`'static` borrows and/or
+    /// `!Send` data, you can use `with_engine_mut` - it may not be implemented
+    /// for some of the runtimes though.
     fn with_engine_send_mut<T: Send + 'static>(
         &mut self,
         f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
@@ -313,6 +317,10 @@ pub trait Runtime: Resource + Default {
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// Using this function make the closure be executed on another thread for
+    /// some runtimes. If you need to operate on non-`'static` borrows and/or
+    /// `!Send` data, you can use `with_engine` - it may not be implemented
+    /// for some of the runtimes though.
     fn with_engine_send<T: Send + 'static>(
         &self,
         f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
@@ -321,11 +329,15 @@ pub trait Runtime: Resource + Default {
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// May not be implemented for runtimes which require the closure to pass
+    /// thread boundary.
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// May not be implemented for runtimes which require the closure to pass
+    /// thread boundary.
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn eval(
