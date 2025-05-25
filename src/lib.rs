@@ -330,14 +330,14 @@ pub trait Runtime: Resource + Default {
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
     /// May not be implemented for runtimes which require the closure to pass
-    /// thread boundary.
+    /// thread boundary - use `with_engine_send_mut` then.
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
     /// May not be implemented for runtimes which require the closure to pass
-    /// thread boundary.
+    /// thread boundary - use `with_engine_send` then.
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn eval(
