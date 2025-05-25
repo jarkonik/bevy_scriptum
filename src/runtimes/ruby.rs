@@ -67,20 +67,26 @@ static RUBY_THREAD: LazyLock<Arc<(Mutex<Option<RubyThread>>, Condvar)>> =
     LazyLock::new(|| Arc::new((Mutex::new(Some(RubyThread::spawn())), Condvar::new())));
 
 impl RubyThread {
+    fn build_ruby_process_argv() -> anyhow::Result<Vec<*mut i8>> {
+        Ok(vec![
+            CString::new("ruby")?.into_raw(),
+            CString::new("-e")?.into_raw(),
+            CString::new("")?.into_raw(),
+        ])
+    }
+
     fn spawn() -> Self {
         let (sender, receiver) = crossbeam_channel::unbounded::<Box<dyn FnOnce(Ruby) + Send>>();
 
         let handle = thread::spawn(move || {
-            let mut argv = vec![
-                CString::new("ruby").unwrap().into_raw(),
-                CString::new("-e").unwrap().into_raw(),
-                CString::new("").unwrap().into_raw(),
-            ];
-
             unsafe {
                 let mut variable_in_this_stack_frame: VALUE = 0;
                 ruby_init_stack(&mut variable_in_this_stack_frame as *mut VALUE as *mut _);
+
                 rb_sys::ruby_init();
+
+                let mut argv =
+                    Self::build_ruby_process_argv().expect("Failed to build ruby process args");
                 rb_sys::ruby_options(argv.len() as i32, argv.as_mut_ptr());
             };
             while let Ok(f) = receiver.recv() {
@@ -127,7 +133,7 @@ unsafe impl TypedData for Promise<(), RubyValue> {
         static CLASS: Lazy<RClass> = Lazy::new(|ruby| {
             let class = ruby
                 .define_module("Bevy")
-                .unwrap()
+                .expect("Failed to define Bevy module")
                 .define_class("Promise", ruby.class_object())
                 .expect("Failed to define Bevy::Promise class in Ruby");
             class.undef_default_alloc_func();
@@ -258,7 +264,7 @@ impl Default for RubyRuntime {
                 vec3.define_method("z", method!(BevyVec3::z, 0))?;
                 Ok::<(), ScriptingError>(())
             }))
-            .unwrap();
+            .expect("Failed to define builtin types");
         Self {
             ruby_thread: Some(ruby_thread),
         }
@@ -268,7 +274,9 @@ impl Default for RubyRuntime {
 impl Drop for RubyRuntime {
     fn drop(&mut self) {
         let (lock, cvar) = &*Arc::clone(&RUBY_THREAD);
-        let mut ruby_thread = lock.lock().unwrap();
+        let mut ruby_thread = lock
+            .lock()
+            .expect("Failed to lock ruby thread while dropping the runtime");
         *ruby_thread = self.ruby_thread.take();
         cvar.notify_all();
     }
@@ -294,7 +302,7 @@ impl RubyRuntime {
     ) -> T {
         self.ruby_thread
             .as_ref()
-            .unwrap()
+            .expect("No Ruby thread")
             .execute(Box::new(move |ruby| f(&ruby)))
     }
 
@@ -304,7 +312,7 @@ impl RubyRuntime {
     ) -> T {
         self.ruby_thread
             .as_ref()
-            .unwrap()
+            .expect("No Ruby thread")
             .execute(Box::new(move |mut ruby| f(&mut ruby)))
     }
 }
@@ -358,12 +366,15 @@ impl Runtime for RubyRuntime {
             let var = ruby
                 .class_object()
                 .const_get::<_, RModule>("Bevy")
-                .unwrap()
+                .expect("Failed to get Bevy module")
                 .const_get::<_, RClass>("Entity")
-                .unwrap();
-            var.ivar_set("_current", BevyEntity(entity)).unwrap();
+                .expect("Failed to get Entity class");
+
+            var.ivar_set("_current", BevyEntity(entity))
+                .expect("Failed to set current entity handle");
             let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
-            var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
+            var.ivar_set("_current", ruby.qnil().as_value())
+                .expect("Failed to unset current entity handle");
 
             RubyValue::new(value)
         }));
@@ -394,11 +405,14 @@ impl Runtime for RubyRuntime {
         >;
         static RUBY_CALLBACKS: LazyLock<Mutex<HashMap<String, CallbackClosure>>> =
             LazyLock::new(|| Mutex::new(HashMap::new()));
-        let mut callbacks = RUBY_CALLBACKS.lock().unwrap();
+        let mut callbacks = RUBY_CALLBACKS
+            .lock()
+            .expect("Failed to lock callbacks static when registering a callback");
         callbacks.insert(name.clone(), Box::new(f));
 
         fn callback(args: &[magnus::Value]) -> magnus::Value {
-            let ruby = magnus::Ruby::get().unwrap();
+            let ruby = magnus::Ruby::get()
+                .expect("Failed to get a handle to Ruby API while processing callback");
             let method_name: magnus::value::StaticSymbol =
                 ruby.class_object().funcall("__method__", ()).unwrap();
             let method_name = method_name.name().unwrap();
