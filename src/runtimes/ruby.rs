@@ -1,4 +1,3 @@
-// TODO: use funcall_public?
 use std::{
     collections::HashMap,
     ffi::CString,
