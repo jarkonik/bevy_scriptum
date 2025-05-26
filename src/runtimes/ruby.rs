@@ -6,12 +6,12 @@ use std::{
 };
 
 use ::magnus::value::Opaque;
+use anyhow::anyhow;
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     math::Vec3,
     reflect::TypePath,
-    tasks::futures_lite::io,
 };
 use magnus::{
     DataType, DataTypeFunctions, IntoValue, Object, RClass, RModule, Ruby, TryConvert, TypedData,
@@ -223,7 +223,7 @@ impl TryConvert for BevyVec3 {
 
 impl From<magnus::Error> for ScriptingError {
     fn from(value: magnus::Error) -> Self {
-        ScriptingError::RuntimeError(Box::new(io::Error::other(value.to_string())))
+        ScriptingError::RuntimeError(anyhow!(value.to_string()).into())
     }
 }
 
@@ -373,13 +373,15 @@ impl Runtime for RubyRuntime {
 
             var.ivar_set("_current", BevyEntity(entity))
                 .expect("Failed to set current entity handle");
-            let value = ruby.eval::<magnus::value::Value>(&script).unwrap();
+
+            ruby.eval::<magnus::value::Value>(&script)
+                .map_err(|e| ScriptingError::RuntimeError(anyhow!(e.to_string()).into()))?;
+
             var.ivar_set("_current", ruby.qnil().as_value())
                 .expect("Failed to unset current entity handle");
 
-            RubyValue::new(value)
-        }));
-        Ok(RubyScriptData)
+            Ok::<Self::ScriptData, ScriptingError>(RubyScriptData)
+        }))
     }
 
     fn register_fn(

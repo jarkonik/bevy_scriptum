@@ -1,13 +1,13 @@
-use bevy::{prelude::*, log::tracing};
+use bevy::{log::tracing, prelude::*};
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},
 };
 
 use crate::{
+    Callback, Callbacks, Runtime, ScriptingError,
     callback::FunctionCallEvent,
     promise::{Promise, PromiseInner},
-    Callback, Callbacks, Runtime, ScriptingError,
 };
 
 use super::components::Script;

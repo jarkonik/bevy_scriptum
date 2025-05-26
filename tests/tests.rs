@@ -266,7 +266,7 @@ macro_rules! scripting_tests {
                 || {},
             );
 
-            assert_n_times_called!(app, 1);
+            assert_n_times_called!(app, 2);
         }
 
         #[test]
