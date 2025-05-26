@@ -431,11 +431,19 @@ impl Runtime for RubyRuntime {
         fn callback(args: &[magnus::Value]) -> magnus::Value {
             let ruby = magnus::Ruby::get()
                 .expect("Failed to get a handle to Ruby API while processing callback");
-            let method_name: magnus::value::StaticSymbol =
-                ruby.class_object().funcall("__method__", ()).unwrap();
-            let method_name = method_name.name().unwrap();
-            let callbacks = RUBY_CALLBACKS.lock().unwrap();
-            let f = callbacks.get(method_name).unwrap();
+            let method_name: magnus::value::StaticSymbol = ruby
+                .class_object()
+                .funcall("__method__", ())
+                .expect("Failed to get currently called method name symbol from Ruby");
+            let method_name = method_name
+                .name()
+                .expect("Failed to convert method symbol to string");
+            let callbacks = RUBY_CALLBACKS
+                .lock()
+                .expect("Failed to lock callbacks when executing a script callback");
+            let f = callbacks
+                .get(method_name)
+                .expect("No callback found to execute with specified name");
             let result = f(
                 (),
                 args.iter()
@@ -485,19 +493,16 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let value = value.clone();
 
-        self.ruby_thread
-            .as_ref()
-            .unwrap()
-            .execute(Box::new(move |ruby| {
-                let f: Proc = TryConvert::try_convert(ruby.get_inner(value.0)).unwrap();
+        self.execute_in_thread(move |ruby| {
+            let f: Proc = TryConvert::try_convert(ruby.get_inner(value.0))?;
 
-                let args: Vec<_> = args
-                    .into_iter()
-                    .map(|x| ruby.get_inner(x.0).as_value())
-                    .collect();
-                let result: magnus::Value = f.funcall("call", args.as_slice())?;
-                Ok(RubyValue::new(result))
-            }))
+            let args: Vec<_> = args
+                .into_iter()
+                .map(|x| ruby.get_inner(x.0).as_value())
+                .collect();
+            let result: magnus::Value = f.funcall("call", args.as_slice())?;
+            Ok(RubyValue::new(result))
+        })
     }
 
     fn needs_own_thread() -> bool {
@@ -516,7 +521,7 @@ pub mod prelude {
 impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
     fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
         let inner = engine.get_inner(value.0);
-        T::try_convert(inner).unwrap()
+        T::try_convert(inner).expect("Failed to convert from Ruby value to native type")
     }
 }
 
@@ -545,7 +550,8 @@ pub struct RArray(pub Opaque<magnus::RArray>);
 impl FromRuntimeValueWithEngine<'_, RubyRuntime> for RArray {
     fn from_runtime_value_with_engine(value: RubyValue, engine: &magnus::Ruby) -> Self {
         let inner = engine.get_inner(value.0);
-        let array = magnus::RArray::try_convert(inner).unwrap();
+        let array =
+            magnus::RArray::try_convert(inner).expect("Failed to convert Ruby value to RArray");
         RArray(Opaque::from(array))
     }
 }
