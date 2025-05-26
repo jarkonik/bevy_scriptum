@@ -3,12 +3,16 @@
 ![demo](demo.gif)
 
 bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
-Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
+### Supported scripting languages/runtimes
 
-Everything you need to know to get started with using this library is contained in the
-[bevy_scriptum book](https://jarkonik.github.io/bevy_scriptum/)
+| language/runtime  | cargo feature | documentation chapter                                           |
+| ----------------- | ------------- | --------------------------------------------------------------- |
+| 🌙 LuaJIT         | lua           | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+| 🌾 Rhai           | rhai          | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+| 💎 Ruby           | ruby          | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 
-API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+Documentation book is available at [documentation book](https://jarkonik.github.io/bevy_scriptum/) 📖
+Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 
 bevy_scriptum's main advantages include:
 - low-boilerplate
@@ -17,7 +21,7 @@ bevy_scriptum's main advantages include:
 - flexibility
 - hot-reloading
 
-Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game or application logic without having to recompile your game.
 
 All you need to do is register callbacks on your Bevy app like this:
 ```rust
