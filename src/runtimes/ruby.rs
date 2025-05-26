@@ -324,6 +324,25 @@ impl RubyRuntime {
             .expect("No Ruby thread")
             .execute(Box::new(move |mut ruby| f(&mut ruby)))
     }
+
+    fn with_current_entity<T>(ruby: &Ruby, entity: Entity, f: impl FnOnce() -> T) -> T {
+        let var = ruby
+            .class_object()
+            .const_get::<_, RModule>("Bevy")
+            .expect("Failed to get Bevy module")
+            .const_get::<_, RClass>("Entity")
+            .expect("Failed to get Entity class");
+
+        var.ivar_set("_current", BevyEntity(entity))
+            .expect("Failed to set current entity handle");
+
+        let result = f();
+
+        var.ivar_set("_current", ruby.qnil().as_value())
+            .expect("Failed to unset current entity handle");
+
+        result
+    }
 }
 
 impl Runtime for RubyRuntime {
@@ -372,23 +391,10 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
-            // TODO: refactor
-            let var = ruby
-                .class_object()
-                .const_get::<_, RModule>("Bevy")
-                .expect("Failed to get Bevy module")
-                .const_get::<_, RClass>("Entity")
-                .expect("Failed to get Entity class");
-
-            var.ivar_set("_current", BevyEntity(entity))
-                .expect("Failed to set current entity handle");
-
-            ruby.eval::<magnus::value::Value>(&script)
-                .map_err(|e| <magnus::Error as Into<ScriptingError>>::into(e))?;
-
-            var.ivar_set("_current", ruby.qnil().as_value())
-                .expect("Failed to unset current entity handle");
-
+            Self::with_current_entity(ruby, entity, || {
+                ruby.eval::<magnus::value::Value>(&script)
+                    .map_err(|e| <magnus::Error as Into<ScriptingError>>::into(e))
+            })?;
             Ok::<Self::ScriptData, ScriptingError>(RubyScriptData)
         }))
     }
@@ -457,23 +463,15 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::Value, crate::ScriptingError> {
         let name = name.to_string();
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
-            // TOOD: refactor
-            let var = ruby
-                .class_object()
-                .const_get::<_, RModule>("Bevy")
-                .unwrap()
-                .const_get::<_, RClass>("Entity")
-                .unwrap();
-            var.ivar_set("_current", BevyEntity(entity)).unwrap();
+            let return_value = Self::with_current_entity(ruby, entity, || {
+                let args: Vec<_> = args
+                    .parse(ruby)
+                    .into_iter()
+                    .map(|a| ruby.get_inner(a.0))
+                    .collect();
 
-            let args: Vec<_> = args
-                .parse(ruby)
-                .into_iter()
-                .map(|a| ruby.get_inner(a.0))
-                .collect();
-            let return_value: magnus::Value = ruby.class_object().funcall(name, args.as_slice())?;
-
-            var.ivar_set("_current", ruby.qnil().as_value()).unwrap();
+                ruby.class_object().funcall(name, args.as_slice())
+            })?;
 
             Ok(RubyValue::new(return_value))
         }))
