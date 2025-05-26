@@ -294,7 +294,7 @@ const ENTITY_VAR_NAME: &str = "entity";
 /// An error that can occur when internal [ScriptingPlugin] systems are being executed
 #[derive(Error, Debug)]
 pub enum ScriptingError {
-    #[error("script runtime error: {0}")]
+    #[error("script runtime error:\n {0}")]
     RuntimeError(String),
     #[error("script compilation error: {0}")]
     CompileError(Box<dyn std::error::Error + Send>),
