@@ -222,7 +222,8 @@ impl TryConvert for BevyVec3 {
 
 impl From<magnus::Error> for ScriptingError {
     fn from(value: magnus::Error) -> Self {
-        ScriptingError::RuntimeError(
+        ScriptingError::RuntimeError(format!(
+            "error: {}\nbacktrace:\n{}\n",
             value.inspect(),
             value
                 .value()
@@ -232,7 +233,7 @@ impl From<magnus::Error> for ScriptingError {
                 .to_vec::<String>()
                 .expect("Failed to convert backtrace to vec of strings")
                 .join("\n"),
-        )
+        ))
     }
 }
 
