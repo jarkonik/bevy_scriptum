@@ -105,7 +105,7 @@ impl Runtime for RhaiRuntime {
 
         engine
             .run_ast_with_scope(&mut scope, &ast)
-            .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
 
         scope.remove::<BevyEntity>(ENTITY_VAR_NAME).unwrap();
 
@@ -156,7 +156,7 @@ impl Runtime for RhaiRuntime {
         scope.remove::<BevyEntity>(ENTITY_VAR_NAME).unwrap();
         match result {
             Ok(val) => Ok(RhaiValue(val)),
-            Err(e) => Err(ScriptingError::RuntimeError(Box::new(e))),
+            Err(e) => Err(ScriptingError::RuntimeError(e.to_string(), "".to_string())),
         }
     }
 
@@ -173,11 +173,11 @@ impl Runtime for RhaiRuntime {
 
         let result = if args.len() == 1 && args.first().unwrap().0.is_unit() {
             f.call_raw(ctx, None, [])
-                .map_err(|e| ScriptingError::RuntimeError(e))?
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?
         } else {
             let args = args.into_iter().map(|a| a.0).collect::<Vec<Dynamic>>();
             f.call_raw(ctx, None, args)
-                .map_err(|e| ScriptingError::RuntimeError(e))?
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?
         };
 
         Ok(RhaiValue(result))

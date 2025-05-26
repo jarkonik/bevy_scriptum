@@ -187,7 +187,7 @@ impl Runtime for LuaRuntime {
                 .expect("Error clearing entity global variable");
             result
         })
-        .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+        .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
         Ok(LuaScriptData)
     }
 
@@ -236,14 +236,14 @@ impl Runtime for LuaRuntime {
             let func = engine
                 .globals()
                 .get::<_, Function>(name)
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
             let args = args
                 .parse(engine)
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = func
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
             engine
                 .globals()
                 .set(ENTITY_VAR_NAME, mlua::Value::Nil)
@@ -261,13 +261,13 @@ impl Runtime for LuaRuntime {
         self.with_engine(|engine| {
             let val = engine
                 .registry_value::<Function>(&value.0)
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
             let args = args
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = val
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string(), "".to_string()))?;
             Ok(LuaValue::new(engine, result))
         })
     }

@@ -107,7 +107,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 },
             );
             if let Err(e) = result {
-                tracing::error!("error registering function: {:?}", e);
+                tracing::error!("error registering function: {}", e);
             }
         }
     }
@@ -158,7 +158,7 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    tracing::error!("error resolving call: {} {:?}", callback.name, e);
+                    tracing::error!("error resolving call: {} {}", callback.name, e);
                 }
             }
         }
