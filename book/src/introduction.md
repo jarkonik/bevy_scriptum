@@ -20,7 +20,7 @@ bevy_scriptum's main advantages include:
 - flexibility
 - hot-reloading
 
-Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile it.
 
 All you need to do is register callbacks on your Bevy app like this:
 ```rust
