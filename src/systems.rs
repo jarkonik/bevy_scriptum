@@ -52,7 +52,7 @@ pub(crate) fn process_new_scripts<R: Runtime>(
                     let path = asset_server
                         .get_path(&script_component.script)
                         .unwrap_or_default();
-                    tracing::error!("error running script {} {:?}", path, e);
+                    tracing::error!("error running script {} {}", path, e);
                 }
             }
         }

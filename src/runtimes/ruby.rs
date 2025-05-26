@@ -1,3 +1,4 @@
+// TODO: use funcall_public?
 use std::{
     collections::HashMap,
     ffi::CString,
@@ -5,7 +6,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use ::magnus::value::Opaque;
+use ::magnus::{error::IntoError, typed_data::Inspect, value::Opaque};
 use anyhow::anyhow;
 use bevy::{
     asset::Asset,
@@ -20,7 +21,7 @@ use magnus::{
     value::{Lazy, ReprValue},
 };
 use magnus::{method, prelude::*};
-use rb_sys::{VALUE, ruby_init_stack};
+use rb_sys::{VALUE, rb_backtrace, rb_make_backtrace, ruby_init_stack};
 use serde::Deserialize;
 
 use crate::{
@@ -223,7 +224,19 @@ impl TryConvert for BevyVec3 {
 
 impl From<magnus::Error> for ScriptingError {
     fn from(value: magnus::Error) -> Self {
-        ScriptingError::RuntimeError(anyhow!(value.to_string()).into())
+        // TODO: DRY
+        ScriptingError::RuntimeError(
+            value.inspect(),
+            value
+                .value()
+                .unwrap()
+                .funcall::<_, _, magnus::RArray>("backtrace", ()) // TODO: is there an API for this
+                // somehwere
+                .unwrap()
+                .to_vec::<String>()
+                .unwrap()
+                .join("\n"),
+        )
     }
 }
 
@@ -374,8 +387,20 @@ impl Runtime for RubyRuntime {
             var.ivar_set("_current", BevyEntity(entity))
                 .expect("Failed to set current entity handle");
 
-            ruby.eval::<magnus::value::Value>(&script)
-                .map_err(|e| ScriptingError::RuntimeError(anyhow!(e.to_string()).into()))?;
+            unsafe {
+                ruby.eval::<magnus::value::Value>(&script).map_err(|e| {
+                    ScriptingError::RuntimeError(
+                        e.inspect(),
+                        e.value()
+                            .unwrap()
+                            .funcall::<_, _, magnus::RArray>("backtrace", ())
+                            .unwrap()
+                            .to_vec::<String>()
+                            .unwrap()
+                            .join("\n"),
+                    )
+                })?;
+            }
 
             var.ivar_set("_current", ruby.qnil().as_value())
                 .expect("Failed to unset current entity handle");
