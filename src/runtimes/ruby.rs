@@ -223,7 +223,7 @@ impl TryConvert for BevyVec3 {
 impl From<magnus::Error> for ScriptingError {
     fn from(value: magnus::Error) -> Self {
         ScriptingError::RuntimeError(format!(
-            "error: {}\nbacktrace:\n{}\n",
+            "{}\nbacktrace:\n{}\n",
             value.inspect(),
             value
                 .value()
