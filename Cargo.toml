@@ -6,9 +6,9 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 categories = ["game-development"]
-description = "Plugin for Bevy engine that allows you to write some of your game logic in a scripting language"
+description = "Plugin for Bevy engine that allows you to write some of your game or application logic in a scripting language"
 repository = "https://github.com/jarkonik/bevy_scriptum"
-keywords = ["bevy", "rhai", "scripting", "game", "gamedev"]
+keywords = ["bevy", "lua", "scripting", "game", "script"]
 
 [features]
 lua = ["dep:mlua", "mlua/luajit"]

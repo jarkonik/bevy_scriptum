@@ -4,12 +4,14 @@ use bevy_scriptum::runtimes::rhai::prelude::*;
 
 fn main() {
     App::new()
-        // This is just needed for headless console app, not needed for a regular bevy game
+        // This is just needed for headless console app, not needed for a regular bevy application
         // that uses a winit window
-        .set_runner(move |mut app: App| loop {
-            app.update();
-            if let Some(exit) = app.should_exit() {
-                return exit;
+        .set_runner(move |mut app: App| {
+            loop {
+                app.update();
+                if let Some(exit) = app.should_exit() {
+                    return exit;
+                }
             }
         })
         .add_plugins(DefaultPlugins)

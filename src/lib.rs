@@ -1,6 +1,6 @@
 //! ![demo](demo.gif)
 //!
-//! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
+//! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
 //! Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
 //!
 //! Everything you need to know to get started with using this library is contained in the
@@ -15,7 +15,7 @@
 //! - flexibility
 //! - hot-reloading
 //!
-//! Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+//! Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game or application logic without having to recompile your game.
 //!
 //! All you need to do is register callbacks on your Bevy app like this:
 //! ```no_run

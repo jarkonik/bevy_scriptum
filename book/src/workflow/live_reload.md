@@ -9,18 +9,18 @@ within bevy dependency in `Cargo.toml`
 bevy = { version = "0.16", features = ["file_watcher"] }
 ```
 
-## Init-teardown pattern for game development
+## Init-teardown pattern
 
-It is useful to structure your game in a way that would allow making changes to
-the scripting code without restarting the game.
+It is useful to structure your application in a way that would allow making changes to
+the scripting code without restarting the application.
 
 A useful pattern is to hava three functions "init", "update" and "teardown".
 
-- "init" function will take care of starting the game(spawning the player, the level etc)
+- "init" function will take care of starting the application(spawning the player, the level etc)
 
-- "update" function will run the main game logic
+- "update" function will run the main application logic
 
-- "teardown" function will despawn all the entities so game starts at fresh state.
+- "teardown" function will despawn all the entities so application starts at fresh state.
 
 This pattern is very easy to implement in bevy_scriptum. All you need is to define all needed functions
 in script:
@@ -35,7 +35,7 @@ local function init()
 	player.entity = spawn_player()
 end
 
--- game logic here, should be called in a bevy system using call_fn
+-- application logic here, should be called in a bevy system using call_fn
 local function update()
     (...)
 end
@@ -45,7 +45,7 @@ local function teardown()
 	despawn(player.entity)
 end
 
--- call init to start the game, this will be called on each file-watcher script
+-- call init to start the application, this will be called on each file-watcher script
 -- reload
 init()
 ```
