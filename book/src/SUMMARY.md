@@ -14,6 +14,7 @@
     - [Rhai](./rhai/rhai.md)
         - [Installation](./rhai/installation.md)
         - [Hello World(TBD)]()
+- [Multiple plugins](./multiple_plugins.md)
 - [Multiple runtimes(TBD)]()
 - [Implementing custom runtimes(TBD)]()
 - [Workflow](./workflow/workflow.md)
