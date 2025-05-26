@@ -387,20 +387,18 @@ impl Runtime for RubyRuntime {
             var.ivar_set("_current", BevyEntity(entity))
                 .expect("Failed to set current entity handle");
 
-            unsafe {
-                ruby.eval::<magnus::value::Value>(&script).map_err(|e| {
-                    ScriptingError::RuntimeError(
-                        e.inspect(),
-                        e.value()
-                            .unwrap()
-                            .funcall::<_, _, magnus::RArray>("backtrace", ())
-                            .unwrap()
-                            .to_vec::<String>()
-                            .unwrap()
-                            .join("\n"),
-                    )
-                })?;
-            }
+            ruby.eval::<magnus::value::Value>(&script).map_err(|e| {
+                ScriptingError::RuntimeError(
+                    e.inspect(),
+                    e.value()
+                        .unwrap()
+                        .funcall::<_, _, magnus::RArray>("backtrace", ())
+                        .unwrap()
+                        .to_vec::<String>()
+                        .unwrap()
+                        .join("\n"),
+                )
+            })?;
 
             var.ivar_set("_current", ruby.qnil().as_value())
                 .expect("Failed to unset current entity handle");
