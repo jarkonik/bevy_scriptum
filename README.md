@@ -12,6 +12,7 @@ bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you 
 | 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 
 Documentation book is available at [documentation book](https://jarkonik.github.io/bevy_scriptum/) 📖
+
 Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 
 bevy_scriptum's main advantages include:
