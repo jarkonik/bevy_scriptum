@@ -394,7 +394,7 @@ impl Runtime for RubyRuntime {
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
             Self::with_current_entity(ruby, entity, || {
                 ruby.eval::<magnus::value::Value>(&script)
-                    .map_err(|e| <magnus::Error as Into<ScriptingError>>::into(e))
+                    .map_err(<magnus::Error as Into<ScriptingError>>::into)
             })?;
             Ok::<Self::ScriptData, ScriptingError>(RubyScriptData)
         }))
