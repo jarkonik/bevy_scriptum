@@ -46,7 +46,7 @@ path = "examples/rhai/current_entity.rs"
 required-features = ["rhai"]
 
 [[example]]
-name = "custom5type_rhai"
+name = "custom_type_rhai"
 path = "examples/rhai/custom_type.rs"
 required-features = ["rhai"]
 
