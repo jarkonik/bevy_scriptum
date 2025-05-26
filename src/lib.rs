@@ -6,9 +6,9 @@
 //!
 //! | language/runtime  | cargo feature | documentation chapter                                           |
 //! | ----------------- | ------------- | --------------------------------------------------------------- |
-//! | 🌙 LuaJIT         | lua           | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
-//! | 🌾 Rhai           | rhai          | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
-//! | 💎 Ruby           | ruby          | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
+//! | 🌙 LuaJIT         | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+//! | 🌾 Rhai           | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+//! | 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 //!
 //! Documentation book is available at [documentation book](https://jarkonik.github.io/bevy_scriptum/) 📖
 //! Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
@@ -95,36 +95,6 @@
 //! ```lua
 //! fun_with_string_param("Hello world!")
 //! ```
-//! It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
-//! This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-//! ```no_run
-//! use bevy::prelude::*;
-//! use bevy_scriptum::prelude::*;
-//! # #[cfg(feature = "lua")]
-//! use bevy_scriptum::runtimes::lua::prelude::*;
-//!
-//! struct MyPlugin;
-//! # #[cfg(feature = "lua")]
-//! impl Plugin for MyPlugin {
-//!     fn build(&self, app: &mut App) {
-//!         app.add_scripting_api::<LuaRuntime>(|runtime| {
-//!             runtime.add_function(String::from("hello_from_my_plugin"), || {
-//!                 info!("Hello from MyPlugin");
-//!             });
-//!         });
-//!     }
-//! }
-//!
-//! # #[cfg(feature = "lua")]
-//! App::new()
-//!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<LuaRuntime>(|_| {
-//!         // nice and clean
-//!     })
-//!     .add_plugins(MyPlugin)
-//!     .run();
-//! ```
-//!
 //!
 //! ## Usage
 //!
