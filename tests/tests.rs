@@ -12,6 +12,24 @@ use bevy_scriptum::{FuncArgs, Runtime, prelude::*};
 static TRACING_SUBSCRIBER: OnceLock<()> = OnceLock::new();
 
 #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
+#[derive(Default, Resource)]
+struct TimesCalled {
+    times_called: u8,
+}
+
+macro_rules! assert_n_times_called {
+    ($app: expr, $count: expr) => {
+        assert_eq!(
+            $app.world()
+                .get_resource::<TimesCalled>()
+                .unwrap()
+                .times_called,
+            $count
+        );
+    };
+}
+
+#[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
 fn build_test_app() -> App {
     let mut app = App::new();
 
@@ -225,6 +243,33 @@ macro_rules! scripting_tests {
         }
 
         #[test]
+        fn eval_that_casues_runtime_error_doesnt_panic() {
+            let mut app = build_test_app();
+
+            app.add_scripting::<$runtime>(|r| {
+                r.add_function(
+                    String::from("mark_called"),
+                    |mut times_called: ResMut<TimesCalled>| {
+                        times_called.times_called += 1;
+                    },
+                );
+            })
+            .init_resource::<TimesCalled>();
+
+            run_script::<$runtime, _, _>(
+                &mut app,
+                format!(
+                    "tests/{}/eval_that_causes_runtime_error.{}",
+                    $script, $extension
+                )
+                .to_string(),
+                || {},
+            );
+
+            assert_n_times_called!(app, 1);
+        }
+
+        #[test]
         fn call_script_function_that_casues_runtime_error() {
             let mut app = build_test_app();
 
@@ -347,11 +392,6 @@ macro_rules! scripting_tests {
         fn rust_function_gets_called_from_script() {
             let mut app = build_test_app();
 
-            #[derive(Default, Resource)]
-            struct TimesCalled {
-                times_called: u8,
-            }
-
             app.world_mut().init_resource::<TimesCalled>();
 
             app.add_scripting::<$runtime>(|runtime| {
@@ -370,13 +410,7 @@ macro_rules! scripting_tests {
                 call_script_on_update_from_rust::<$runtime>,
             );
 
-            assert_eq!(
-                app.world()
-                    .get_resource::<TimesCalled>()
-                    .unwrap()
-                    .times_called,
-                1
-            );
+            assert_n_times_called!(app, 1);
         }
 
         #[test]

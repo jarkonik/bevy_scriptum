@@ -21,8 +21,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -42,11 +44,13 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! #[derive(Component)]
 //! struct Player;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -66,8 +70,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -89,9 +95,11 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! struct MyPlugin;
+//! # #[cfg(feature = "lua")]
 //! impl Plugin for MyPlugin {
 //!     fn build(&self, app: &mut App) {
 //!         app.add_scripting_api::<LuaRuntime>(|runtime| {
@@ -102,6 +110,7 @@
 //!     }
 //! }
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|_| {
@@ -128,8 +137,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -154,8 +165,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -209,8 +222,10 @@
 //! ```
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!    .add_plugins(DefaultPlugins)
 //!    .add_scripting::<LuaRuntime>(|runtime| {
