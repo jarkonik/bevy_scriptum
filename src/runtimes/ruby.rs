@@ -5,8 +5,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use ::magnus::{error::IntoError, typed_data::Inspect, value::Opaque};
-use anyhow::anyhow;
+use ::magnus::{typed_data::Inspect, value::Opaque};
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
@@ -20,7 +19,7 @@ use magnus::{
     value::{Lazy, ReprValue},
 };
 use magnus::{method, prelude::*};
-use rb_sys::{VALUE, rb_backtrace, rb_make_backtrace, ruby_init_stack};
+use rb_sys::{VALUE, ruby_init_stack};
 use serde::Deserialize;
 
 use crate::{
