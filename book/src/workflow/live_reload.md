@@ -5,7 +5,7 @@
 To enable live reload it should be enough to enable `file-watcher` feature
 within bevy dependency in `Cargo.toml`
 
-```
+```toml
 bevy = { version = "0.16", features = ["file_watcher"] }
 ```
 
@@ -53,6 +53,9 @@ init()
 The function calls can be implemented on Rust side the following way:
 
 ```rust
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -98,7 +101,10 @@ fn main() {}
 
 And to tie this all together we do the following:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -126,6 +132,9 @@ fn spawn_player() {} // Implemented elsewhere
 `despawn` can be implemented as:
 
 ```rust
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
 
