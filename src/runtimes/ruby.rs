@@ -222,17 +222,15 @@ impl TryConvert for BevyVec3 {
 
 impl From<magnus::Error> for ScriptingError {
     fn from(value: magnus::Error) -> Self {
-        // TODO: DRY
         ScriptingError::RuntimeError(
             value.inspect(),
             value
                 .value()
-                .unwrap()
-                .funcall::<_, _, magnus::RArray>("backtrace", ()) // TODO: is there an API for this
-                // somehwere
-                .unwrap()
+                .expect("No error value")
+                .funcall::<_, _, magnus::RArray>("backtrace", ())
+                .expect("Failed to get backtrace")
                 .to_vec::<String>()
-                .unwrap()
+                .expect("Failed to convert backtrace to vec of strings")
                 .join("\n"),
         )
     }
@@ -385,18 +383,8 @@ impl Runtime for RubyRuntime {
             var.ivar_set("_current", BevyEntity(entity))
                 .expect("Failed to set current entity handle");
 
-            ruby.eval::<magnus::value::Value>(&script).map_err(|e| {
-                ScriptingError::RuntimeError(
-                    e.inspect(),
-                    e.value()
-                        .unwrap()
-                        .funcall::<_, _, magnus::RArray>("backtrace", ())
-                        .unwrap()
-                        .to_vec::<String>()
-                        .unwrap()
-                        .join("\n"),
-                )
-            })?;
+            ruby.eval::<magnus::value::Value>(&script)
+                .map_err(|e| <magnus::Error as Into<ScriptingError>>::into(e))?;
 
             var.ivar_set("_current", ruby.qnil().as_value())
                 .expect("Failed to unset current entity handle");
