@@ -315,8 +315,6 @@ pub trait Runtime: Resource + Default {
     type Value: Send + Clone;
     type RawEngine;
 
-    fn needs_own_thread() -> bool;
-
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.

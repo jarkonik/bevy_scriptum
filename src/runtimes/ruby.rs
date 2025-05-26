@@ -505,10 +505,6 @@ impl Runtime for RubyRuntime {
             Ok(RubyValue::new(result))
         })
     }
-
-    fn needs_own_thread() -> bool {
-        true
-    }
 }
 
 pub mod magnus {

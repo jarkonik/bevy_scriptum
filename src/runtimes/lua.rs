@@ -295,10 +295,6 @@ impl Runtime for LuaRuntime {
     ) -> T {
         self.with_engine(f)
     }
-
-    fn needs_own_thread() -> bool {
-        false
-    }
 }
 
 impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {

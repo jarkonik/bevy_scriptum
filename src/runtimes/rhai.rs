@@ -204,10 +204,6 @@ impl Runtime for RhaiRuntime {
     ) -> T {
         self.with_engine(f)
     }
-
-    fn needs_own_thread() -> bool {
-        false
-    }
 }
 
 impl Default for RhaiRuntime {
