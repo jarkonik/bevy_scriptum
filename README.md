@@ -2,13 +2,18 @@
 
 ![demo](demo.gif)
 
-bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
+bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
+### Supported scripting languages/runtimes
 
-Everything you need to know to get started with using this library is contained in the
-[bevy_scriptum book](https://jarkonik.github.io/bevy_scriptum/)
+| language/runtime  | cargo feature | documentation chapter                                           |
+| ----------------- | ------------- | --------------------------------------------------------------- |
+| 🌙 LuaJIT         | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+| 🌾 Rhai           | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+| 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 
-API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
+
+Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 
 bevy_scriptum's main advantages include:
 - low-boilerplate
@@ -17,7 +22,7 @@ bevy_scriptum's main advantages include:
 - flexibility
 - hot-reloading
 
-Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game or application logic without having to recompile it.
 
 All you need to do is register callbacks on your Bevy app like this:
 ```rust
@@ -86,33 +91,6 @@ which you can then call in your script like this:
 ```lua
 fun_with_string_param("Hello world!")
 ```
-It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
-This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-```rust
-use bevy::prelude::*;
-use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
-
-struct MyPlugin;
-impl Plugin for MyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_scripting_api::<LuaRuntime>(|runtime| {
-            runtime.add_function(String::from("hello_from_my_plugin"), || {
-                info!("Hello from MyPlugin");
-            });
-        });
-    }
-}
-
-App::new()
-    .add_plugins(DefaultPlugins)
-    .add_scripting::<LuaRuntime>(|_| {
-        // nice and clean
-    })
-    .add_plugins(MyPlugin)
-    .run();
-```
-
 
 ### Usage
 

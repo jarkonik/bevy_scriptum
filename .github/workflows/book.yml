@@ -1,0 +1,54 @@
+name: Book
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Cache Ruby
+        id: cache-ruby
+        uses: actions/cache@v4
+        with:
+          path: rubies
+          key: ${{ runner.os }}-ruby
+      - name: Install Ruby
+        if: steps.cache-ruby.outputs.cache-hit != 'true'
+        env:
+          CC: clang
+        run: |
+          url="https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.4.tar.gz"
+          prefix=`pwd`/rubies/ruby-3.4
+          mkdir rubies
+          mkdir ruby_src
+          curl -sSL $url | tar -xz
+          cd ruby-3.4.4
+          mkdir build
+          cd build
+          ../configure --without-shared --prefix=$prefix
+          make install
+          echo $prefix/bin >> $GITHUB_PATH
+      - name: Add Ruby to PATH
+        run: |
+          prefix=`pwd`/rubies/ruby-3.4
+          echo $prefix/bin >> $GITHUB_PATH
+      - name: Install latest mdbook
+        run: |
+          tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
+          url="https://github.com/rust-lang/mdbook/releases/download/${tag}/mdbook-${tag}-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir mdbook
+          curl -sSL $url | tar -xz --directory=./mdbook
+          echo `pwd`/mdbook >> $GITHUB_PATH
+      - name: Test Book
+        run: |
+          cd book
+          export CARGO_MANIFEST_DIR=$(pwd)
+          cargo build
+          mdbook test -L target/debug/deps/

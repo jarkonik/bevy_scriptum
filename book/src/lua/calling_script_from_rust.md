@@ -13,7 +13,10 @@ of the function to call, `LuaScriptData` that has been automatically
 attached to entity after an entity with script attached has been spawned
 and its script evaluated, the entity and optionally some arguments.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -29,14 +32,15 @@ fn call_lua_on_update_from_rust(
             .unwrap();
     }
 }
-
-fn main() {}
 ```
 
 We can also pass some arguments by providing a tuple or `Vec` as the last
 `call_fn` argument.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -51,8 +55,6 @@ fn call_lua_on_update_from_rust(
             .unwrap();
     }
 }
-
-fn main() {}
 ```
 
 They will be passed to `on_update` Lua function

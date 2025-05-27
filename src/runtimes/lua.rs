@@ -12,10 +12,10 @@ use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
 use crate::{
+    ENTITY_VAR_NAME, FuncArgs, Runtime, ScriptingError,
     assets::GetExtensions,
     callback::{FromRuntimeValueWithEngine, IntoRuntimeValueWithEngine},
     promise::Promise,
-    FuncArgs, Runtime, ScriptingError, ENTITY_VAR_NAME,
 };
 
 type LuaEngine = Arc<Mutex<Lua>>;
@@ -41,6 +41,12 @@ pub struct LuaRuntime {
 #[derive(Debug, Clone, Copy)]
 pub struct BevyEntity(pub Entity);
 
+impl BevyEntity {
+    pub fn index(&self) -> u32 {
+        self.0.index()
+    }
+}
+
 impl UserData for BevyEntity {}
 
 impl FromLua<'_> for BevyEntity {
@@ -57,6 +63,24 @@ impl FromLua<'_> for BevyEntity {
 
 #[derive(Debug, Clone, Copy)]
 pub struct BevyVec3(pub Vec3);
+
+impl BevyVec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        BevyVec3(Vec3 { x, y, z })
+    }
+
+    pub fn x(&self) -> f32 {
+        self.0.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.0.y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.0.z
+    }
+}
 
 impl UserData for BevyVec3 {}
 
@@ -163,7 +187,7 @@ impl Runtime for LuaRuntime {
                 .expect("Error clearing entity global variable");
             result
         })
-        .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+        .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
         Ok(LuaScriptData)
     }
 
@@ -172,14 +196,14 @@ impl Runtime for LuaRuntime {
         name: String,
         _arg_types: Vec<std::any::TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<
-                crate::promise::Promise<Self::CallContext, Self::Value>,
-                crate::ScriptingError,
-            > + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<
+            crate::promise::Promise<Self::CallContext, Self::Value>,
+            crate::ScriptingError,
+        > + Send
+        + Sync
+        + 'static,
     ) -> Result<(), crate::ScriptingError> {
         self.with_engine(|engine| {
             let func = engine
@@ -212,14 +236,14 @@ impl Runtime for LuaRuntime {
             let func = engine
                 .globals()
                 .get::<_, Function>(name)
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             let args = args
                 .parse(engine)
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = func
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             engine
                 .globals()
                 .set(ENTITY_VAR_NAME, mlua::Value::Nil)
@@ -237,13 +261,13 @@ impl Runtime for LuaRuntime {
         self.with_engine(|engine| {
             let val = engine
                 .registry_value::<Function>(&value.0)
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             let args = args
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = val
                 .call::<_, mlua::Value>(Variadic::from_iter(args))
-                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+                .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             Ok(LuaValue::new(engine, result))
         })
     }
@@ -256,6 +280,20 @@ impl Runtime for LuaRuntime {
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         let engine = self.engine.lock().unwrap();
         f(&engine)
+    }
+
+    fn with_engine_send_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine_mut(f)
+    }
+
+    fn with_engine_send<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T {
+        self.with_engine(f)
     }
 }
 

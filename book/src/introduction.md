@@ -1,9 +1,18 @@
 # bevy_scriptum 📜
 
-bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
+bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
 
-API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+ ## Supported scripting languages/runtimes
+
+ | language/runtime  | cargo feature | documentation chapter                                           |
+ | ----------------- | ------------- | --------------------------------------------------------------- |
+ | 🌙 LuaJIT         | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+ | 🌾 Rhai           | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+ | 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
+
+ Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
+
+ Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 
 bevy_scriptum's main advantages include:
 - low-boilerplate
@@ -12,10 +21,13 @@ bevy_scriptum's main advantages include:
 - flexibility
 - hot-reloading
 
-Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile it.
 
 All you need to do is register callbacks on your Bevy app like this:
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -38,7 +50,11 @@ hello_bevy()
 
 Every callback function that you expose to the scripting language is also a Bevy system, so you can easily query and mutate ECS components and resources just like you would in a regular Bevy system:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_ecs;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -64,7 +80,10 @@ fn main() {
 ```
 
 You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -88,36 +107,6 @@ which you can then call in your script like this:
 fun_with_string_param("Hello world!")
 ```
 
-It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
-This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-```rust
-use bevy::prelude::*;
-use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
-
-struct MyPlugin;
-impl Plugin for MyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_scripting_api::<LuaRuntime>(|runtime| {
-            runtime.add_function(String::from("hello_from_my_plugin"), || {
-                info!("Hello from MyPlugin");
-            });
-        });
-    }
-}
-
-// Main
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|_| {
-            // nice and clean
-        })
-        .add_plugins(MyPlugin)
-        .run();
-}
-```
-
 ### Usage
 
 Add the following to your `Cargo.toml`:
@@ -131,7 +120,10 @@ or execute `cargo add bevy_scriptum --features lua` from your project directory.
 
 You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -159,7 +151,10 @@ my_print("Hello world!")
 
 And spawn an entity with attached `Script` component with a handle to a script source file:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -204,7 +199,10 @@ end)
 ```
 which will print out `John` when used with following exposed function:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;

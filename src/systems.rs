@@ -1,13 +1,13 @@
-use bevy::{prelude::*, log::tracing};
+use bevy::{log::tracing, prelude::*};
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},
 };
 
 use crate::{
+    Callback, Callbacks, Runtime, ScriptingError,
     callback::FunctionCallEvent,
     promise::{Promise, PromiseInner},
-    Callback, Callbacks, Runtime, ScriptingError,
 };
 
 use super::components::Script;
@@ -52,7 +52,7 @@ pub(crate) fn process_new_scripts<R: Runtime>(
                     let path = asset_server
                         .get_path(&script_component.script)
                         .unwrap_or_default();
-                    tracing::error!("error running script {} {:?}", path, e);
+                    tracing::error!("error running script {} {}", path, e);
                 }
             }
         }
@@ -107,7 +107,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 },
             );
             if let Err(e) = result {
-                tracing::error!("error registering function: {:?}", e);
+                tracing::error!("error registering function: {}", e);
             }
         }
     }
@@ -158,7 +158,7 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    tracing::error!("error resolving call: {} {:?}", callback.name, e);
+                    tracing::error!("error resolving call: {} {}", callback.name, e);
                 }
             }
         }

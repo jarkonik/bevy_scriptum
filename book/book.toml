@@ -4,9 +4,3 @@ language = "en"
 multilingual = false
 src = "src"
 title = "bevy_scriptum"
-
-[preprocessor.keeper]
-command = "mdbook-keeper"
-manifest_dir = "../"
-externs = ["bevy", "bevy_scriptum"]
-build_features = ["lua", "rhai"]

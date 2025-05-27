@@ -3,7 +3,10 @@
 To call a rust function from Lua first you need to register a function
 within Rust using builder pattern.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -20,7 +23,10 @@ fn main() {
 
 For example to register a function called `my_rust_func` you can do the following:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -49,7 +55,10 @@ that implements `FromLua`.
 Since a registered callback function is a Bevy system, the parameters are passed
 to it as `In` struct with tuple, which has to be the first parameter of the closure.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -68,7 +77,10 @@ fn main() {
 
 To make it look nicer you can destructure the `In` struct.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -97,7 +109,10 @@ Any registered rust function that returns a value will retrurn a promise when
 called within a script. By calling `:and_then` on the promise you can register
 a callback that will receive the value returned from Rust function.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;

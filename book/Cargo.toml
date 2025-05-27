@@ -1,0 +1,7 @@
+[package]
+name = "bevy_scriptum_book"
+publish = false
+edition = "2024"
+
+[dependencies]
+bevy_scriptum = { path = "../", features = ["ruby", "lua", "rhai"] }

@@ -1,0 +1,15 @@
+export CARGO_MANIFEST_DIR := `pwd`
+
+build-deps:
+	cargo clean && cargo build
+
+_test:
+	mdbook test -L target/debug/deps/
+
+test: build-deps _test
+
+test-watch: build-deps
+	watchexec --exts md -r just _test
+
+serve:
+	mdbook serve

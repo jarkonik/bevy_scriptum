@@ -1,12 +1,18 @@
 //! ![demo](demo.gif)
 //!
-//! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game logic in a scripting language.
-//! Currently [Rhai](https://rhai.rs/) and [Lua](https://lua.org/) are supported, but more languages may be added in the future.
+//! bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
+
+//! ## Supported scripting languages/runtimes
 //!
-//! Everything you need to know to get started with using this library is contained in the
-//! [bevy_scriptum book](https://jarkonik.github.io/bevy_scriptum/)
+//! | language/runtime  | cargo feature | documentation chapter                                           |
+//! | ----------------- | ------------- | --------------------------------------------------------------- |
+//! | 🌙 LuaJIT         | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+//! | 🌾 Rhai           | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+//! | 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 //!
-//! API docs are available in [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/)
+//! Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
+//!
+//! Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 //!
 //! bevy_scriptum's main advantages include:
 //! - low-boilerplate
@@ -15,14 +21,16 @@
 //! - flexibility
 //! - hot-reloading
 //!
-//! Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile your game.
+//! Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game or application logic without having to recompile it.
 //!
 //! All you need to do is register callbacks on your Bevy app like this:
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -42,11 +50,13 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
 //! #[derive(Component)]
 //! struct Player;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -66,8 +76,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -84,33 +96,6 @@
 //! ```lua
 //! fun_with_string_param("Hello world!")
 //! ```
-//! It is also possible to split the definition of your callback functions up over multiple plugins. This enables you to split up your code by subject and keep the main initialization light and clean.
-//! This can be accomplished by using `add_scripting_api`. Be careful though, `add_scripting` has to be called before adding plugins.
-//! ```no_run
-//! use bevy::prelude::*;
-//! use bevy_scriptum::prelude::*;
-//! use bevy_scriptum::runtimes::lua::prelude::*;
-//!
-//! struct MyPlugin;
-//! impl Plugin for MyPlugin {
-//!     fn build(&self, app: &mut App) {
-//!         app.add_scripting_api::<LuaRuntime>(|runtime| {
-//!             runtime.add_function(String::from("hello_from_my_plugin"), || {
-//!                 info!("Hello from MyPlugin");
-//!             });
-//!         });
-//!     }
-//! }
-//!
-//! App::new()
-//!     .add_plugins(DefaultPlugins)
-//!     .add_scripting::<LuaRuntime>(|_| {
-//!         // nice and clean
-//!     })
-//!     .add_plugins(MyPlugin)
-//!     .run();
-//! ```
-//!
 //!
 //! ## Usage
 //!
@@ -128,8 +113,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -154,8 +141,10 @@
 //! ```no_run
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
 //!     .add_scripting::<LuaRuntime>(|runtime| {
@@ -209,8 +198,10 @@
 //! ```
 //! use bevy::prelude::*;
 //! use bevy_scriptum::prelude::*;
+//! # #[cfg(feature = "lua")]
 //! use bevy_scriptum::runtimes::lua::prelude::*;
 //!
+//! # #[cfg(feature = "lua")]
 //! App::new()
 //!    .add_plugins(DefaultPlugins)
 //!    .add_scripting::<LuaRuntime>(|runtime| {
@@ -259,7 +250,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{app::MainScheduleOrder, ecs::{component::Mutable, schedule::ScheduleLabel}, prelude::*};
+use bevy::{
+    app::MainScheduleOrder,
+    ecs::{component::Mutable, schedule::ScheduleLabel},
+    prelude::*,
+};
 use callback::{Callback, IntoCallbackSystem};
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
@@ -275,10 +270,10 @@ const ENTITY_VAR_NAME: &str = "entity";
 /// An error that can occur when internal [ScriptingPlugin] systems are being executed
 #[derive(Error, Debug)]
 pub enum ScriptingError {
-    #[error("script runtime error: {0}")]
-    RuntimeError(Box<dyn std::error::Error>),
-    #[error("script compilation error: {0}")]
-    CompileError(Box<dyn std::error::Error>),
+    #[error("script runtime error:\n{0}")]
+    RuntimeError(String),
+    #[error("script compilation error:\n{0}")]
+    CompileError(Box<dyn std::error::Error + Send>),
     #[error("no runtime resource present")]
     NoRuntimeResource,
     #[error("no settings resource present")]
@@ -299,11 +294,39 @@ pub trait Runtime: Resource + Default {
     /// Provides mutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// Using this function make the closure be executed on another thread for
+    /// some runtimes. If you need to operate on non-`'static` borrows and/or
+    /// `!Send` data, you can use `with_engine_mut` - it may not be implemented
+    /// for some of the runtimes though.
+    fn with_engine_send_mut<T: Send + 'static>(
+        &mut self,
+        f: impl FnOnce(&mut Self::RawEngine) -> T + Send + 'static,
+    ) -> T;
+
+    /// Provides immutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    /// Using this function make the closure be executed on another thread for
+    /// some runtimes. If you need to operate on non-`'static` borrows and/or
+    /// `!Send` data, you can use `with_engine` - it may not be implemented
+    /// for some of the runtimes though.
+    fn with_engine_send<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Self::RawEngine) -> T + Send + 'static,
+    ) -> T;
+
+    /// Provides mutable reference to raw scripting engine instance.
+    /// Can be used to directly interact with an interpreter to use interfaces
+    /// that bevy_scriptum does not provided adapters for.
+    /// May not be implemented for runtimes which require the closure to pass
+    /// thread boundary - use `with_engine_send_mut` then.
     fn with_engine_mut<T>(&mut self, f: impl FnOnce(&mut Self::RawEngine) -> T) -> T;
 
     /// Provides immutable reference to raw scripting engine instance.
     /// Can be used to directly interact with an interpreter to use interfaces
     /// that bevy_scriptum does not provided adapters for.
+    /// May not be implemented for runtimes which require the closure to pass
+    /// thread boundary - use `with_engine_send` then.
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T;
 
     fn eval(
@@ -320,12 +343,12 @@ pub trait Runtime: Resource + Default {
         name: String,
         arg_types: Vec<TypeId>,
         f: impl Fn(
-                Self::CallContext,
-                Vec<Self::Value>,
-            ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
-            + Send
-            + Sync
-            + 'static,
+            Self::CallContext,
+            Vec<Self::Value>,
+        ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+        + Send
+        + Sync
+        + 'static,
     ) -> Result<(), ScriptingError>;
 
     /// Calls a function by name defined within the runtime in the context of the
@@ -336,7 +359,7 @@ pub trait Runtime: Resource + Default {
         name: &str,
         script_data: &mut Self::ScriptData,
         entity: Entity,
-        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self> + Send + 'static,
     ) -> Result<Self::Value, ScriptingError>;
 
     /// Calls a function by value defined within the runtime in the context of the
@@ -348,6 +371,10 @@ pub trait Runtime: Resource + Default {
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError>;
+
+    fn needs_rdynamic_linking() -> bool {
+        false
+    }
 }
 
 pub trait FuncArgs<'a, V, R: Runtime> {
@@ -410,6 +437,17 @@ impl BuildScriptingRuntime for App {
     /// Adds a scripting runtime. Registers required bevy systems that take
     /// care of processing and running the scripts.
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
+        #[cfg(debug_assertions)]
+        if R::needs_rdynamic_linking() && !is_rdynamic_linking() {
+            panic!(
+                "Missing `-rdynamic`: symbol resolution failed.\n\
+                 It is needed by {:?}.\n\
+                 Please add `println!(\"cargo:rustc-link-arg=-rdynamic\");` to your build.rs\n\
+                 or set `RUSTFLAGS=\"-C link-arg=-rdynamic\"`.",
+                std::any::type_name::<R>()
+            );
+        }
+
         self.world_mut()
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
@@ -469,6 +507,20 @@ impl<R: Runtime> Default for Callbacks<R> {
             uninitialized_callbacks: Default::default(),
             callbacks: Default::default(),
         }
+    }
+}
+
+#[cfg(debug_assertions)]
+pub extern "C" fn is_rdynamic_linking() -> bool {
+    unsafe {
+        // Get a function pointer to itself
+        let addr = is_rdynamic_linking as *const libc::c_void;
+        let mut info: libc::Dl_info = std::mem::zeroed();
+
+        // Try to resolve symbol info
+        let result = libc::dladdr(addr, &mut info);
+
+        result != 0 && !info.dli_sname.is_null()
     }
 }
 
