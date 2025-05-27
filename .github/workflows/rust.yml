@@ -24,11 +24,11 @@ jobs:
           prefix=`pwd`/rubies/ruby-3.4
           mkdir rubies
           mkdir ruby_src
-          curl -sSL $url | tar -xz --directory=./ruby_src
-          cd ruby_src
+          curl -sSL $url | tar -xz
+          cd ruby-3.4.4
           mkdir build
           cd build
-          ../configure --without-shared --prefix=`prefix`
+          ../configure --without-shared --prefix=$prefix
           make install
           echo `pwd`/rubies/ruby-3.4/ruby/bin >> $GITHUB_PATH
       - name: Clippy
