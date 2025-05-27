@@ -17,7 +17,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Cache Ruby
+        id: cache-ruby
+        uses: actions/cache@v4
+        with:
+          path: rubies
+          key: ${{ runner.os }}-ruby
       - name: Install Ruby
+        if: steps.cache-ruby.outputs.cache-hit != 'true'
         env:
           CC: clang
         run: |
@@ -31,6 +38,10 @@ jobs:
           cd build
           ../configure --without-shared --prefix=$prefix
           make install
+          echo $prefix/bin >> $GITHUB_PATH
+      - name: Add Ruby to PATH
+        run: |
+          prefix=`pwd`/rubies/ruby-3.4
           echo $prefix/bin >> $GITHUB_PATH
       - name: Install latest mdbook
         run: |

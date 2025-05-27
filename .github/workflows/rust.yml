@@ -16,7 +16,14 @@ jobs:
       RUSTFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v3
+      - name: Cache Ruby
+        id: cache-ruby
+        uses: actions/cache@v4
+        with:
+          path: rubies
+          key: ${{ runner.os }}-ruby
       - name: Install Ruby
+        if: steps.cache-ruby.outputs.cache-hit != 'true'
         env:
           CC: clang
         run: |
@@ -30,6 +37,9 @@ jobs:
           cd build
           ../configure --without-shared --prefix=$prefix
           make install
+      - name: Add Ruby to PATH
+        run: |
+          prefix=`pwd`/rubies/ruby-3.4
           echo $prefix/bin >> $GITHUB_PATH
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
