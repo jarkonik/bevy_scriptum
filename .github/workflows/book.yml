@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # To push a branch
@@ -27,6 +27,6 @@ jobs:
       - name: Test Book
         run: |
           cd book
-          export CARGO_MANIFEST_DIR = $(pwd)
+          export CARGO_MANIFEST_DIR=$(pwd)
           cargo build
           mdbook test -L target/debug/deps/
