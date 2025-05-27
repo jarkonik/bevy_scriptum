@@ -2,10 +2,10 @@
 
 bevy_scriptum provides following types that can be used in Ruby:
 
-- ```Bevy::Vec3```
-- ```Bevy::Entity```
+- `Bevy::Vec3`
+- `Bevy::Entity`
 
-## Vec3
+## Bevy::Vec3
 
 ### Class Methods
 
@@ -53,15 +53,15 @@ fn set_translation(
 }
 ```
 
-## BevyEntity
+## Bevy::Entity
 
 ### Constructor
 
-None - instances can only be acquired by using built-in `entity` global variable.
+None - instances can only be acquired by using `Bevy::Entity.current`
 
-### Properties
+### Class method
 
-- `index: integer`
+- `index`
 
 ### Example Ruby usage
 
