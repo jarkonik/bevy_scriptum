@@ -2,19 +2,20 @@
 
 bevy_scriptum is a a plugin for [Bevy](https://bevyengine.org/) that allows you to write some of your game or application logic in a scripting language.
 
- ## Supported scripting languages/runtimes
+## Supported scripting languages/runtimes
 
- | language/runtime  | cargo feature | documentation chapter                                           |
- | ----------------- | ------------- | --------------------------------------------------------------- |
- | 🌙 LuaJIT         | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
- | 🌾 Rhai           | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
- | 💎 Ruby           | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
+| language/runtime | cargo feature | documentation chapter                                           |
+| ---------------- | ------------- | --------------------------------------------------------------- |
+| 🌙 LuaJIT        | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+| 🌾 Rhai          | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+| 💎 Ruby          | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 
- Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
+Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
 
- Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
+Full API docs are available at [docs.rs](https://docs.rs/bevy_scriptum/latest/bevy_scriptum/) 🧑‍💻
 
 bevy_scriptum's main advantages include:
+
 - low-boilerplate
 - easy to use
 - asynchronicity with a promise-based API
@@ -24,6 +25,7 @@ bevy_scriptum's main advantages include:
 Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile it.
 
 All you need to do is register callbacks on your Bevy app like this:
+
 ```rust,no_run
 # extern crate bevy;
 # extern crate bevy_scriptum;
@@ -43,7 +45,9 @@ fn main() {
         .run();
 }
 ```
+
 And you can call them in your scripts like this:
+
 ```lua
 hello_bevy()
 ```
@@ -80,6 +84,7 @@ fn main() {
 ```
 
 You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
+
 ```rust,no_run
 # extern crate bevy;
 # extern crate bevy_scriptum;
@@ -102,7 +107,9 @@ fn main() {
         .run();
 }
 ```
+
 which you can then call in your script like this:
+
 ```lua
 fun_with_string_param("Hello world!")
 ```
@@ -113,7 +120,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy_scriptum = { version = "0.8", features = ["lua"] }
+bevy_scriptum = { version = "0.9", features = ["lua"] }
 ```
 
 or execute `cargo add bevy_scriptum --features lua` from your project directory.
@@ -181,11 +188,12 @@ You should then see `my_print: 'Hello world!'` printed in your console.
 
 ### Provided examples
 
-You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>_<language_name>`.  For example:
+You can also try running provided examples by cloning this repository and running `cargo run --example <example_name>_<language_name>`. For example:
 
 ```bash
 cargo run --example hello_world_lua
 ```
+
 The examples live in `examples` directory and their corresponding scripts live in `assets/examples` directory within the repository.
 
 ### Promises - getting return values from scripts
@@ -197,6 +205,7 @@ get_player_name():and_then(function(name)
     print(name)
 end)
 ```
+
 which will print out `John` when used with following exposed function:
 
 ```rust,no_run
@@ -214,7 +223,7 @@ fn main() {
                runtime.add_function(String::from("get_player_name"), || String::from("John"));
        });
 }
-````
+```
 
 ## Access entity from script
 
@@ -222,6 +231,7 @@ A variable called `entity` is automatically available to all scripts - it repres
 It exposes `index` property that returns bevy entity index.
 It is useful for accessing entity's components from scripts.
 It can be used in the following way:
+
 ```lua
 print("Current entity index: " .. entity.index)
 ```
