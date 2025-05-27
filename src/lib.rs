@@ -510,6 +510,7 @@ impl<R: Runtime> Default for Callbacks<R> {
     }
 }
 
+#[cfg(debug_assertions)]
 pub extern "C" fn is_rdynamic_linking() -> bool {
     unsafe {
         // Get a function pointer to itself
