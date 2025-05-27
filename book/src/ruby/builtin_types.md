@@ -55,6 +55,8 @@ fn set_translation(
 
 ## Bevy::Entity
 
+`Bevy::Entity.current` is currently not available within promise callbacks.
+
 ### Constructor
 
 None - instances can only be acquired by using `Bevy::Entity.current`
