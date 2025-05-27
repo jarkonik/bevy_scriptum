@@ -25,10 +25,10 @@ jobs:
           curl -sSL $url | tar -xz --directory=./ruby_src
           cd ruby_src
           mkdir build && cd build
-          mkdir /rubies
-          ../configure --without-shared --prefix="/rubies/ruby-3.4"
+          mkdir rubies
+          ../configure --without-shared --prefix="${pwd}/rubies/ruby-3.4"
           make install
-          echo /rubies/ruby-3.4/ruby/bin >> $GITHUB_PATH
+          echo `pwd`/rubies/ruby-3.4/ruby/bin >> $GITHUB_PATH
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
       - name: Build
