@@ -16,7 +16,7 @@ CC=clang rbenv install 3.4.4
 
 Above assumes that you also have `clang` installed on your system.
 For `clang` installation instruction consult your
-Linux distribution or [clang official webiste](https://clang.llvm.org).
+OS vendor provided documentation or [clang official webiste](https://clang.llvm.org).
 
 If you rather not use `rbenv` you are free to supply your own installation of
 Ruby provided the following is true about it:
