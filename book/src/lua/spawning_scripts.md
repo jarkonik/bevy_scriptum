@@ -16,8 +16,6 @@ fn my_spawner(mut commands: Commands, assets_server: Res<AssetServer>) {
         assets_server.load("my_script.lua"),
     ));
 }
-
-fn main() {}
 ```
 
 After they scripts have been evaled by bevy_scriptum, the entities that they've
@@ -41,6 +39,4 @@ fn my_system(
         // do something with scripted entities
     }
 }
-
-fn main() {}
 ```

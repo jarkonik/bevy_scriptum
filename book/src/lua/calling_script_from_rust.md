@@ -32,8 +32,6 @@ fn call_lua_on_update_from_rust(
             .unwrap();
     }
 }
-
-fn main() {}
 ```
 
 We can also pass some arguments by providing a tuple or `Vec` as the last
@@ -57,8 +55,6 @@ fn call_lua_on_update_from_rust(
             .unwrap();
     }
 }
-
-fn main() {}
 ```
 
 They will be passed to `on_update` Lua function

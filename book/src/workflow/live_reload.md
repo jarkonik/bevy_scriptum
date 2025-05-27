@@ -95,8 +95,6 @@ fn teardown(
         }
     }
 }
-
-fn main() {}
 ```
 
 And to tie this all together we do the following:
@@ -122,11 +120,11 @@ fn main() {
         .run();
 }
 
-fn init() {} // Implemented elsewhere
-fn update() {} // Implemented elsewhere
-fn despawn() {} // Implemented elsewhere
-fn teardown() {} // Implemented elsewhere
-fn spawn_player() {} // Implemented elsewhere
+# fn init() {}
+# fn update() {}
+# fn despawn() {}
+# fn teardown() {}
+# fn spawn_player() {}
 ```
 
 `despawn` can be implemented as:
@@ -141,8 +139,6 @@ use bevy_scriptum::runtimes::lua::prelude::*;
 fn despawn(In((entity,)): In<(BevyEntity,)>, mut commands: Commands) {
     commands.entity(entity.0).despawn();
 }
-
-fn main() {} // Implemented elsewhere
 ```
 
 Implementation of `spawn_player` has been left out as an exercise for the reader.
