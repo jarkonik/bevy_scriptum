@@ -438,16 +438,14 @@ impl BuildScriptingRuntime for App {
     /// care of processing and running the scripts.
     fn add_scripting<R: Runtime>(&mut self, f: impl Fn(ScriptingRuntimeBuilder<R>)) -> &mut Self {
         #[cfg(debug_assertions)]
-        if R::needs_rdynamic_linking() {
-            if !is_rdynamic_linking() {
-                panic!(
-                    "Missing `-rdynamic`: symbol resolution failed.\n\
-                     It is needed by {:?}.\n\
-                     Please add `println!(\"cargo:rustc-link-arg=-rdynamic\");` to your build.rs\n\
-                     or set `RUSTFLAGS=\"-C link-arg=-rdynamic\"`.",
-                    std::any::type_name::<R>()
-                );
-            }
+        if R::needs_rdynamic_linking() && !is_rdynamic_linking() {
+            panic!(
+                "Missing `-rdynamic`: symbol resolution failed.\n\
+                 It is needed by {:?}.\n\
+                 Please add `println!(\"cargo:rustc-link-arg=-rdynamic\");` to your build.rs\n\
+                 or set `RUSTFLAGS=\"-C link-arg=-rdynamic\"`.",
+                std::any::type_name::<R>()
+            );
         }
 
         self.world_mut()
