@@ -1,6 +1,6 @@
 # Spawning scripts
 
-To spawn a Lua script you will need to get a handle to a script asset using
+To spawn a Ruby script you will need to get a handle to a script asset using
 bevy's `AssetServer`.
 
 ```rust
