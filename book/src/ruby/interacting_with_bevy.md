@@ -14,7 +14,7 @@ of all entities with `Player` component.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 #[derive(Component)]
 struct Player;
@@ -22,7 +22,7 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
             runtime.add_function(
                 String::from("print_player_names"),
                 |players: Query<&Name, With<Player>>| {
@@ -38,8 +38,8 @@ fn main() {
 
 In script:
 
-```lua
-print_player_names()
+```ruby
+print_player_names
 ```
 
 You can use functions that interact with Bevy entities and resources and
@@ -53,7 +53,7 @@ component.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 #[derive(Component)]
 struct Player {
@@ -63,7 +63,7 @@ struct Player {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
             runtime.add_function(
                 String::from("hurt_player"),
                 |In((hit_value,)): In<(i32,)>, mut players: Query<&mut Player>| {
@@ -78,6 +78,6 @@ fn main() {
 
 And it could be called in script like:
 
-```lua
+```ruby
 hurt_player(5)
 ```

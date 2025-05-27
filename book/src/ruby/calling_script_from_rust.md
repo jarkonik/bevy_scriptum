@@ -1,15 +1,15 @@
-# Calling Lua from Rust
+# Calling Ruby from Rust
 
-To call a function defined in Lua
+To call a function defined in Ruby
 
-```lua
-function on_update()
+```ruby
+def on_update
 end
 ```
 
-We need to acquire `LuaRuntime` resource within a bevy system.
+We need to acquire `RubyRuntime` resource within a bevy system.
 Then we will be able to call `call_fn` on it, providing the name
-of the function to call, `LuaScriptData` that has been automatically
+of the function to call, `RubyScriptData` that has been automatically
 attached to entity after an entity with script attached has been spawned
 and its script evaluated, the entity and optionally some arguments.
 
@@ -19,14 +19,14 @@ and its script evaluated, the entity and optionally some arguments.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
-fn call_lua_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut LuaScriptData)>,
-    scripting_runtime: ResMut<LuaRuntime>,
+fn call_ruby_on_update_from_rust(
+    mut scripted_entities: Query<(Entity, &mut RubyScriptData)>,
+    scripting_runtime: ResMut<RubyRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
-        // calling function named `on_update` defined in lua script
+        // calling function named `on_update` defined in Ruby script
         scripting_runtime
             .call_fn("on_update", &mut script_data, entity, ())
             .unwrap();
@@ -43,11 +43,11 @@ We can also pass some arguments by providing a tuple or `Vec` as the last
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
-fn call_lua_on_update_from_rust(
-    mut scripted_entities: Query<(Entity, &mut LuaScriptData)>,
-    scripting_runtime: ResMut<LuaRuntime>,
+fn call_ruby_on_update_from_rust(
+    mut scripted_entities: Query<(Entity, &mut RubyScriptData)>,
+    scripting_runtime: ResMut<RubyRuntime>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
         scripting_runtime
@@ -57,13 +57,10 @@ fn call_lua_on_update_from_rust(
 }
 ```
 
-They will be passed to `on_update` Lua function
-```lua
-function on_update(a, b)
-    print(a) -- 123
-    print(b) -- hello
+They will be passed to `on_update` Ruby function
+```ruby
+def on_update(a, b)
+    puts(a) # 123
+    puts(b) # hello
 end
 ```
-
-Any type that implements `IntoLua` can be passed as an argument withing the
-tuple in `call_fn`.

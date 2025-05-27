@@ -1,27 +1,27 @@
 # Builtin types
 
-bevy_scriptum provides following types that can be used in Lua:
+bevy_scriptum provides following types that can be used in Ruby:
 
-- ```Vec3```
-- ```BevyEntity```
+- ```Bevy::Vec3```
+- ```Bevy::Entity```
 
 ## Vec3
 
-### Constructor
+### Class Methods
 
-`Vec3(x: number, y: number, z: number)`
+- `new(x, y, z)`
+- `current`
 
-### Properties
+### Instance Methods
 
-- `x: number`
-- `y: number`
-- `z: number`
+- `x`
+- `y`
+- `z`
 
+### Example Ruby usage
 
-### Example Lua usage
-
-```lua
-my_vec = Vec3(1, 2, 3)
+```ruby
+my_vec = Bevy::Vec3.new(1, 2, 3)
 set_translation(entity, my_vec)
 ```
 
@@ -33,12 +33,12 @@ set_translation(entity, my_vec)
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("set_translation"), set_translation);
         })
         .run();
@@ -63,11 +63,11 @@ None - instances can only be acquired by using built-in `entity` global variable
 
 - `index: integer`
 
-### Example Lua usage
+### Example Ruby usage
 
-```lua
-print(entity.index)
-pass_to_rust(entity)
+```ruby
+puts(Bevy::Entity.current.index)
+pass_to_rust(Bevy::Entity.current)
 ```
 
 ### Example Rust usage
@@ -78,12 +78,12 @@ pass_to_rust(entity)
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("pass_to_rust"), |In((entity,)): In<(BevyEntity,)>| {
                println!("pass_to_rust called with entity: {:?}", entity);
              });

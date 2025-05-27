@@ -174,7 +174,7 @@ fn then(r_self: magnus::Value) -> magnus::Value {
         .into_value()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[magnus::wrap(class = "Bevy::Entity")]
 pub struct BevyEntity(pub Entity);
 
@@ -191,7 +191,7 @@ impl TryConvert for BevyEntity {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[magnus::wrap(class = "Bevy::Vec3")]
 pub struct BevyVec3(pub Vec3);
 

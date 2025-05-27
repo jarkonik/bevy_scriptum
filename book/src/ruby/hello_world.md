@@ -18,12 +18,12 @@ You can now start exposing functions to the scripting language. For example, you
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
            runtime.add_function(
                String::from("my_print"),
                |In((x,)): In<(String,)>| {
@@ -35,9 +35,9 @@ fn main() {
 }
 ```
 
-Then you can create a script file in `assets` directory called `script.lua` that calls this function:
+Then you can create a script file in `assets` directory called `script.rb` that calls this function:
 
-```lua
+```ruby
 my_print("Hello world!")
 ```
 
@@ -49,12 +49,12 @@ And spawn an entity with attached `Script` component with a handle to a script s
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
            runtime.add_function(
                String::from("my_print"),
                |In((x,)): In<(String,)>| {
@@ -63,7 +63,7 @@ fn main() {
            );
         })
         .add_systems(Startup,|mut commands: Commands, asset_server: Res<AssetServer>| {
-            commands.spawn(Script::<LuaScript>::new(asset_server.load("script.lua")));
+            commands.spawn(Script::<RubyScript>::new(asset_server.load("script.rb")));
         })
         .run();
 }

@@ -1,6 +1,6 @@
-# Calling Rust from Lua
+# Calling Rust from Ruby
 
-To call a rust function from Lua first you need to register a function
+To call a rust function from Ruby first you need to register a function
 within Rust using builder pattern.
 
 ```rust,no_run
@@ -9,12 +9,12 @@ within Rust using builder pattern.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
             // `runtime` is a builder that you can use to register functions
         })
         .run();
@@ -29,12 +29,12 @@ For example to register a function called `my_rust_func` you can do the followin
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("my_rust_func"), || {
                println!("my_rust_func has been called");
              });
@@ -43,14 +43,11 @@ fn main() {
 }
 ```
 
-After you do that the function will be available to Lua code in your spawned scripts.
+After you do that the function will be available to Ruby code in your spawned scripts.
 
-```lua
-my_rust_func()
+```ruby
+my_rust_func
 ```
-
-Registered functions can also take parameters. A parameter can be any type
-that implements `FromLua`.
 
 Since a registered callback function is a Bevy system, the parameters are passed
 to it as `In` struct with tuple, which has to be the first parameter of the closure.
@@ -61,12 +58,12 @@ to it as `In` struct with tuple, which has to be the first parameter of the clos
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("func_with_params"), |args: In<(String, i64)>| {
                println!("my_rust_func has been called with string {} and i64 {}", args.0.0, args.0.1);
              });
@@ -83,12 +80,12 @@ To make it look nicer you can destructure the `In` struct.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("func_with_params"), |In((a, b)): In<(String, i64)>| {
                println!("my_rust_func has been called with string {} and i64 {}", a, b);
              });
@@ -97,9 +94,9 @@ fn main() {
 }
 ```
 
-The above function can be called from Lua
+The above function can be called from Ruby
 
-```lua
+```ruby
 func_with_params("abc", 123)
 ```
 
@@ -115,12 +112,12 @@ a callback that will receive the value returned from Rust function.
 
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
-use bevy_scriptum::runtimes::lua::prelude::*;
+use bevy_scriptum::runtimes::ruby::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_scripting::<LuaRuntime>(|runtime| {
+        .add_scripting::<RubyRuntime>(|runtime| {
              runtime.add_function(String::from("returns_value"), || {
                 123
              });
@@ -129,8 +126,8 @@ fn main() {
 }
 ```
 
-```lua
-returns_value():and_then(function (value)
-    print(value) -- 123
-end)
+```ruby
+returns_value.and_then do |value|
+    puts(value) # 123
+end
 ```
