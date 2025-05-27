@@ -16,6 +16,9 @@ jobs:
       RUSTFLAGS: -D warnings
     steps:
     - uses: actions/checkout@v3
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
     - name: Clippy
       run: cargo clippy --all-features --verbose -- -D warnings
     - name: Build
