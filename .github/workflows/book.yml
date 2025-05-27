@@ -1,4 +1,4 @@
-name: Test book
+name: Book
 
 on:
   push:
