@@ -20,14 +20,17 @@ bevy_scriptum provides following types that can be used in Lua:
 
 ### Example Lua usage
 
-```
+```lua
 my_vec = Vec3(1, 2, 3)
 set_translation(entity, my_vec)
 ```
 
 ### Example Rust usage
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -69,7 +72,10 @@ pass_to_rust(entity)
 
 ### Example Rust usage
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;

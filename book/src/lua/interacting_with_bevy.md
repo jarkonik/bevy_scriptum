@@ -7,7 +7,11 @@ That allows you to do anything you would do in a Bevy system.
 You could for example create a callback system function that prints names
 of all entities with `Player` component.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_ecs;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -42,7 +46,11 @@ You can use functions that interact with Bevy entities and resources and
 take arguments at the same time. It could be used for example to mutate a
 component.
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_ecs;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -59,7 +67,7 @@ fn main() {
             runtime.add_function(
                 String::from("hurt_player"),
                 |In((hit_value,)): In<(i32,)>, mut players: Query<&mut Player>| {
-                    let mut player = players.single_mut();
+                    let mut player = players.single_mut().unwrap();
                     player.health -= hit_value;
                 },
             );

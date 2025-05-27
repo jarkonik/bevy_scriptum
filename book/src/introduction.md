@@ -24,7 +24,10 @@ bevy_scriptum's main advantages include:
 Scripts are separate files that can be hot-reloaded at runtime. This allows you to quickly iterate on your game logic without having to recompile it.
 
 All you need to do is register callbacks on your Bevy app like this:
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -47,7 +50,11 @@ hello_bevy()
 
 Every callback function that you expose to the scripting language is also a Bevy system, so you can easily query and mutate ECS components and resources just like you would in a regular Bevy system:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_ecs;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -73,7 +80,10 @@ fn main() {
 ```
 
 You can also pass arguments to your callback functions, just like you would in a regular Bevy system - using `In` structs with tuples:
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -110,7 +120,10 @@ or execute `cargo add bevy_scriptum --features lua` from your project directory.
 
 You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -138,7 +151,10 @@ my_print("Hello world!")
 
 And spawn an entity with attached `Script` component with a handle to a script source file:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -183,7 +199,10 @@ end)
 ```
 which will print out `John` when used with following exposed function:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;

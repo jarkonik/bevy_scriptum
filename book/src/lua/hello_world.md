@@ -12,7 +12,10 @@ a create feature.
 
 You can now start exposing functions to the scripting language. For example, you can expose a function that prints a message to the console:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -40,7 +43,10 @@ my_print("Hello world!")
 
 And spawn an entity with attached `Script` component with a handle to a script source file:
 
-```rust
+```rust,no_run
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
