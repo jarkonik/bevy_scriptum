@@ -9,7 +9,7 @@ _test:
 test: build-deps _test
 
 test-watch: build-deps
-	watchexec --exts md just _test
+	watchexec --exts md -r just _test
 
 serve:
 	mdbook serve

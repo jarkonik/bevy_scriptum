@@ -4,6 +4,9 @@ To spawn a Lua script you will need to get a handle to a script asset using
 bevy's `AssetServer`.
 
 ```rust
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
@@ -24,6 +27,9 @@ been attached to will get the `Script::<LuaScript>` component stripped and inste
 So to query scipted entities you could do something like:
 
 ```rust
+# extern crate bevy;
+# extern crate bevy_scriptum;
+
 use bevy::prelude::*;
 use bevy_scriptum::prelude::*;
 use bevy_scriptum::runtimes::lua::prelude::*;
