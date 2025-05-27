@@ -2,24 +2,36 @@ name: Book
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # To push a branch
-      pages: write  # To push to a GitHub Pages site
+      contents: write # To push a branch
+      pages: write # To push to a GitHub Pages site
       id-token: write # To update the deployment status
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
+      - name: Install Ruby
+        env:
+          CC: clang
+        run: |
+          url="https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.4.tar.gz"
+          prefix=`pwd`/rubies/ruby-3.4
+          mkdir rubies
+          mkdir ruby_src
+          curl -sSL $url | tar -xz
+          cd ruby-3.4.4
+          mkdir build
+          cd build
+          ../configure --without-shared --prefix=$prefix
+          make install
+          echo $prefix/bin >> $GITHUB_PATH
       - name: Install latest mdbook
         run: |
           tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
