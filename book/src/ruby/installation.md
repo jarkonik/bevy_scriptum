@@ -38,3 +38,13 @@ bevy_scriptum = { version = "0.8", features = ["ruby"] }
 
 If you need a different version of bevy you need to use a matching bevy_scriptum
 version according to the [bevy support matrix](../bevy_support_matrix.md)
+
+Ruby also needs dynamic symbol resolution and since `bevy_scriptum` links Ruby
+statically the following `build.rs` file is needed to be present in project
+root directory.
+
+```rust
+fn main() {
+    println!("cargo:rustc-link-arg=-rdynamic");
+}
+```

@@ -505,6 +505,10 @@ impl Runtime for RubyRuntime {
             Ok(RubyValue::new(result))
         })
     }
+
+    fn needs_rdynamic_linking() -> bool {
+        true
+    }
 }
 
 pub mod magnus {

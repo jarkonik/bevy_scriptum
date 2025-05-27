@@ -34,6 +34,7 @@ mlua = { version = "0.9.8", features = [
 magnus = { version = "0.7.1", optional = true }
 rb-sys = { version = "*", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
 crossbeam-channel = "0.5.15"
+libc = "0.2.172"
 
 [[example]]
 name = "call_function_from_rust_rhai"
