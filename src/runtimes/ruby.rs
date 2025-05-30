@@ -213,6 +213,19 @@ impl TryConvert for BevyEntity {
 #[magnus::wrap(class = "Bevy::Vec3")]
 pub struct BevyVec3(pub Vec3);
 
+pub fn async_function() {
+    let ruby = Ruby::get().unwrap();
+    let fiber = ruby
+        .fiber_new_from_fn(Default::default(), move |ruby, _args, _block| {
+            let p = ruby.block_proc().unwrap();
+            p.call::<_, value::Value>(()).unwrap();
+
+            Ok(())
+        })
+        .unwrap();
+    fiber.resume::<_, magnus::Value>(()).unwrap();
+}
+
 impl BevyVec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self(Vec3::new(x, y, z))
@@ -291,6 +304,8 @@ impl Default for RubyRuntime {
                 vec3.define_method("x", method!(BevyVec3::x, 0))?;
                 vec3.define_method("y", method!(BevyVec3::y, 0))?;
                 vec3.define_method("z", method!(BevyVec3::z, 0))?;
+
+                ruby.define_global_function("async", function!(async_function, 0));
                 Ok::<(), ScriptingError>(())
             }))
             .expect("Failed to define builtin types");
