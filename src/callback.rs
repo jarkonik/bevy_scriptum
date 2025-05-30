@@ -10,18 +10,18 @@ pub struct CallbackSystem<R: Runtime> {
     pub(crate) arg_types: Vec<TypeId>,
 }
 
-pub(crate) struct FunctionCallEvent<C: Send, V: Send, F: Send> {
+pub(crate) struct FunctionCallEvent<C: Send, V: Send> {
     pub(crate) params: Vec<V>,
-    pub(crate) promise: Promise<C, V, F>,
+    pub(crate) promise: Promise<C, V>,
 }
 
-type Calls<C, V, F> = Arc<Mutex<Vec<FunctionCallEvent<C, V, F>>>>;
+type Calls<C, V> = Arc<Mutex<Vec<FunctionCallEvent<C, V>>>>;
 
 /// A struct representing a Bevy system that can be called from a script.
 pub(crate) struct Callback<R: Runtime> {
     pub(crate) name: String,
     pub(crate) system: Arc<Mutex<CallbackSystem<R>>>,
-    pub(crate) calls: Calls<R::CallContext, R::Value, R::Value>,
+    pub(crate) calls: Calls<R::CallContext, R::Value>,
 }
 
 impl<R: Runtime> Clone for Callback<R> {
@@ -37,7 +37,7 @@ impl<R: Runtime> Clone for Callback<R> {
 impl<R: Runtime> CallbackSystem<R> {
     pub(crate) fn call(
         &mut self,
-        call: &FunctionCallEvent<R::CallContext, R::Value, R::Value>,
+        call: &FunctionCallEvent<R::CallContext, R::Value>,
         world: &mut World,
     ) -> R::Value {
         self.system.run(call.params.clone(), world)

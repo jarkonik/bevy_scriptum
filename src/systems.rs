@@ -144,7 +144,7 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
             .lock()
             .expect("Failed to lock callback calls mutex")
             .drain(..)
-            .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value, R::Value>>>();
+            .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value>>>();
         for mut call in calls {
             tracing::trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback

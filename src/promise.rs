@@ -1,31 +1,29 @@
 use std::sync::{Arc, Mutex};
 
-use magnus::Fiber;
-
 use crate::{Runtime, ScriptingError};
 
 /// A struct that represents a function that will get called when the Promise is resolved.
-pub(crate) struct PromiseCallback<C: Send, V: Send, F: Send> {
+pub(crate) struct PromiseCallback<C: Send, V: Send> {
     callback: V,
-    following_promise: Arc<Mutex<PromiseInner<C, V, F>>>,
+    following_promise: Arc<Mutex<PromiseInner<C, V>>>,
 }
 
 /// Internal representation of a Promise.
-pub(crate) struct PromiseInner<C: Send, V: Send, F: Send> {
-    pub(crate) callbacks: Vec<PromiseCallback<C, V, F>>,
+pub(crate) struct PromiseInner<C: Send, V: Send> {
+    pub(crate) callbacks: Vec<PromiseCallback<C, V>>,
     #[allow(deprecated)]
     pub(crate) context: C,
     pub(crate) resolved_value: Option<V>,
-    pub(crate) fibers: Vec<F>, // TODO: should htis be vec or option
+    pub(crate) fibers: Vec<V>, // TODO: should htis be vec or option
 }
 
 /// A struct that represents a Promise.
 #[derive(Clone)]
-pub struct Promise<C: Send, V: Send, F: Send> {
-    pub(crate) inner: Arc<Mutex<PromiseInner<C, V, F>>>,
+pub struct Promise<C: Send, V: Send> {
+    pub(crate) inner: Arc<Mutex<PromiseInner<C, V>>>,
 }
 
-impl<C: Send, V: Send + Clone, F: Send + Clone> PromiseInner<C, V, F> {
+impl<C: Send, V: Send + Clone> PromiseInner<C, V> {
     /// Resolve the Promise. This will call all the callbacks that were added to the Promise.
     fn resolve<R>(&mut self, runtime: &mut R, val: R::Value) -> Result<(), ScriptingError>
     where
@@ -45,7 +43,7 @@ impl<C: Send, V: Send + Clone, F: Send + Clone> PromiseInner<C, V, F> {
     }
 }
 
-impl<C: Clone + Send + 'static, V: Send + Clone, F: Send + Clone> Promise<C, V, F> {
+impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     /// Acquire [Mutex] for writing the promise and resolve it. Call will be forwarded to [PromiseInner::resolve].
     pub(crate) fn resolve<R>(
         &mut self,
@@ -55,19 +53,24 @@ impl<C: Clone + Send + 'static, V: Send + Clone, F: Send + Clone> Promise<C, V, 
     where
         R: Runtime<Value = V, CallContext = C>,
     {
+        let mut fibers: Vec<V> = vec![];
         if let Ok(mut inner) = self.inner.lock() {
             inner.resolved_value = Some(val.clone());
-            inner.resolve(runtime, val)?;
+            inner.resolve(runtime, val.clone())?;
+
             for fiber in inner.fibers.drain(..) {
-                println!("resume");
+                fibers.push(fiber);
             }
+        }
+        for fiber in fibers {
+            runtime.resume(&fiber, &val.clone());
         }
         Ok(())
     }
 
     /// Register a fiber that will be resumed when the [Promise] is resolved.
     #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
-    pub(crate) fn await_promise(&mut self, fiber: F) {
+    pub(crate) fn await_promise(&mut self, fiber: V) {
         let mut inner = self
             .inner
             .lock()

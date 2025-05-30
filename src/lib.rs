@@ -345,8 +345,7 @@ pub trait Runtime: Resource + Default {
         f: impl Fn(
             Self::CallContext,
             Vec<Self::Value>,
-        )
-            -> Result<Promise<Self::CallContext, Self::Value, Self::Value>, ScriptingError>
+        ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
         + Send
         + Sync
         + 'static,
@@ -376,6 +375,8 @@ pub trait Runtime: Resource + Default {
     fn needs_rdynamic_linking() -> bool {
         false
     }
+
+    fn resume(&self, fiber: &Self::Value, value: &Self::Value);
 }
 
 pub trait FuncArgs<'a, V, R: Runtime> {
