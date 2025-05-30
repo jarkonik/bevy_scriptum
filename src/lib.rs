@@ -345,7 +345,8 @@ pub trait Runtime: Resource + Default {
         f: impl Fn(
             Self::CallContext,
             Vec<Self::Value>,
-        ) -> Result<Promise<Self::CallContext, Self::Value>, ScriptingError>
+        )
+            -> Result<Promise<Self::CallContext, Self::Value, Self::Value>, ScriptingError>
         + Send
         + Sync
         + 'static,

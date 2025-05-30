@@ -129,9 +129,9 @@ impl Drop for RubyThread {
     }
 }
 
-impl DataTypeFunctions for Promise<(), RubyValue> {}
+impl DataTypeFunctions for Promise<(), RubyValue, RubyValue> {}
 
-unsafe impl TypedData for Promise<(), RubyValue> {
+unsafe impl TypedData for Promise<(), RubyValue, RubyValue> {
     fn class(ruby: &Ruby) -> magnus::RClass {
         static CLASS: Lazy<RClass> = Lazy::new(|ruby| {
             let class = ruby
@@ -147,12 +147,12 @@ unsafe impl TypedData for Promise<(), RubyValue> {
 
     fn data_type() -> &'static magnus::DataType {
         static DATA_TYPE: DataType =
-            data_type_builder!(Promise<(), RubyValue>, "Bevy::Promise").build();
+            data_type_builder!(Promise<(), RubyValue, RubyValue>, "Bevy::Promise").build();
         &DATA_TYPE
     }
 }
 
-impl TryConvert for Promise<(), RubyValue> {
+impl TryConvert for Promise<(), RubyValue, RubyValue> {
     fn try_convert(val: magnus::Value) -> Result<Self, magnus::Error> {
         let result: Result<&Self, _> = TryConvert::try_convert(val);
         result.cloned()
@@ -160,7 +160,7 @@ impl TryConvert for Promise<(), RubyValue> {
 }
 
 fn then(r_self: magnus::Value) -> magnus::Value {
-    let promise: &Promise<(), RubyValue> =
+    let promise: &Promise<(), RubyValue, RubyValue> =
         TryConvert::try_convert(r_self).expect("Couldn't convert self to Promise");
     let ruby =
         Ruby::get().expect("Failed to get a handle to Ruby API when registering Promise callback");
@@ -179,21 +179,15 @@ fn then(r_self: magnus::Value) -> magnus::Value {
 }
 
 fn await_promise(r_self: magnus::Value) -> magnus::Value {
-    let promise: &Promise<(), RubyValue> =
+    let promise: &Promise<(), RubyValue, RubyValue> =
         TryConvert::try_convert(r_self).expect("Couldn't convert self to Promise");
     let ruby =
         Ruby::get().expect("Failed to get a handle to Ruby API when registering Promise callback");
-    let fiber = Opaque::from(ruby.fiber_current());
-    promise
-        .clone()
-        .then(RubyValue::new(
-            ruby.proc_from_fn(move |ruby, args, _| {
-                let fiber = ruby.get_inner(fiber);
-                fiber.resume::<_, magnus::Value>(args).unwrap();
-            })
-            .as_value(),
-        ))
-        .into_value();
+    let fiber = Opaque::from(ruby.fiber_current().as_value());
+    if let Some(value) = &promise.inner.try_lock().unwrap().resolved_value {
+        panic!();
+    }
+    promise.clone().await_promise(RubyValue(fiber)).into_value();
     ruby.fiber_yield::<_, magnus::Value>(()).unwrap()
 }
 
@@ -457,7 +451,7 @@ impl Runtime for RubyRuntime {
             Self::CallContext,
             Vec<Self::Value>,
         ) -> Result<
-            crate::promise::Promise<Self::CallContext, Self::Value>,
+            crate::promise::Promise<Self::CallContext, Self::Value, Self::Value>,
             crate::ScriptingError,
         > + Send
         + Sync
@@ -467,9 +461,10 @@ impl Runtime for RubyRuntime {
             dyn Fn(
                     (),
                     Vec<RubyValue>,
-                )
-                    -> Result<crate::promise::Promise<(), RubyValue>, crate::ScriptingError>
-                + Send,
+                ) -> Result<
+                    crate::promise::Promise<(), RubyValue, RubyValue>,
+                    crate::ScriptingError,
+                > + Send,
         >;
         static RUBY_CALLBACKS: LazyLock<Mutex<HashMap<String, CallbackClosure>>> =
             LazyLock::new(|| Mutex::new(HashMap::new()));

@@ -89,6 +89,8 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 move |context, params| {
                     let promise = Promise {
                         inner: Arc::new(Mutex::new(PromiseInner {
+                            resolved_value: None,
+                            fibers: vec![],
                             callbacks: vec![],
                             context,
                         })),
@@ -100,7 +102,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                         .expect("Failed to lock callback calls mutex");
 
                     calls.push(FunctionCallEvent {
-                        promise: promise.clone(),
+                        promise: promise.clone(), // TODO: dont clone?
                         params,
                     });
                     Ok(promise)
@@ -142,7 +144,7 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
             .lock()
             .expect("Failed to lock callback calls mutex")
             .drain(..)
-            .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value>>>();
+            .collect::<Vec<FunctionCallEvent<R::CallContext, R::Value, R::Value>>>();
         for mut call in calls {
             tracing::trace!("process_calls: calling '{}'", callback.name);
             let mut system = callback
