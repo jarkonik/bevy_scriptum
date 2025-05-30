@@ -421,7 +421,7 @@ impl Runtime for RubyRuntime {
                                 .unwrap()
                                 .into_raw(),
                         );
-                        rb_load(file, 1);
+                        rb_load(file, 0);
                     };
                     // ruby.eval::<magnus::value::Value>(&script)
                     //     .map_err(<magnus::Error as Into<ScriptingError>>::into)
