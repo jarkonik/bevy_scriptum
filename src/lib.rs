@@ -375,6 +375,8 @@ pub trait Runtime: Resource + Default {
     fn needs_rdynamic_linking() -> bool {
         false
     }
+
+    fn resume(&self, fiber: &Self::Value, value: &Self::Value);
 }
 
 pub trait FuncArgs<'a, V, R: Runtime> {

@@ -9,15 +9,19 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_scripting::<RubyRuntime>(|builder| {
-            builder.add_function(
-                String::from("get_player_name"),
-                |player_names: Query<&Name, With<Player>>| {
-                    player_names
-                        .single()
-                        .expect("Missing player_names")
-                        .to_string()
-                },
-            );
+            builder
+                .add_function(
+                    String::from("get_player_name"),
+                    |player_names: Query<&Name, With<Player>>| {
+                        player_names
+                            .single()
+                            .expect("Missing player_names")
+                            .to_string()
+                    },
+                )
+                .add_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
+                    exit.write(AppExit::Success);
+                });
         })
         .add_systems(Startup, startup)
         .run();

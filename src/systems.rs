@@ -89,6 +89,8 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                 move |context, params| {
                     let promise = Promise {
                         inner: Arc::new(Mutex::new(PromiseInner {
+                            resolved_value: None,
+                            fibers: vec![],
                             callbacks: vec![],
                             context,
                         })),
@@ -100,7 +102,7 @@ pub(crate) fn init_callbacks<R: Runtime>(world: &mut World) -> Result<(), Script
                         .expect("Failed to lock callback calls mutex");
 
                     calls.push(FunctionCallEvent {
-                        promise: promise.clone(),
+                        promise: promise.clone(), // TODO: dont clone?
                         params,
                     });
                     Ok(promise)
