@@ -527,7 +527,7 @@ pub extern "C" fn is_rdynamic_linking() -> bool {
 #[cfg(any(not(debug_assertions), not(unix)))]
 pub extern "C" fn is_rdynamic_linking() -> bool {
     // On Windows or in release builds, return a default value
-    false
+    true
 }
 
 pub mod prelude {
