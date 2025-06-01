@@ -1,5 +1,7 @@
 # Installation
 
+Ruby is currently only supported on Linux.
+
 ## Ruby
 
 To build `bevy_scriptum` with Ruby support a Ruby installation is needed to be
