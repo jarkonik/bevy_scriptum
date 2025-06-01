@@ -510,7 +510,7 @@ impl<R: Runtime> Default for Callbacks<R> {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(all(debug_assertions, unix))]
 pub extern "C" fn is_rdynamic_linking() -> bool {
     unsafe {
         // Get a function pointer to itself
@@ -522,6 +522,12 @@ pub extern "C" fn is_rdynamic_linking() -> bool {
 
         result != 0 && !info.dli_sname.is_null()
     }
+}
+
+#[cfg(any(not(debug_assertions), not(unix)))]
+pub extern "C" fn is_rdynamic_linking() -> bool {
+    // On Windows or in release builds, return a default value
+    true
 }
 
 pub mod prelude {
