@@ -1,11 +1,16 @@
 use std::{
     collections::HashMap,
     ffi::CString,
+    io::Write,
     sync::{Arc, Condvar, LazyLock, Mutex},
     thread::{self, JoinHandle},
 };
 
-use ::magnus::{typed_data::Inspect, value::Opaque};
+use ::magnus::{
+    Fiber,
+    typed_data::Inspect,
+    value::{self, Opaque},
+};
 use bevy::{
     asset::Asset,
     ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
@@ -19,7 +24,7 @@ use magnus::{
     value::{Lazy, ReprValue},
 };
 use magnus::{method, prelude::*};
-use rb_sys::{VALUE, ruby_init_stack};
+use rb_sys::{VALUE, rb_load, ruby_init_stack};
 use serde::Deserialize;
 
 use crate::{
@@ -174,6 +179,19 @@ fn then(r_self: magnus::Value) -> magnus::Value {
         .into_value()
 }
 
+fn await_promise(r_self: magnus::Value) -> magnus::Value {
+    let promise: &Promise<(), RubyValue> =
+        TryConvert::try_convert(r_self).expect("Couldn't convert self to Promise");
+    let ruby =
+        Ruby::get().expect("Failed to get a handle to Ruby API when registering Promise callback");
+    let fiber = Opaque::from(ruby.fiber_current().as_value());
+    if let Some(value) = &promise.inner.try_lock().unwrap().resolved_value {
+        return ruby.get_inner(value.0);
+    }
+    promise.clone().await_promise(RubyValue(fiber)).into_value();
+    ruby.fiber_yield::<_, magnus::Value>(()).unwrap()
+}
+
 #[derive(Clone, Debug)]
 #[magnus::wrap(class = "Bevy::Entity")]
 pub struct BevyEntity(pub Entity);
@@ -194,6 +212,19 @@ impl TryConvert for BevyEntity {
 #[derive(Clone, Debug)]
 #[magnus::wrap(class = "Bevy::Vec3")]
 pub struct BevyVec3(pub Vec3);
+
+pub fn async_function() {
+    let ruby = Ruby::get().unwrap();
+    let fiber = ruby
+        .fiber_new_from_fn(Default::default(), move |ruby, _args, _block| {
+            let p = ruby.block_proc().unwrap();
+            p.call::<_, value::Value>(()).unwrap();
+
+            Ok(())
+        })
+        .unwrap();
+    fiber.resume::<_, magnus::Value>(()).unwrap();
+}
 
 impl BevyVec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
@@ -266,12 +297,15 @@ impl Default for RubyRuntime {
 
                 let promise = module.define_class("Promise", ruby.class_object())?;
                 promise.define_method("and_then", magnus::method!(then, 0))?;
+                promise.define_method("await", magnus::method!(await_promise, 0))?;
 
                 let vec3 = module.define_class("Vec3", ruby.class_object())?;
                 vec3.define_singleton_method("new", function!(BevyVec3::new, 3))?;
                 vec3.define_method("x", method!(BevyVec3::x, 0))?;
                 vec3.define_method("y", method!(BevyVec3::y, 0))?;
                 vec3.define_method("z", method!(BevyVec3::z, 0))?;
+
+                ruby.define_global_function("async", function!(async_function, 0));
                 Ok::<(), ScriptingError>(())
             }))
             .expect("Failed to define builtin types");
@@ -392,10 +426,35 @@ impl Runtime for RubyRuntime {
     ) -> Result<Self::ScriptData, crate::ScriptingError> {
         let script = script.0.clone();
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
-            Self::with_current_entity(ruby, entity, || {
-                ruby.eval::<magnus::value::Value>(&script)
-                    .map_err(<magnus::Error as Into<ScriptingError>>::into)
-            })?;
+            let p = Opaque::from(ruby.proc_from_fn(move |ruby, _args, _block| {
+                Self::with_current_entity(ruby, entity, || {
+                    let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+                    tmpfile.write(script.as_bytes()).unwrap();
+                    unsafe {
+                        let file = rb_sys::rb_str_new_cstr(
+                            CString::new(tmpfile.path().to_str().unwrap())
+                                .unwrap()
+                                .into_raw(),
+                        );
+                        rb_load(file, 0);
+                    };
+                    // ruby.eval::<magnus::value::Value>(&script)
+                    //     .map_err(<magnus::Error as Into<ScriptingError>>::into)
+                    Ok::<(), ScriptingError>(())
+                })
+                .unwrap();
+            }));
+            let fiber = ruby
+                .fiber_new_from_fn(Default::default(), move |ruby, _args, _block| {
+                    let p = ruby.get_inner(p);
+
+                    p.call::<_, value::Value>(()).unwrap();
+
+                    Ok(())
+                })
+                .unwrap();
+            fiber.resume::<_, value::Value>(()).unwrap();
+
             Ok::<Self::ScriptData, ScriptingError>(RubyScriptData)
         }))
     }
@@ -508,6 +567,15 @@ impl Runtime for RubyRuntime {
 
     fn needs_rdynamic_linking() -> bool {
         true
+    }
+
+    fn resume(&self, fiber: &Self::Value, value: &Self::Value) {
+        let fiber = fiber.clone();
+        let value = value.clone();
+        self.execute_in_thread(move |ruby| {
+            let fiber: Fiber = TryConvert::try_convert(ruby.get_inner(fiber.0)).unwrap();
+            fiber.resume::<_, magnus::Value>((value.0,));
+        });
     }
 }
 

@@ -35,6 +35,7 @@ magnus = { version = "0.7.1", optional = true }
 rb-sys = { version = "0.9", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
 crossbeam-channel = "0.5.15"
 libc = "0.2.172"
+tempfile = "3.20.0"
 
 [[example]]
 name = "call_function_from_rust_rhai"
