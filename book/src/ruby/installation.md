@@ -1,24 +1,23 @@
 # Installation
 
-Ruby is currently only supported on Linux.
-
 ## Ruby
 
-To build `bevy_scriptum` with Ruby support a Ruby installation is needed to be
+To build `bevy_scriptum` with Ruby support, a Ruby installation needs to be
 present on your development machine.
 
-The easiest way to produce a compatible Ruby installation is to use [rbenv](https://rbenv.org/).
+The easiest way to produce a compatible Ruby installation is to use
+[rbenv](https://rbenv.org/)/[ruby-build](https://github.com/rbenv/ruby-build#readme).
 
 After installing `rbenv` along with its `ruby-build` plugin you can build and
 install a Ruby installation that will work with `bevy_scriptum` by executing:
 
 ```sh
-CC=clang rbenv install 3.4.4
+CC=clang rbenv install 3.4.5
 ```
 
 Above assumes that you also have `clang` installed on your system.
 For `clang` installation instruction consult your
-OS vendor provided documentation or [clang official webiste](https://clang.llvm.org).
+OS vendor provided documentation or [clang official website](https://clang.llvm.org).
 
 If you rather not use `rbenv` you are free to supply your own installation of
 Ruby provided the following is true about it:
@@ -27,6 +26,38 @@ Ruby provided the following is true about it:
 - it is compiled as a static library
 - it is accessible as `ruby` within `PATH` or `RUBY` environment variable is set
   to path of desired `ruby` binary.
+
+### macOS Caveats
+
+By default, `rbenv install`/`ruby-build` compiles Ruby as a shared library,
+which on macOS disables the inclusion of the static library in the installation.
+
+This can be worked around by passing `--disable-shared` when installing Ruby,
+e.g.:
+
+```sh
+rbenv install 3.4.5 -- --disable-shared
+```
+
+### Vendoring Ruby
+
+You may find it useful to vendor a specific build of Ruby with your app, which
+can be done by using `ruby-build` directly to install Ruby to a subdirectory.
+
+```sh
+ruby-build 3.4.5 vendor/ruby -- --disable-shared
+```
+
+You may then configure `cargo build` to use it by pointing the `RUBY`
+environment variable at `vendor/ruby/bin/ruby`.
+
+Cargo may be configured to do this automatically, by adding the following to
+`.cargo/config.toml`:
+
+```toml
+[env]
+RUBY = { value = "vendor/ruby/bin/ruby", relative = true }
+```
 
 ## Main Library
 
