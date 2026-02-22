@@ -14,7 +14,6 @@ jobs:
       - uses: ./.github/actions/ruby_install
         with:
           ruby-version: "3.4.4"
-          os: ubuntu-latest
       - name: Install latest mdbook
         run: |
           tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')

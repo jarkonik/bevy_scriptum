@@ -24,7 +24,6 @@ jobs:
       - uses: ./.github/actions/ruby_install
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          os: ${{ matrix.sys.os }}
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
       - name: Build
