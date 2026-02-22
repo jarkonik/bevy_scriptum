@@ -15,9 +15,8 @@ jobs:
     env:
       RUSTFLAGS: -D warnings
     strategy:
-      fail-fast: false
       matrix:
-        ruby_version: ["3.4.4"]
+        ruby_version: ["3.2.2"]
         sys:
           - os: ubuntu-latest
     steps:
