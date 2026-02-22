@@ -11,36 +11,19 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -D warnings
+    strategy:
+      matrix:
+        ruby-version: ["3.4.4"]
+        sys:
+          - os: ubuntu-latest
+    runs-on: ${{ matrix.sys.os }}
     steps:
       - uses: actions/checkout@v3
-      - name: Cache Ruby
-        id: cache-ruby
-        uses: actions/cache@v4
+      - uses: ./.github/actions/ruby_install
         with:
-          path: rubies
-          key: ${{ runner.os }}-ruby
-      - name: Install Ruby
-        if: steps.cache-ruby.outputs.cache-hit != 'true'
-        env:
-          CC: clang
-        run: |
-          url="https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.4.tar.gz"
-          prefix=`pwd`/rubies/ruby-3.4
-          mkdir rubies
-          mkdir ruby_src
-          curl -sSL $url | tar -xz
-          cd ruby-3.4.4
-          mkdir build
-          cd build
-          ../configure --without-shared --prefix=$prefix
-          make install
-      - name: Add Ruby to PATH
-        run: |
-          prefix=`pwd`/rubies/ruby-3.4
-          echo $prefix/bin >> $GITHUB_PATH
+          ruby-version: ${{ matrix.ruby-version }}
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
       - name: Build
