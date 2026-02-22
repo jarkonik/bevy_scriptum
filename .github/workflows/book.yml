@@ -10,12 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/ruby_install
         with:
-          ruby-version: "3.4.4"
+          ruby-version: "3.2.2"
           os: ubuntu-latest
       - name: Install latest mdbook
         run: |
