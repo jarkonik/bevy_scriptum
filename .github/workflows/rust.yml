@@ -23,7 +23,7 @@ jobs:
             rust_toolchain: stable
     steps:
       - uses: actions/checkout@v3
-      - uses: .github/actions/ruby_install
+      - uses: ./.github/actions/ruby_install
         with:
           ruby-version: ${{ matrix.ruby-version }}
           os: ${{ matrix.sys.os }}
