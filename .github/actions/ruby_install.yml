@@ -1,0 +1,34 @@
+name: "Install Ruby"
+
+inputs:
+  ruby-version:
+    required: true
+  os:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup env
+      run: |
+        echo "PATH=/opt/rubies/${{ inputs.ruby_version }}/bin:$PATH" >> $GITHUB_ENV
+        echo "GEM_HOME=~/.gem/ruby/${{ inputs.ruby_version }}" >> $GITHUB_ENV
+
+    - name: ⚡ Cache
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      with:
+        path: |
+          /opt/rubies/${{ inputs.ruby_version }}
+          ~/.gem/ruby/${{ inputs.ruby_version }}
+        key: rb-sys-ruby-static-${{ inputs.os }}-${{ inputs.ruby_version }}
+
+    - name: 🔘 Build static ruby
+      working-directory: /tmp
+      run: |
+        if [ -d /opt/rubies/${{inputs.ruby_version }} ]; then
+          echo "Ruby ${{ inputs.ruby_version }} already installed, skipping build"
+        else
+          git clone https://github.com/rbenv/ruby-build.git
+          PREFIX=/usr/local sudo -E ./ruby-build/install.sh
+          RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ matrix.ruby_version }} /opt/rubies/${{ matrix.ruby_version }}
+        fi

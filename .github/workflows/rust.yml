@@ -17,41 +17,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby_version: ["3.2.2"]
+        ruby_version: ["3.4.4"]
         sys:
           - os: ubuntu-latest
             rust_toolchain: stable
     steps:
       - uses: actions/checkout@v3
-      - uses: oxidize-rb/actions/setup-ruby-and-rust@v1
+      - uses: ./.github/actions/ruby_install
         with:
-          ruby-version: none
-          rustup-toolchain: ${{ matrix.sys.rust_toolchain }}
-          cargo-cache: "sccache"
-
-      - name: Setup env
-        run: |
-          echo "PATH=/opt/rubies/${{ matrix.ruby_version }}/bin:$PATH" >> $GITHUB_ENV
-          echo "GEM_HOME=~/.gem/ruby/${{ matrix.ruby_version }}" >> $GITHUB_ENV
-
-      - name: ⚡ Cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
-        with:
-          path: |
-            /opt/rubies/${{ matrix.ruby_version }}
-            ~/.gem/ruby/${{ matrix.ruby_version }}
-          key: rb-sys-ruby-static-${{ matrix.sys.os }}-${{ matrix.ruby_version }}
-
-      - name: 🔘 Build static ruby
-        working-directory: /tmp
-        run: |
-          if [ -d /opt/rubies/${{matrix.ruby_version }} ]; then
-            echo "Ruby ${{ matrix.ruby_version }} already installed, skipping build"
-          else
-            git clone https://github.com/rbenv/ruby-build.git
-            PREFIX=/usr/local sudo -E ./ruby-build/install.sh
-            RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ matrix.ruby_version }} /opt/rubies/${{ matrix.ruby_version }}
-          fi
+          ruby-version: ${{ matrix.ruby-version }}
+          os: ${{ matrix.sys.os }}
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
       - name: Build
