@@ -24,7 +24,7 @@ type LuaEngine = Arc<Mutex<Lua>>;
 pub struct LuaValue(pub Arc<RegistryKey>);
 
 impl LuaValue {
-    fn new<T: IntoLua>(engine: &Lua, value: T) -> Self {
+    fn new<'a, T: IntoLua<'a>>(engine: &'a Lua, value: T) -> Self {
         Self(Arc::new(
             engine
                 .create_registry_value(value)
@@ -49,8 +49,11 @@ impl BevyEntity {
 
 impl UserData for BevyEntity {}
 
-impl FromLua for BevyEntity {
-    fn from_lua(value: mlua::prelude::LuaValue, _lua: &'_ Lua) -> mlua::prelude::LuaResult<Self> {
+impl FromLua<'_> for BevyEntity {
+    fn from_lua(
+        value: mlua::prelude::LuaValue<'_>,
+        _lua: &'_ Lua,
+    ) -> mlua::prelude::LuaResult<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
             _ => panic!("got {:?} instead of BevyEntity", value),
@@ -81,8 +84,11 @@ impl BevyVec3 {
 
 impl UserData for BevyVec3 {}
 
-impl FromLua for BevyVec3 {
-    fn from_lua(value: mlua::prelude::LuaValue, _lua: &'_ Lua) -> mlua::prelude::LuaResult<Self> {
+impl FromLua<'_> for BevyVec3 {
+    fn from_lua(
+        value: mlua::prelude::LuaValue<'_>,
+        _lua: &'_ Lua,
+    ) -> mlua::prelude::LuaResult<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
             _ => panic!("got {:?} instead of BevyVec3", value),
@@ -229,14 +235,14 @@ impl Runtime for LuaRuntime {
                 .expect("Error setting entity global variable");
             let func = engine
                 .globals()
-                .get::<Function>(name)
+                .get::<_, Function>(name)
                 .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             let args = args
                 .parse(engine)
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = func
-                .call::<mlua::Value>(Variadic::from_iter(args))
+                .call::<_, mlua::Value>(Variadic::from_iter(args))
                 .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             engine
                 .globals()
@@ -260,7 +266,7 @@ impl Runtime for LuaRuntime {
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = val
-                .call::<mlua::Value>(Variadic::from_iter(args))
+                .call::<_, mlua::Value>(Variadic::from_iter(args))
                 .map_err(|e| ScriptingError::RuntimeError(e.to_string()))?;
             Ok(LuaValue::new(engine, result))
         })
@@ -291,7 +297,7 @@ impl Runtime for LuaRuntime {
     }
 }
 
-impl<'a, T: IntoLuaMulti> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
+impl<'a, T: IntoLuaMulti<'a>> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     fn into_runtime_value_with_engine(value: T, engine: &'a Lua) -> LuaValue {
         let mut iter = value.into_lua_multi(engine).unwrap().into_iter();
         if iter.len() > 1 {
@@ -301,7 +307,7 @@ impl<'a, T: IntoLuaMulti> IntoRuntimeValueWithEngine<'a, T, LuaRuntime> for T {
     }
 }
 
-impl<'a, T: FromLua> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
+impl<'a, T: FromLua<'a>> FromRuntimeValueWithEngine<'a, LuaRuntime> for T {
     fn from_runtime_value_with_engine(value: LuaValue, engine: &'a Lua) -> Self {
         engine.registry_value(&value.0).unwrap()
     }
@@ -313,7 +319,7 @@ impl FuncArgs<'_, LuaValue, LuaRuntime> for () {
     }
 }
 
-impl<'a, T: IntoLua> FuncArgs<'a, LuaValue, LuaRuntime> for Vec<T> {
+impl<'a, T: IntoLua<'a>> FuncArgs<'a, LuaValue, LuaRuntime> for Vec<T> {
     fn parse(self, engine: &'a Lua) -> Vec<LuaValue> {
         self.into_iter().map(|x| LuaValue::new(engine, x)).collect()
     }
@@ -327,7 +333,7 @@ pub mod prelude {
 
 macro_rules! impl_tuple {
     ($($idx:tt $t:tt),+) => {
-        impl<'a, $($t: IntoLua,)+> FuncArgs<'a, LuaValue, LuaRuntime>
+        impl<'a, $($t: IntoLua<'a>,)+> FuncArgs<'a, LuaValue, LuaRuntime>
             for ($($t,)+)
         {
             fn parse(self, engine: &'a Lua) -> Vec<LuaValue> {
