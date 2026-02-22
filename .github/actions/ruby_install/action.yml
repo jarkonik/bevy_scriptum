@@ -24,6 +24,7 @@ runs:
 
     - name: 🔘 Build static ruby
       working-directory: /tmp
+      shell: bash
       run: |
         if [ -d /opt/rubies/${{inputs.ruby_version }} ]; then
           echo "Ruby ${{ inputs.ruby_version }} already installed, skipping build"
