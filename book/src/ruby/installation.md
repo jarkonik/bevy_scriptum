@@ -13,8 +13,19 @@ After installing `rbenv` along with its `ruby-build` plugin you can build and
 install a Ruby installation that will work with `bevy_scriptum` by executing:
 
 ```sh
-CC=clang rbenv install 3.4.4
+CC=clang RUBY_CONFIGURE_OPTS="--enable-static" rbenv install 3.4.4
 ```
+
+Before building make sure you are using the correct Ruby version.
+It can be done for example by executing `which ruby`.
+Output should be similar to `/home/$USER/.rbenv/shims/ruby`.
+If the version is not correct then refer to `rbenv` manual or documentation
+relevant for your method of installation to switch to correct Ruby.
+To set Ruby version for current shell for example `rbenv shell 3.4.4` can be
+used.
+
+If ruby-static installation can't be found its advisable to run `cargo clean`
+before building as `rb-sys` may have cached an incorrect Ruby version.
 
 Above assumes that you also have `clang` installed on your system.
 For `clang` installation instruction consult your
