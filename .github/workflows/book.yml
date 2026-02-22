@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/ruby_install
         with:
-          ruby-version: 3.4.4
+          ruby-version: "3.4.4"
           os: ubuntu-latest
       - name: Install latest mdbook
         run: |
