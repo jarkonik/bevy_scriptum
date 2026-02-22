@@ -15,7 +15,7 @@ jobs:
       RUSTFLAGS: -D warnings
     strategy:
       matrix:
-        ruby_version: ["3.2.2"]
+        ruby-version: ["3.2.2"]
         sys:
           - os: ubuntu-latest
     runs-on: ${{ matrix.sys.os }}
