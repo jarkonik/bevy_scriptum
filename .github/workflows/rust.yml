@@ -20,7 +20,6 @@ jobs:
         ruby_version: ["3.4.4"]
         sys:
           - os: ubuntu-latest
-            rust_toolchain: stable
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/ruby_install
