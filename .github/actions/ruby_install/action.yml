@@ -32,5 +32,5 @@ runs:
         else
           git clone https://github.com/rbenv/ruby-build.git
           PREFIX=/usr/local sudo -E ./ruby-build/install.sh
-          RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ matrix.ruby-version }} /opt/rubies/${{ matrix.ruby-version }}
+          RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ inputs.ruby-version }} /opt/rubies/${{ inputs.ruby-version }}
         fi
