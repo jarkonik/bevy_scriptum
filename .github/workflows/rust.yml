@@ -11,7 +11,6 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -D warnings
     strategy:
@@ -19,6 +18,7 @@ jobs:
         ruby_version: ["3.2.2"]
         sys:
           - os: ubuntu-latest
+    runs-on: ${{ matrix.sys.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/ruby_install
