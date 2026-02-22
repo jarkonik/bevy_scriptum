@@ -13,7 +13,7 @@ After installing `rbenv` along with its `ruby-build` plugin you can build and
 install a Ruby installation that will work with `bevy_scriptum` by executing:
 
 ```sh
-CC=clang RUBY_CONFIGURE_OPTS="--enable-static --disable-shared" rbenv install 3.4.4
+CC=clang RUBY_CONFIGURE_OPTS="--disable-shared" rbenv install 3.4.4
 ```
 
 Before building make sure you are using the correct Ruby version.
