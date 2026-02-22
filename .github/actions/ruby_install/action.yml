@@ -21,7 +21,7 @@ runs:
         path: |
           /opt/rubies/${{ inputs.ruby-version }}
           ~/.gem/ruby/${{ inputs.ruby-version }}
-        key: rb-sys-ruby-static-${{ inputs.os }}-${{ inputs.ruby-version }}
+        key: ruby-static-${{ inputs.os }}-${{ inputs.ruby-version }}
 
     - name: Build static ruby
       working-directory: /tmp
