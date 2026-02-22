@@ -6,7 +6,7 @@ To enable live reload it should be enough to enable `file-watcher` feature
 within bevy dependency in `Cargo.toml`
 
 ```toml
-bevy = { version = "0.16", features = ["file_watcher"] }
+bevy = { version = "0.17", features = ["file_watcher"] }
 ```
 
 ## Init-teardown pattern
@@ -81,7 +81,7 @@ fn update(
 
 
 fn teardown(
-    mut ev_asset: EventReader<AssetEvent<LuaScript>>,
+    mut ev_asset: MessageReader<AssetEvent<LuaScript>>,
     scripting_runtime: ResMut<LuaRuntime>,
     mut scripted_entities: Query<(Entity, &mut LuaScriptData)>,
 ) {

@@ -15,7 +15,7 @@ use super::components::Script;
 /// Reloads scripts when they are modified.
 pub(crate) fn reload_scripts<R: Runtime>(
     mut commands: Commands,
-    mut ev_asset: EventReader<AssetEvent<R::ScriptAsset>>,
+    mut ev_asset: MessageReader<AssetEvent<R::ScriptAsset>>,
     mut scripts: Query<(Entity, &mut Script<R::ScriptAsset>)>,
 ) {
     for ev in ev_asset.read() {
@@ -149,7 +149,9 @@ pub(crate) fn process_calls<R: Runtime>(world: &mut World) -> Result<(), Scripti
                 .system
                 .lock()
                 .expect("Failed to lock callback system mutex");
-            let val = system.call(&call, world);
+            let val = system
+                .call(&call, world)
+                .expect("Callback system call failed");
             let mut runtime = world
                 .get_resource_mut::<R>()
                 .ok_or(ScriptingError::NoRuntimeResource)?;

@@ -8,7 +8,7 @@ fn main() {
         .add_systems(Startup, startup)
         .add_systems(Update, call_ruby_on_update_from_rust)
         .add_scripting::<RubyRuntime>(|runtime| {
-            runtime.add_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
+            runtime.add_function(String::from("quit"), |mut exit: MessageWriter<AppExit>| {
                 exit.write(AppExit::Success);
             });
         })

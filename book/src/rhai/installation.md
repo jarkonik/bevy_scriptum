@@ -4,7 +4,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy = "0.16"
+bevy = "0.17"
 bevy_scriptum = { version = "0.9", features = ["rhai"] }
 ```
 

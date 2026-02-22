@@ -167,6 +167,7 @@ The examples live in `examples` directory and their corresponding scripts live i
 
 | bevy version | bevy_scriptum version |
 |--------------|-----------------------|
+| 0.17         | 0.10                  |
 | 0.16         | 0.8-0.9               |
 | 0.15         | 0.7                   |
 | 0.14         | 0.6                   |
