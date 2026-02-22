@@ -12,25 +12,25 @@ runs:
     - name: Setup env
       shell: bash
       run: |
-        echo "PATH=/opt/rubies/${{ inputs.ruby_version }}/bin:$PATH" >> $GITHUB_ENV
-        echo "GEM_HOME=~/.gem/ruby/${{ inputs.ruby_version }}" >> $GITHUB_ENV
+        echo "PATH=/opt/rubies/${{ inputs.ruby-version }}/bin:$PATH" >> $GITHUB_ENV
+        echo "GEM_HOME=~/.gem/ruby/${{ inputs.ruby-version }}" >> $GITHUB_ENV
 
     - name: ⚡ Cache
       uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
       with:
         path: |
-          /opt/rubies/${{ inputs.ruby_version }}
-          ~/.gem/ruby/${{ inputs.ruby_version }}
-        key: rb-sys-ruby-static-${{ inputs.os }}-${{ inputs.ruby_version }}
+          /opt/rubies/${{ inputs.ruby-version }}
+          ~/.gem/ruby/${{ inputs.ruby-version }}
+        key: rb-sys-ruby-static-${{ inputs.os }}-${{ inputs.ruby-version }}
 
     - name: Build static ruby
       working-directory: /tmp
       shell: bash
       run: |
-        if [ -d /opt/rubies/${{inputs.ruby_version }} ]; then
-          echo "Ruby ${{ inputs.ruby_version }} already installed, skipping build"
+        if [ -d /opt/rubies/${{inputs.ruby-version }} ]; then
+          echo "Ruby ${{ inputs.ruby-version }} already installed, skipping build"
         else
           git clone https://github.com/rbenv/ruby-build.git
           PREFIX=/usr/local sudo -E ./ruby-build/install.sh
-          RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ matrix.ruby_version }} /opt/rubies/${{ matrix.ruby_version }}
+          RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo -E ruby-build ${{ matrix.ruby-version }} /opt/rubies/${{ matrix.ruby-version }}
         fi
