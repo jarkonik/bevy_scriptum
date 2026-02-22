@@ -1,0 +1,3 @@
+[build]
+# Include dead code when static-linking magnus
+rustflags = ["-C", "link-dead-code=on"]
