@@ -49,8 +49,8 @@ jobs:
             echo "Ruby ${{ matrix.ruby_version }} already installed, skipping build"
           else
             git clone https://github.com/rbenv/ruby-build.git
-            PREFIX=/usr/local sudo ./ruby-build/install.sh
-            RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" sudo ruby-build ${{ matrix.ruby_version }} /opt/rubies/${{ matrix.ruby_version }}
+            PREFIX=/usr/local ./ruby-build/install.sh
+            RUBY_CONFIGURE_OPTS="--disable-shared --disable-install-doc --disable-install-rdoc" ruby-build ${{ matrix.ruby_version }} /opt/rubies/${{ matrix.ruby_version }}
           fi
       - name: Clippy
         run: cargo clippy --all-features --verbose -- -D warnings
