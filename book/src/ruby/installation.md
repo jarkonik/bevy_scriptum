@@ -13,8 +13,19 @@ After installing `rbenv` along with its `ruby-build` plugin you can build and
 install a Ruby installation that will work with `bevy_scriptum` by executing:
 
 ```sh
-CC=clang rbenv install 3.4.4
+CC=clang RUBY_CONFIGURE_OPTS="--disable-shared" rbenv install 3.4.4
 ```
+
+Before building make sure you are using the correct Ruby version.
+It can be done for example by executing `which ruby`.
+Output should be similar to `/home/$USER/.rbenv/shims/ruby`.
+If the version is not correct then refer to `rbenv` manual or documentation
+relevant for your method of installation to switch to correct Ruby.
+To set Ruby version for current shell for example `rbenv shell 3.4.4` can be
+used.
+
+If ruby-static installation can't be found its advisable to run `cargo clean`
+before building as `rb-sys` may have cached an incorrect Ruby version.
 
 Above assumes that you also have `clang` installed on your system.
 For `clang` installation instruction consult your
@@ -34,8 +45,8 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy = "0.16"
-bevy_scriptum = { version = "0.9", features = ["ruby"] }
+bevy = "0.17"
+bevy_scriptum = { version = "0.10", features = ["ruby"] }
 ```
 
 If you need a different version of bevy you need to use a matching bevy_scriptum

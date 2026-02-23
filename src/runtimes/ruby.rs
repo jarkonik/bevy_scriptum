@@ -171,7 +171,7 @@ fn then(r_self: magnus::Value) -> magnus::Value {
             }
             .as_value(),
         ))
-        .into_value()
+        .into_value_with(&ruby)
 }
 
 #[derive(Clone, Debug)]
@@ -448,11 +448,11 @@ impl Runtime for RubyRuntime {
             let result = f(
                 (),
                 args.iter()
-                    .map(|arg| RubyValue::new(arg.into_value()))
+                    .map(|arg| RubyValue::new(arg.into_value_with(&ruby)))
                     .collect(),
             )
             .expect("failed to call callback");
-            result.into_value()
+            result.into_value_with(&ruby)
         }
 
         self.execute_in_thread(Box::new(move |ruby: &Ruby| {
@@ -527,8 +527,8 @@ impl<T: TryConvert> FromRuntimeValueWithEngine<'_, RubyRuntime> for T {
 }
 
 impl<T: IntoValue> IntoRuntimeValueWithEngine<'_, T, RubyRuntime> for T {
-    fn into_runtime_value_with_engine(value: T, _engine: &magnus::Ruby) -> RubyValue {
-        RubyValue::new(value.into_value())
+    fn into_runtime_value_with_engine(value: T, engine: &magnus::Ruby) -> RubyValue {
+        RubyValue::new(value.into_value_with(engine))
     }
 }
 
@@ -539,9 +539,9 @@ impl FuncArgs<'_, RubyValue, RubyRuntime> for () {
 }
 
 impl<T: IntoValue> FuncArgs<'_, RubyValue, RubyRuntime> for Vec<T> {
-    fn parse(self, _engine: &magnus::Ruby) -> Vec<RubyValue> {
+    fn parse(self, engine: &magnus::Ruby) -> Vec<RubyValue> {
         self.into_iter()
-            .map(|x| RubyValue::new(x.into_value()))
+            .map(|x| RubyValue::new(x.into_value_with(engine)))
             .collect()
     }
 }
@@ -562,9 +562,9 @@ macro_rules! impl_tuple {
         impl<'a, $($t: IntoValue,)+> FuncArgs<'a, RubyValue, RubyRuntime>
             for ($($t,)+)
         {
-            fn parse(self, _engine: &'a magnus::Ruby) -> Vec<RubyValue> {
+            fn parse(self, engine: &'a magnus::Ruby) -> Vec<RubyValue> {
                 vec![
-                    $(RubyValue::new(self.$idx.into_value()), )+
+                    $(RubyValue::new(self.$idx.into_value_with(engine)), )+
                 ]
             }
         }

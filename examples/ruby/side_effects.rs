@@ -33,7 +33,7 @@ fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
     ),));
 }
 
-fn print_entity_names_and_quit(query: Query<&Name>, mut exit: EventWriter<AppExit>) {
+fn print_entity_names_and_quit(query: Query<&Name>, mut exit: MessageWriter<AppExit>) {
     if !query.is_empty() {
         for e in &query {
             println!("{}", e);

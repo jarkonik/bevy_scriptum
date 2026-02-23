@@ -8,7 +8,7 @@ fn main() {
         .add_systems(Startup, startup)
         .add_systems(Update, call_lua_on_update_from_rust)
         .add_scripting::<LuaRuntime>(|runtime| {
-            runtime.add_function(String::from("quit"), |mut exit: EventWriter<AppExit>| {
+            runtime.add_function(String::from("quit"), |mut exit: MessageWriter<AppExit>| {
                 exit.write(AppExit::Success);
             });
         })
@@ -24,7 +24,7 @@ fn startup(mut commands: Commands, assets_server: Res<AssetServer>) {
 fn call_lua_on_update_from_rust(
     mut scripted_entities: Query<(Entity, &mut LuaScriptData)>,
     scripting_runtime: ResMut<LuaRuntime>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     for (entity, mut script_data) in &mut scripted_entities {
         let val = scripting_runtime

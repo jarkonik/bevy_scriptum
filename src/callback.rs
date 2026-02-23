@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::RunSystemError, prelude::*};
 use core::any::TypeId;
 use std::sync::{Arc, Mutex};
 
@@ -39,7 +39,7 @@ impl<R: Runtime> CallbackSystem<R> {
         &mut self,
         call: &FunctionCallEvent<R::CallContext, R::Value>,
         world: &mut World,
-    ) -> R::Value {
+    ) -> Result<R::Value, RunSystemError> {
         self.system.run(call.params.clone(), world)
     }
 }
@@ -74,7 +74,9 @@ where
         let mut inner_system = IntoSystem::into_system(self);
         inner_system.initialize(world);
         let system_fn = move |_args: In<Vec<R::Value>>, world: &mut World| {
-            let result = inner_system.run((), world);
+            let result = inner_system
+                .run((), world)
+                .expect("Callback system failed to run");
             inner_system.apply_deferred(world);
             let mut runtime = world.get_resource_mut::<R>().expect("No runtime resource");
 
@@ -112,7 +114,7 @@ macro_rules! impl_tuple {
                             )
                         });
 
-                    let result = inner_system.run(args, world);
+                    let result = inner_system.run(args, world).expect("Callback system failed to run");
                     inner_system.apply_deferred(world);
                     let mut runtime = world.get_resource_mut::<RN>().expect("No runtime resource");
 

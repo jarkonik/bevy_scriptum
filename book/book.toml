@@ -1,6 +1,5 @@
 [book]
 authors = ["Jaroslaw Konik"]
 language = "en"
-multilingual = false
 src = "src"
 title = "bevy_scriptum"

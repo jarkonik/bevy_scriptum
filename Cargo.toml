@@ -1,7 +1,7 @@
 [package]
 name = "bevy_scriptum"
 authors = ["Jaroslaw Konik <konikjar@gmail.com>"]
-version = "0.9.1"
+version = "0.10.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -16,14 +16,14 @@ rhai = ["dep:rhai"]
 ruby = ["dep:magnus", "dep:rb-sys"]
 
 [dependencies]
-bevy = { default-features = false, version = "0.16", features = ["bevy_asset", "bevy_log"] }
+bevy = { default-features = false, version = "0.17", features = ["bevy_asset", "bevy_log"] }
 serde = "1.0.162"
 rhai = { version = "1.14.0", features = [
     "sync",
     "internals",
     "unchecked",
 ], optional = true }
-thiserror = "1.0.40"
+thiserror = "1.0.69"
 anyhow = "1.0.82"
 tracing = "0.1.40"
 mlua = { version = "0.9.8", features = [
@@ -31,7 +31,7 @@ mlua = { version = "0.9.8", features = [
     "vendored",
     "send",
 ], optional = true }
-magnus = { version = "0.7.1", optional = true }
+magnus = { version = "0.8.2", optional = true }
 rb-sys = { version = "0.9", default-features = false, features = ["link-ruby", "ruby-static"], optional = true }
 crossbeam-channel = "0.5.15"
 libc = "0.2.172"

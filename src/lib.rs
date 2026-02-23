@@ -103,7 +103,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! bevy_scriptum = { version = "0.9", features = ["lua"] }
+//! bevy_scriptum = { version = "0.10", features = ["lua"] }
 //! ```
 //!
 //! or execute `cargo add bevy_scriptum --features lua` from your project directory.
@@ -176,6 +176,7 @@
 //!
 //! | bevy version | bevy_scriptum version |
 //! |--------------|-----------------------|
+//! | 0.17         | 0.10                  |
 //! | 0.16         | 0.8-0.9               |
 //! | 0.15         | 0.7                   |
 //! | 0.14         | 0.6                   |
@@ -278,6 +279,12 @@ pub enum ScriptingError {
     NoRuntimeResource,
     #[error("no settings resource present")]
     NoSettingsResource,
+}
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum ScriptSystemSet {
+    Reload,
+    Process,
 }
 
 /// Trait that represents a scripting runtime/engine. In practice it is
@@ -433,6 +440,14 @@ impl<'a, R: Runtime> ScriptingRuntimeBuilder<'a, R> {
     }
 }
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum ScriptSystems {
+    Reload,
+    InitCallbacks,
+    ProcessNewScripts,
+    ProcessCalls,
+}
+
 impl BuildScriptingRuntime for App {
     /// Adds a scripting runtime. Registers required bevy systems that take
     /// care of processing and running the scripts.
@@ -441,13 +456,14 @@ impl BuildScriptingRuntime for App {
         if R::needs_rdynamic_linking() && !is_rdynamic_linking() {
             panic!(
                 "Missing `-rdynamic`: symbol resolution failed.\n\
-                 It is needed by {:?}.\n\
-                 Please add `println!(\"cargo:rustc-link-arg=-rdynamic\");` to your build.rs\n\
-                 or set `RUSTFLAGS=\"-C link-arg=-rdynamic\"`.",
+             It is needed by {:?}.\n\
+             Please add `println!(\"cargo:rustc-link-arg=-rdynamic\");` to your build.rs\n\
+             or set `RUSTFLAGS=\"-C link-arg=-rdynamic\"`.",
                 std::any::type_name::<R>()
             );
         }
 
+        // Insert the runtime schedule after Update
         self.world_mut()
             .resource_mut::<MainScheduleOrder>()
             .insert_after(Update, R::Schedule::default());
@@ -457,22 +473,35 @@ impl BuildScriptingRuntime for App {
             .init_asset::<R::ScriptAsset>()
             .init_resource::<Callbacks<R>>()
             .insert_resource(R::default())
+            .configure_sets(
+                R::Schedule::default(),
+                (
+                    ScriptSystems::Reload,
+                    ScriptSystems::InitCallbacks.after(ScriptSystems::Reload),
+                    ScriptSystems::ProcessNewScripts.after(ScriptSystems::InitCallbacks),
+                    ScriptSystems::ProcessCalls.after(ScriptSystems::ProcessNewScripts),
+                ),
+            )
             .add_systems(
                 R::Schedule::default(),
                 (
-                    reload_scripts::<R>,
-                    process_calls::<R>
+                    reload_scripts::<R>.in_set(ScriptSystems::Reload),
+                    init_callbacks::<R>
                         .pipe(log_errors)
-                        .after(process_new_scripts::<R>),
-                    init_callbacks::<R>.pipe(log_errors),
+                        .in_set(ScriptSystems::InitCallbacks)
+                        .after(ScriptSystems::Reload),
                     process_new_scripts::<R>
                         .pipe(log_errors)
-                        .after(init_callbacks::<R>),
+                        .in_set(ScriptSystems::ProcessNewScripts)
+                        .after(ScriptSystems::InitCallbacks),
+                    process_calls::<R>
+                        .pipe(log_errors)
+                        .in_set(ScriptSystems::ProcessCalls)
+                        .after(ScriptSystems::ProcessNewScripts),
                 ),
             );
 
         let runtime = ScriptingRuntimeBuilder::<R>::new(self.world_mut());
-
         f(runtime);
 
         self
