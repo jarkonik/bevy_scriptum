@@ -45,7 +45,7 @@ impl<R: Runtime> CallbackSystem<R> {
 }
 
 /// Allows converting to a wrapper type that the library uses internally for data
-pub(crate) trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
+pub trait IntoRuntimeValueWithEngine<'a, V, R: Runtime> {
     fn into_runtime_value_with_engine(value: V, engine: &'a R::RawEngine) -> R::Value;
 }
 

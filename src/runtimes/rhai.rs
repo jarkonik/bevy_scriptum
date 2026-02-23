@@ -235,6 +235,8 @@ impl Default for RhaiRuntime {
         #[allow(deprecated)]
         engine.on_def_var(|_, info, _| Ok(info.name != "entity"));
 
+        engine.register_fn("to_f32", |x: f64| x as f32);
+
         RhaiRuntime { engine }
     }
 }
@@ -280,6 +282,30 @@ macro_rules! impl_tuple {
             }
         }
     };
+}
+
+impl From<Entity> for BevyEntity {
+    fn from(value: Entity) -> Self {
+        BevyEntity(value)
+    }
+}
+
+impl From<BevyEntity> for Entity {
+    fn from(value: BevyEntity) -> Self {
+        value.0
+    }
+}
+
+impl From<Vec3> for BevyVec3 {
+    fn from(value: Vec3) -> Self {
+        BevyVec3(value)
+    }
+}
+
+impl From<BevyVec3> for Vec3 {
+    fn from(value: BevyVec3) -> Self {
+        value.0
+    }
 }
 
 impl_tuple!(0 A, 1 B, 2 C, 3 D, 4 E, 5 F, 6 G, 7 H, 8 I, 9 J, 10 K, 11 L, 12 M, 13 N, 14 O, 15 P, 16 Q, 17 R, 18 S, 19 T, 20 U, 21 V, 22 W, 23 X, 24 Y, 25 Z);

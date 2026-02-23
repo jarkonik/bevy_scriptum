@@ -231,16 +231,17 @@
 //! bevy_scriptum is licensed under either of the following, at your option:
 //! Apache License, Version 2.0, (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0) or MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
 
+pub mod callback;
+
 mod assets;
-mod callback;
 mod components;
 mod promise;
-mod systems;
-
 pub mod runtimes;
+mod systems;
 
 pub use crate::components::Script;
 use assets::GetExtensions;
+pub use callback::IntoCallbackSystem;
 use promise::Promise;
 
 use std::{
@@ -256,7 +257,7 @@ use bevy::{
     ecs::{component::Mutable, schedule::ScheduleLabel},
     prelude::*,
 };
-use callback::{Callback, IntoCallbackSystem};
+use callback::Callback;
 use systems::{init_callbacks, log_errors, process_calls};
 use thiserror::Error;
 
