@@ -180,7 +180,7 @@ pub struct BevyEntity(pub Entity);
 
 impl BevyEntity {
     pub fn index(&self) -> u32 {
-        self.0.index()
+        self.0.index_u32()
     }
 }
 

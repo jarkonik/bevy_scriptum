@@ -4,11 +4,11 @@
 
 //! ## Supported scripting languages/runtimes
 //!
-//! | language/runtime                           | cargo feature | documentation chapter                                           |
-//! | ------------------------------------------ | ------------- | --------------------------------------------------------------- |
-//! | 🌙 LuaJIT                                  | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
-//! | 🌾 Rhai                                    | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
-//! | 💎 Ruby(currently only supported on Linux) | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
+//! | language/runtime                                     | cargo feature | documentation chapter                                           |
+//! | ---------------------------------------------------- | ------------- | --------------------------------------------------------------- |
+//! | 🌙 LuaJIT                                            | `lua`         | [link](https://jarkonik.github.io/bevy_scriptum/lua/lua.html)   |
+//! | 🌾 Rhai                                              | `rhai`        | [link](https://jarkonik.github.io/bevy_scriptum/rhai/rhai.html) |
+//! | 💎 Ruby(currently only supported on Linux and MacOS) | `ruby`        | [link](https://jarkonik.github.io/bevy_scriptum/ruby/ruby.html) |
 //!
 //! Documentation book is available [here](https://jarkonik.github.io/bevy_scriptum/) 📖
 //!

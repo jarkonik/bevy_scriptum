@@ -1,6 +1,6 @@
 # Installation
 
-Ruby is currently only supported on Linux.
+Ruby is currently only supported on Linux ana MacOS.
 
 ## Ruby
 
