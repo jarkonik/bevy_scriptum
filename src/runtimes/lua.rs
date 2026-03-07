@@ -43,7 +43,7 @@ pub struct BevyEntity(pub Entity);
 
 impl BevyEntity {
     pub fn index(&self) -> u32 {
-        self.0.index()
+        self.0.index_u32()
     }
 }
 
@@ -104,7 +104,7 @@ impl Default for LuaRuntime {
             let engine = engine.lock().expect("Failed to lock engine");
             engine
                 .register_userdata_type::<BevyEntity>(|typ| {
-                    typ.add_field_method_get("index", |_, entity| Ok(entity.0.index()));
+                    typ.add_field_method_get("index", |_, entity| Ok(entity.index()));
                 })
                 .expect("Failed to register BevyEntity userdata type");
 

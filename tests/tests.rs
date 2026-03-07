@@ -441,7 +441,7 @@ macro_rules! scripting_tests {
 
             assert_eq!(
                 app.world().get_resource::<State>().unwrap().index,
-                entity.index()
+                entity.index_u32()
             );
         }
 
@@ -473,7 +473,7 @@ macro_rules! scripting_tests {
 
             assert_eq!(
                 app.world().get_resource::<State>().unwrap().index,
-                Some(entity.index())
+                Some(entity.index_u32())
             );
         }
 
@@ -505,7 +505,7 @@ macro_rules! scripting_tests {
 
             assert_eq!(
                 app.world().get_resource::<State>().unwrap().index,
-                Some(entity.index())
+                Some(entity.index_u32())
             );
         }
 

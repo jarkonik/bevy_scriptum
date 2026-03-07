@@ -1,7 +1,7 @@
 [package]
 name = "bevy_scriptum"
 authors = ["Jaroslaw Konik <konikjar@gmail.com>"]
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -16,7 +16,7 @@ rhai = ["dep:rhai"]
 ruby = ["dep:magnus", "dep:rb-sys"]
 
 [dependencies]
-bevy = { default-features = false, version = "0.17", features = ["bevy_asset", "bevy_log"] }
+bevy = { default-features = false, version = "0.18", features = ["bevy_asset", "bevy_log"] }
 serde = "1.0.162"
 rhai = { version = "1.14.0", features = [
     "sync",
