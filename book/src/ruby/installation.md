@@ -45,8 +45,8 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy = "0.17"
-bevy_scriptum = { version = "0.10", features = ["ruby"] }
+bevy = "0.18"
+bevy_scriptum = { version = "0.11", features = ["ruby"] }
 ```
 
 If you need a different version of bevy you need to use a matching bevy_scriptum
