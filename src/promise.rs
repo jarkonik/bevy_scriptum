@@ -13,6 +13,8 @@ pub(crate) struct PromiseInner<C: Send, V: Send> {
     pub(crate) callbacks: Vec<PromiseCallback<C, V>>,
     #[allow(deprecated)]
     pub(crate) context: C,
+    pub(crate) resolved_value: Option<V>,
+    pub(crate) fibers: Vec<V>, // TODO: should htis be vec or option
 }
 
 /// A struct that represents a Promise.
@@ -51,10 +53,29 @@ impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
     where
         R: Runtime<Value = V, CallContext = C>,
     {
+        let mut fibers: Vec<V> = vec![];
         if let Ok(mut inner) = self.inner.lock() {
-            inner.resolve(runtime, val)?;
+            inner.resolved_value = Some(val.clone());
+            inner.resolve(runtime, val.clone())?;
+
+            for fiber in inner.fibers.drain(..) {
+                fibers.push(fiber);
+            }
+        }
+        for fiber in fibers {
+            runtime.resume(&fiber, &val.clone());
         }
         Ok(())
+    }
+
+    /// Register a fiber that will be resumed when the [Promise] is resolved.
+    #[cfg(any(feature = "rhai", feature = "lua", feature = "ruby"))]
+    pub(crate) fn await_promise(&mut self, fiber: V) {
+        let mut inner = self
+            .inner
+            .lock()
+            .expect("Failed to lock inner promise mutex");
+        inner.fibers.push(fiber);
     }
 
     /// Register a callback that will be called when the [Promise] is resolved.
@@ -65,8 +86,10 @@ impl<C: Clone + Send + 'static, V: Send + Clone> Promise<C, V> {
             .lock()
             .expect("Failed to lock inner promise mutex");
         let following_inner = Arc::new(Mutex::new(PromiseInner {
+            fibers: vec![],
             callbacks: vec![],
             context: inner.context.clone(),
+            resolved_value: None,
         }));
 
         inner.callbacks.push(PromiseCallback {
